@@ -1,0 +1,6 @@
+// Empty defaults so a fresh clone builds. Put your own project's values in
+// Supabase.local.xcconfig (gitignored); see Supabase.local.example.xcconfig.
+SUPABASE_URL =
+SUPABASE_PUBLISHABLE_KEY =
+
+#include? "Supabase.local.xcconfig"

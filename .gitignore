@@ -1,0 +1,19 @@
+node_modules/
+dist/
+build/
+.DS_Store
+.env
+.env.*
+*.log
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+
+# Local configuration
+Config/Supabase.local.xcconfig
+
+# ADE local state
+.ade/

@@ -1,0 +1,45 @@
+import SwiftUI
+
+struct MainTabView: View {
+    enum AppTab: Hashable {
+        case trips, explore, profile
+    }
+
+    @State private var selection: AppTab = .trips
+
+    var body: some View {
+        TabView(selection: $selection) {
+            TripsHomeView()
+                .tabItem {
+                    tabLabel("Trips", outline: "suitcase", filled: "suitcase.fill", tab: .trips)
+                }
+                .tag(AppTab.trips)
+
+            ExploreView()
+                .tabItem {
+                    tabLabel("Explore", outline: "map", filled: "map.fill", tab: .explore)
+                }
+                .tag(AppTab.explore)
+
+            ProfileView()
+                .tabItem {
+                    tabLabel("Profile", outline: "person.crop.circle", filled: "person.crop.circle.fill", tab: .profile)
+                }
+                .tag(AppTab.profile)
+        }
+        .tint(WandererTheme.coral)
+        .sensoryFeedback(.selection, trigger: selection)
+    }
+
+    /// Outline glyphs for unselected tabs, filled for the active one. The tab
+    /// bar would otherwise force the filled variant on every item.
+    private func tabLabel(_ title: String, outline: String, filled: String, tab: AppTab) -> some View {
+        Label(title, systemImage: selection == tab ? filled : outline)
+            .environment(\.symbolVariants, .none)
+    }
+}
+
+#Preview {
+    MainTabView()
+        .environmentObject(AuthStore())
+}

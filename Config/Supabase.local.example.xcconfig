@@ -1,0 +1,4 @@
+// Copy to Supabase.local.xcconfig and fill in your own project's values.
+// The "$()" stops xcconfig from reading the "//" in the URL as a comment.
+SUPABASE_URL = https:/$()/YOUR-PROJECT-REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY = YOUR-PUBLISHABLE-KEY
