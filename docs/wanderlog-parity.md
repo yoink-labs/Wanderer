@@ -54,7 +54,7 @@ guessed.
 | --- | --- | --- |
 | Create trip with destination autosuggest (disambiguated cities) | Observed | impl (MapKit search), not tested |
 | Date range optional, two-month range picker | Observed | impl (start/end pickers), not tested |
-| Guest planning with “Skip and sign up later” | Observed | impl (guest mode in `RootView`) |
+| Guest planning with “Skip and sign up later” | Observed | impl — guest trips persist to disk and copy into the account on sign-in |
 | Guest can add places / times | Observed | impl (local guest stores) |
 | Guest can add expenses / share / save | Gated — sign-up modal | Guest keeps full local data, no gate |
 | Trip cover photo + cover color | Observed (overview) | impl (`updateCover`, `cover_color`) |
@@ -110,8 +110,8 @@ guessed.
 | Capability | Wanderlog | Wanderer |
 | --- | --- | --- |
 | Share trip with link | Gated for guest; Share button observed | impl (app/web link, copy, share sheet) |
-| Export to PDF / Google Maps / calendar | Gated PRO | todo — PDF export is feasible with free native rendering |
-| Trip journal (route + visited places on a map) | Observed (menu item) | todo — visited places exist on profile, not per trip |
+| Export to PDF / Google Maps / calendar | Gated PRO | PDF impl — native UIGraphicsPDFRenderer, shared with the system sheet; Maps/calendar still todo |
+| Trip journal (route + visited places on a map) | Observed (menu item) | impl — per-trip map and visited timeline from mark-as-visited |
 | Undo / redo | Observed | todo |
 | Offline editing | Not observed | todo |
 | Push notifications | Not observed | todo |

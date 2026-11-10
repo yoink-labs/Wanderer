@@ -10,7 +10,8 @@ struct TripsHomeView: View {
 
     @AppStorage(RecentTrips.storageKey) private var recentTripIDsRaw = ""
 
-    @State private var guestTrips = Trip.samples
+    @State private var guestTrips = GuestTripsStore.load()
+    @State private var didImportGuestTrips = false
     @State private var searchText = ""
     @State private var showPlanner = false
     @State private var errorText: String?
@@ -34,11 +35,13 @@ struct TripsHomeView: View {
         return [String(letters)]
     }
 
+    /// Signed in: the account trips. Guest: the trips kept on this device,
+    /// with the sample trips only as a first-run starting point.
     private var allTrips: [Trip] {
         if auth.isAuthenticated {
             return store.trips.map { $0.asTrip(memberInitials: memberInitials) }
         }
-        return guestTrips
+        return guestTrips.isEmpty ? Trip.samples : guestTrips
     }
 
     private var ordering: HomeTripOrdering {
@@ -104,6 +107,7 @@ struct TripsHomeView: View {
             hasLoadedTrips = false
             tripLoadError = nil
             guard auth.isAuthenticated else { return }
+            await importGuestTripsIfNeeded()
             await loadTrips()
             if visitedStore.visited.isEmpty {
                 await visitedStore.load()
@@ -529,6 +533,22 @@ struct TripsHomeView: View {
         await exploreStore.load()
     }
 
+    /// Copies trips made before signing in into the account, then clears the
+    /// device copy so a second sign-in cannot duplicate them.
+    private func importGuestTripsIfNeeded() async {
+        guard !didImportGuestTrips else { return }
+        didImportGuestTrips = true
+        let pending = guestTrips
+        guard !pending.isEmpty else { return }
+
+        for trip in pending.reversed() {
+            await store.create(trip.guestDraft)
+            if store.errorMessage != nil { return }
+        }
+        guestTrips = []
+        GuestTripsStore.clear()
+    }
+
     private func recordOpened(_ trip: Trip) {
         let updated = RecentTrips.recording(trip.id, in: recentTripIDsRaw)
         if updated != recentTripIDsRaw {
@@ -552,6 +572,7 @@ struct TripsHomeView: View {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
                 guestTrips.insert(trip, at: 0)
             }
+            GuestTripsStore.save(guestTrips)
             recordOpened(trip)
             LiggaHaptics.success()
         }

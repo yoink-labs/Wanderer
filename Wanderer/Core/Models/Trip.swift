@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct Trip: Identifiable, Hashable {
+struct Trip: Identifiable, Hashable, Codable {
     let id: UUID
     var title: String
     var destination: String
@@ -110,7 +110,7 @@ extension Trip {
     }
 }
 
-enum TripPalette: String, Hashable, CaseIterable {
+enum TripPalette: String, Hashable, CaseIterable, Codable {
     case kyoto
     case barcelona
     case lisbon

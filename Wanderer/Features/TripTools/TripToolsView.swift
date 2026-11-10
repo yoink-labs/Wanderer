@@ -42,6 +42,9 @@ struct TripToolsView: View {
     @State private var selectedTab: TripToolTab
     @State private var errorText: String?
     @State private var didRequestLoad = false
+    @State private var exportURL: URL?
+    @State private var showShareSheet = false
+    @State private var showJournal = false
 
     init(trip: Trip, store: TripDetailStore, initialTab: TripToolTab = .reservations) {
         self.trip = trip
@@ -82,6 +85,15 @@ struct TripToolsView: View {
             errorText = message
             store.errorMessage = nil
         }
+        .sheet(isPresented: $showShareSheet) {
+            if let exportURL {
+                ActivityShareSheet(items: [exportURL])
+                    .presentationDetents([.medium, .large])
+            }
+        }
+        .sheet(isPresented: $showJournal) {
+            TripJournalView(trip: trip, store: store)
+        }
         .alert("Something went wrong", isPresented: Binding(
             get: { errorText != nil },
             set: { if !$0 { errorText = nil } }
@@ -99,6 +111,31 @@ struct TripToolsView: View {
                 .foregroundStyle(WandererTheme.ink)
                 .accessibilityAddTraits(.isHeader)
             Spacer()
+            Button {
+                showJournal = true
+            } label: {
+                Image(systemName: "map")
+                    .font(.ligga(.body, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Trip journal")
+
+            Button {
+                exportPDF()
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.ligga(.body, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Export trip as PDF")
+            .accessibilityIdentifier("trip-export-pdf")
+
             Button("Done") { dismiss() }
                 .font(.ligga(.body, weight: .semibold))
                 .foregroundStyle(WandererTheme.ink)
@@ -107,6 +144,22 @@ struct TripToolsView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("trip-tools-done")
         }
+    }
+
+    private func exportPDF() {
+        guard let url = TripPDFExporter.writeTemporaryFile(
+            trip: trip,
+            days: store.days,
+            places: store.places,
+            reservations: store.reservations,
+            expenses: store.expenses
+        ) else {
+            errorText = "Couldn't build the PDF. Try again."
+            return
+        }
+        exportURL = url
+        showShareSheet = true
+        LiggaHaptics.success()
     }
 
     private var tabBar: some View {
