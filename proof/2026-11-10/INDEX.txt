@@ -3,14 +3,17 @@ Wanderer proof index — 2026-11-10
 00-signin-email-only.png        Email-only Clerk sign-in (light).
 00-signin-email-only-dark.png   Email-only Clerk sign-in in dark mode.
 01-signup.png                   Clerk sign-up submitted; "Check your email" (no code shown).
-02-verify-email.png             The code entry step before verification (no code shown).
+02-verify-email.png             Code entry step before verification (no code shown).
 03-trips-signed-in.png          Signed-in home with the "Yoink Test Trip" created through the app.
 04-trip-places.png              Trip detail reading two places from D1, routed on the map.
 05-file-upload.png              e2e-receipt.txt uploaded to R2 and listed for the trip.
 06-signout.png                  Sign-in screen after signing out.
 06b-signin-code-sent.png        Sign-in code requested after sign-out (no code shown).
-07-same-account-site.png        yoinklabs.dev recognized arul+wanderertest@undrift.dev and asked
-                                for Clerk's new-device verification code.
+07-same-account-site.png        yoinklabs.dev asked for new-device verification for
+                                arul+wanderertest@undrift.dev.
+07b-site-signed-in.png          After verification: the site opens signed in (no sign-in prompt).
+07c-site-session.png            Clerk API: active sessions for user_3LvlIepc... — the same
+                                subject stored in the app's D1 identities row.
 08-worker-health.png            api.yoinklabs.dev/health returns {"ok":true}.
 10-tests-worker.png             Worker test run (51 passing).
 10-tests-swift.png              Swift unit tests (24 passing).
