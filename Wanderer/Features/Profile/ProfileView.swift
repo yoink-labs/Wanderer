@@ -12,6 +12,8 @@ struct ProfileView: View {
     @AppStorage("wanderer.units") private var units = "Metric"
 
     @State private var backendMode = BackendMode.current
+    @State private var showDeleteAccountConfirm = false
+    @State private var isDeletingAccount = false
     @State private var didApplyRemoteSettings = false
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarSavedCount = 0
@@ -94,6 +96,10 @@ struct ProfileView: View {
                     }
 
                     signOutButton
+
+                if canDeleteAccount {
+                    deleteAccountButton
+                }
                 }
                 .padding(.horizontal, gutter)
                 .padding(.top, 8)
@@ -472,6 +478,54 @@ struct ProfileView: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+
+    private var canDeleteAccount: Bool {
+        !isGuest && auth.isAuthenticated && BackendMode.current == .cloud
+    }
+
+    /// Only offered on the cloud backend: the Worker has a delete endpoint and
+    /// can remove the account's trips and media. The Supabase path has no
+    /// equivalent, so it is not shown there.
+    private var deleteAccountButton: some View {
+        Button(role: .destructive) {
+            showDeleteAccountConfirm = true
+        } label: {
+            Group {
+                if isDeletingAccount {
+                    ProgressView().tint(WandererTheme.coralDeep)
+                } else {
+                    Text("Delete account")
+                        .font(.ligga(.subheadline, weight: .semibold))
+                }
+            }
+            .foregroundStyle(WandererTheme.coralDeep)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDeletingAccount)
+        .confirmationDialog(
+            "Delete your Wanderer account?",
+            isPresented: $showDeleteAccountConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete account and all trips", role: .destructive) {
+                Task {
+                    isDeletingAccount = true
+                    defer { isDeletingAccount = false }
+                    do {
+                        try await CloudSession.shared.api?.deleteAccount()
+                        await auth.signOut()
+                    } catch {
+                        profileStore.errorMessage = "Couldn't delete the account: \(error.localizedDescription)"
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes your trips, places, bookings, expenses and files. It cannot be undone.")
+        }
     }
 
     // MARK: - Helpers

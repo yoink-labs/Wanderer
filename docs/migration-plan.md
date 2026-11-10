@@ -88,6 +88,10 @@ Still open:
 - The Worker has not been deployed, no D1/R2 resources exist yet, and no
   Supabase data has been imported.
 - Media signing secret, Clerk JWKS/issuer/parties and Resend keys are not set.
+- Account deletion is implemented for the cloud backend (Worker endpoint,
+  confirmation body, app button in Profile) and leaves a fresh empty account
+  on next sign-in because Clerk owns the identity. Supabase mode has no delete
+  endpoint, so the button is hidden there.
 
 ### Phase C — UI/UX
 

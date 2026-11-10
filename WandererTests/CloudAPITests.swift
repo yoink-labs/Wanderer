@@ -201,6 +201,18 @@ final class CloudAPITests: XCTestCase {
         XCTAssertEqual(url.path, "/media/trips/a/b.pdf")
     }
 
+    func testDeleteAccountSendsConfirmationBody() async throws {
+        respond(200, #"{"deleted":true}"#)
+        try await api().deleteAccount()
+
+        let request = try XCTUnwrap(StubURLProtocol.requests.first)
+        XCTAssertEqual(request.httpMethod, "DELETE")
+        XCTAssertEqual(request.url?.path, "/v1/me")
+        let body = try XCTUnwrap(request.capturedBody)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(object["confirm"] as? String, "delete")
+    }
+
     func testTripRecordWithoutPlaceCountStillDecodes() throws {
         let json = """
         {

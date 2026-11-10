@@ -24,7 +24,7 @@ JSON it always did.
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/health` | readiness |
-| GET/PATCH | `/v1/me` | profile |
+| GET/PATCH/DELETE | `/v1/me` | profile; DELETE needs `{"confirm":"delete"}` |
 | POST | `/v1/me/avatar` | raw image bytes |
 | GET/POST | `/v1/trips` | list / create (creates days from the date range) |
 | GET/PATCH/DELETE | `/v1/trips/:tripId` | owner-only delete |

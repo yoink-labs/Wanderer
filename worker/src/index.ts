@@ -457,6 +457,36 @@ on("PATCH", "/v1/me", async ({ env, request, user }) => {
   return json(row);
 });
 
+on("DELETE", "/v1/me", async ({ env, request, user }) => {
+  // A body confirmation keeps an accidental DELETE (or a retried proxy call)
+  // from wiping an account.
+  const body = await readJson<Record<string, unknown>>(request).catch(() => ({}) as Record<string, unknown>);
+  if (body.confirm !== "delete") {
+    throw new ApiError(400, "confirmation_required", 'Send {"confirm":"delete"} to delete the account.');
+  }
+
+  const trips = await env.DB.prepare("SELECT id FROM trips WHERE owner_id = ?")
+    .bind(user.id)
+    .all<{ id: string }>();
+  for (const trip of trips.results ?? []) {
+    // Best effort: media is not transactional with D1.
+    const prefix = `trips/${trip.id}/`;
+    const objects = await env.MEDIA.list({ prefix }).catch(() => null);
+    for (const object of objects?.objects ?? []) {
+      await env.MEDIA.delete(object.key).catch(() => undefined);
+    }
+    const covers = await env.MEDIA.list({ prefix: `public/covers/${trip.id}/` }).catch(() => null);
+    for (const object of covers?.objects ?? []) {
+      await env.MEDIA.delete(object.key).catch(() => undefined);
+    }
+  }
+
+  // Cascades remove trips (owner), memberships, content, invites, visited
+  // places and the identity row.
+  await env.DB.prepare("DELETE FROM profiles WHERE id = ?").bind(user.id).run();
+  return json({ deleted: true });
+});
+
 on("POST", "/v1/me/avatar", async ({ env, request, user }) => {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.startsWith("image/")) {

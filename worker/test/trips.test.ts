@@ -167,6 +167,48 @@ describe("trips", () => {
   });
 });
 
+describe("account deletion", () => {
+  it("requires explicit confirmation", async () => {
+    const mine = await json(await call("GET", "/v1/me", { token: token("owner_delete_me") }));
+    const response = await call("DELETE", "/v1/me", { token: token("owner_delete_me"), body: {} });
+    expect(response.status).toBe(400);
+    expect((await call("GET", "/v1/me", { token: token("owner_delete_me") })).status).toBe(200);
+    expect(mine.id).toBeTruthy();
+  });
+
+  it("deletes owned trips and memberships but leaves other people's data", async () => {
+    const trip = await createTrip("owner_delete_me_b");
+    const mateId = await seedProfile("delete_mate", "mate@example.com");
+    await addMember(trip.id, mateId);
+
+    const other = await createTrip("owner_survives");
+
+    const response = await call("DELETE", "/v1/me", {
+      token: token("owner_delete_me_b"),
+      body: { confirm: "delete" },
+    });
+    expect(response.status).toBe(200);
+
+    // Signing in again provisions a fresh, empty account (Clerk owns identity).
+    const revived = await call("GET", "/v1/trips", { token: token("owner_delete_me_b") });
+    expect(revived.status).toBe(200);
+    expect(await json(revived)).toHaveLength(0);
+
+    // The trip is gone for the co-member too.
+    const mateView = await call("GET", `/v1/trips/${trip.id}`, { token: token("delete_mate") });
+    expect(mateView.status).toBe(404);
+
+    // Another account is untouched.
+    const survivor = await call("GET", `/v1/trips/${other.id}`, { token: token("owner_survives") });
+    expect(survivor.status).toBe(200);
+
+    const rows = await env.DB.prepare("SELECT COUNT(*) AS count FROM trip_members WHERE user_id = ?")
+      .bind(mateId)
+      .first<{ count: number }>();
+    expect(rows?.count).toBe(0);
+  });
+});
+
 describe("idempotency", () => {
   it("replays a POST with the same key", async () => {
     const key = "idem-1";

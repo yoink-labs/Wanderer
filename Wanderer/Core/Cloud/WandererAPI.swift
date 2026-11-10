@@ -127,6 +127,21 @@ struct WandererAPI: Sendable {
         try await upload("/v1/me/avatar", data: data, contentType: contentType)
     }
 
+    /// Deletes the account and everything it owns. Irreversible.
+    func deleteAccount() async throws {
+        var request = try await makeRequest(
+            method: "DELETE",
+            path: "/v1/me",
+            query: [],
+            authenticated: true,
+            idempotent: false
+        )
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = try encoder.encode(["confirm": JSONValue.string("delete")])
+        let (data, response) = try await execute(request)
+        try validate(response, data: data)
+    }
+
     // MARK: - Trips
 
     func trips() async throws -> [TripRecord] {
