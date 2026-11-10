@@ -37,7 +37,13 @@ final class AuthStore: ObservableObject {
         }
     }
 
-    var isAuthenticated: Bool { session != nil || clerkSession != nil }
+    var isAuthenticated: Bool {
+        if session != nil || clerkSession != nil { return true }
+        #if DEBUG
+        if CloudSession.shared.debugToken != nil { return true }
+        #endif
+        return false
+    }
 
     var userEmail: String {
         session?.user.email ?? clerkSession?.email ?? ""

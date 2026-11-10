@@ -393,6 +393,17 @@ function on(method: string, pattern: string, handler: Handler): void {
   routes.push({ method, pattern, handler });
 }
 
+/**
+ * Swift renders UUIDs in uppercase while D1 stores the lowercase ids we
+ * generate, and SQLite compares text case-sensitively. Normalize UUID-shaped
+ * path segments so both spellings address the same row.
+ */
+function normalizeId(value: string): string {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value)
+    ? value.toLowerCase()
+    : value;
+}
+
 function matchPattern(pattern: string, pathname: string): Record<string, string> | null {
   const patternParts = pattern.split("/").filter(Boolean);
   const pathParts = pathname.split("/").filter(Boolean);
@@ -402,7 +413,7 @@ function matchPattern(pattern: string, pathname: string): Record<string, string>
     const expected = patternParts[index];
     const actual = pathParts[index];
     if (expected.startsWith(":")) {
-      params[expected.slice(1)] = decodeURIComponent(actual);
+      params[expected.slice(1)] = normalizeId(decodeURIComponent(actual));
     } else if (expected !== actual) {
       return null;
     }

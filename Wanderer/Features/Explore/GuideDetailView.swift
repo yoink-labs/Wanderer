@@ -4,6 +4,7 @@ struct GuideDetailView: View {
     let guide: GuideRecord
     @ObservedObject var store: ExploreStore
 
+    @EnvironmentObject private var auth: AuthStore
     @StateObject private var tripsStore = TripsStore()
     @AppStorage("wanderer.isGuest") private var isGuest = false
 
@@ -31,7 +32,7 @@ struct GuideDetailView: View {
 
     private var canCopy: Bool {
         !isGuest && !places.isEmpty && !isRequestingPlaces && copyState != .copying
-            && WandererSupabase.client.auth.currentSession != nil
+            && auth.isAuthenticated
     }
 
     var body: some View {
@@ -150,7 +151,7 @@ struct GuideDetailView: View {
         if case .copied(let title) = copyState {
             return "“\(title)” is on your Trips tab with \(places.count) \(places.count == 1 ? "stop" : "stops") to schedule."
         }
-        if isGuest || WandererSupabase.client.auth.currentSession == nil {
+        if isGuest || !auth.isAuthenticated {
             return "Sign in to copy guides into your trips."
         }
         if !isRequestingPlaces && places.isEmpty {

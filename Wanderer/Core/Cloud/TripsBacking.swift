@@ -45,10 +45,28 @@ final class CloudSession: @unchecked Sendable {
     func currentToken() async -> String? {
         let state = snapshot()
         if let provider = state.provider {
-            return await provider()
+            if let token = await provider() {
+                return token
+            }
         }
-        return state.token
+        if let token = state.token {
+            return token
+        }
+        #if DEBUG
+        // Local integration runs set WANDERER_TEST_TOKEN. The Worker only
+        // accepts `test:` tokens when it is itself in test mode.
+        if let debugToken = ProcessInfo.processInfo.environment["WANDERER_TEST_TOKEN"] {
+            return debugToken
+        }
+        #endif
+        return nil
     }
+
+    #if DEBUG
+    var debugToken: String? {
+        ProcessInfo.processInfo.environment["WANDERER_TEST_TOKEN"]
+    }
+    #endif
 
     var api: WandererAPI? {
         guard BackendMode.isCloudAvailable else { return nil }

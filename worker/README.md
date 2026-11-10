@@ -80,6 +80,23 @@ npx wrangler d1 migrations apply wanderer --remote
 npx wrangler secret put MEDIA_SIGNING_SECRET
 ```
 
+## Local end-to-end with the iOS app
+
+The Worker accepts test subjects only in test mode, and the app only sends them
+in Debug builds:
+
+```bash
+cd worker
+npx wrangler d1 migrations apply wanderer --local
+npx wrangler dev --port 8787 --var ENVIRONMENT:test --var ALLOW_TEST_AUTH:true
+```
+
+Then point `Config/Cloud.local.xcconfig` at `http://127.0.0.1:8787` and launch
+with `SIMCTL_CHILD_WANDERER_TEST_TOKEN=test:<subject>` and
+`-wanderer.backendMode cloud`. Release builds cannot produce the test header
+and the Worker rejects it unless `ENVIRONMENT === "test"` and
+`ALLOW_TEST_AUTH === "true"`.
+
 ## Test-only auth
 
 `Authorization: Bearer test:<subject>` is accepted only when

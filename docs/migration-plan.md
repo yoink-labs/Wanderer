@@ -66,16 +66,28 @@ Done:
 - 12 Swift tests cover request shaping, decoding, auth failure, offline
   mapping, error mapping and Clerk JWT/error parsing.
 
+- The remaining stores now have cloud paths too: trip detail (days, places,
+  bookings, expenses + splits, settlements, checklist, members), profile,
+  guides/explore, visited places, share/invites and attachments. Supabase stays
+  the default; cloud mode is selected in Profile when configured.
+- Verified end to end locally: the app read a trip, its days and a mapped place
+  from a local `wrangler dev` Worker + D1. That run also caught a real bug --
+  Swift sends uppercase UUIDs and D1 compares text case-sensitively -- which is
+  now normalized in the Worker with a regression test.
+
 Still open:
 
 - Sign-in has not been exercised against a live Clerk instance (no keys in
   this worktree), so "same Yoink account works in the app and the site" is not
-  claimed.
-- The remaining stores (trip detail, profile, guides, visited, share,
-  attachments) still call Supabase directly.
+  claimed. The Clerk client follows the public Frontend API; bot protection and
+  CAPTCHA policy on the Clerk instance still need to be checked.
 - Google/Apple/Facebook buttons are still not wired; in cloud mode they should
   go through Clerk OAuth.
-- Polling replaces Supabase Realtime for collaboration.
+- Supabase Realtime is replaced by a load-on-open fetch; live collaboration is
+  not built.
+- The Worker has not been deployed, no D1/R2 resources exist yet, and no
+  Supabase data has been imported.
+- Media signing secret, Clerk JWKS/issuer/parties and Resend keys are not set.
 
 ### Phase C — UI/UX
 

@@ -10,11 +10,33 @@ final class ShareStore: ObservableObject {
 
     private let client: SupabaseClient
 
+    /// Whether the last cloud invite was actually emailed, so the caller can
+    /// fall back to the Mail sheet when Resend is not configured.
+    private(set) var lastInviteWasEmailed = false
+
     init(client: SupabaseClient = WandererSupabase.client) {
         self.client = client
     }
 
+    private var cloud: WandererAPI? {
+        BackendMode.current == .cloud ? CloudSession.shared.api : nil
+    }
+
     func load(tripID: UUID) async {
+        if let cloud {
+            isLoading = true
+            defer { isLoading = false }
+            do {
+                members = try await cloud.members(tripID: tripID).map {
+                    TripMemberRecord(tripId: tripID, userId: $0.userId, role: $0.role)
+                }
+                invites = try await cloud.invites(tripID: tripID)
+            } catch {
+                errorMessage = "Couldn't load the people on this trip: \(error.localizedDescription)"
+            }
+            return
+        }
+
         guard WandererSupabase.client.auth.currentSession != nil else { return }
         isLoading = true
         defer { isLoading = false }
@@ -37,6 +59,11 @@ final class ShareStore: ObservableObject {
     }
 
     func sendInviteEmail(trip: Trip, to: String, inviterName: String) async -> Bool {
+        if cloud != nil {
+            // The Worker sends the email as part of creating the invite.
+            return lastInviteWasEmailed
+        }
+
         do {
             let session = try await client.auth.session
             let endpoint = SupabaseConfig.url.appendingPathComponent("functions/v1/send-trip-invite")
@@ -65,6 +92,18 @@ final class ShareStore: ObservableObject {
     func invite(tripID: UUID, email: String) async -> Bool {
         let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard trimmed.contains("@"), trimmed.contains(".") else { return false }
+
+        if let cloud {
+            do {
+                let result = try await cloud.createInvite(tripID: tripID, email: trimmed)
+                lastInviteWasEmailed = result.emailed
+                await load(tripID: tripID)
+                return true
+            } catch {
+                errorMessage = "Couldn't save that invite: \(error.localizedDescription)"
+                return false
+            }
+        }
 
         do {
             let payload = NewInvitePayload(tripId: tripID.uuidString, email: trimmed, role: TripRole.editor.rawValue)

@@ -14,6 +14,7 @@ final class TripDetailStore: ObservableObject {
     @Published private(set) var members: [TripMemberProfile] = []
     @Published private(set) var checklist: [ChecklistRecord] = []
     @Published private(set) var isLoading = false
+    @Published private(set) var cloudUserId: UUID?
     @Published var errorMessage: String?
 
     private let client: SupabaseClient
@@ -21,6 +22,10 @@ final class TripDetailStore: ObservableObject {
     init(trip: Trip, client: SupabaseClient = WandererSupabase.client) {
         self.trip = trip
         self.client = client
+    }
+
+    private var cloud: WandererAPI? {
+        BackendMode.current == .cloud ? CloudSession.shared.api : nil
     }
 
     var totalExpenses: Double {
@@ -66,7 +71,8 @@ final class TripDetailStore: ObservableObject {
     }
 
     var currentUserId: UUID? {
-        WandererSupabase.client.auth.currentSession?.user.id
+        if cloud != nil { return cloudUserId }
+        return WandererSupabase.client.auth.currentSession?.user.id
     }
 
     func places(for dayID: UUID?) -> [PlaceRecord] {
@@ -80,6 +86,11 @@ final class TripDetailStore: ObservableObject {
     }
 
     func load() async {
+        if let cloud {
+            await loadFromCloud(cloud)
+            return
+        }
+
         isLoading = true
         defer { isLoading = false }
 
@@ -154,6 +165,39 @@ final class TripDetailStore: ObservableObject {
         }
     }
 
+    /// One round trip per collection in parallel. The Worker returns the same
+    /// row shapes the Supabase queries did, so no mapping is needed.
+    private func loadFromCloud(_ cloud: WandererAPI) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            async let daysTask = cloud.days(tripID: trip.id)
+            async let placesTask = cloud.places(tripID: trip.id)
+            async let reservationsTask = cloud.reservations(tripID: trip.id)
+            async let expensesTask = cloud.expenses(tripID: trip.id)
+            async let checklistTask = cloud.checklist(tripID: trip.id)
+            async let membersTask = cloud.members(tripID: trip.id)
+            async let splitsTask = cloud.expenseSplits(tripID: trip.id)
+            async let settlementsTask = cloud.settlements(tripID: trip.id)
+
+            let (loadedDays, loadedPlaces, loadedReservations, loadedExpenses, loadedChecklist, loadedMembers, loadedSplits, loadedSettlements) =
+                try await (daysTask, placesTask, reservationsTask, expensesTask, checklistTask, membersTask, splitsTask, settlementsTask)
+
+            days = loadedDays
+            places = loadedPlaces
+            reservations = loadedReservations
+            expenses = loadedExpenses
+            checklist = loadedChecklist
+            members = loadedMembers
+            expenseSplits = loadedSplits
+            settlements = loadedSettlements
+            cloudUserId = try? await cloud.profile().id
+            errorMessage = nil
+        } catch {
+            errorMessage = "Couldn't load this trip: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Places
 
     func addPlace(
@@ -166,6 +210,27 @@ final class TripDetailStore: ObservableObject {
         website: String? = nil,
         phone: String? = nil
     ) async {
+        if let cloud {
+            do {
+                let position = (places(for: dayID).map(\.position).max() ?? -1) + 1
+                _ = try await cloud.addPlace(tripID: trip.id, body: [
+                    "day_id": .optional(dayID),
+                    "name": .string(name),
+                    "address": .optional(address),
+                    "lat": .optional(latitude),
+                    "lng": .optional(longitude),
+                    "category": .string(category.rawValue),
+                    "website": .optional(website),
+                    "phone": .optional(phone),
+                    "position": .integer(position)
+                ])
+                await reloadPlaces()
+            } catch {
+                errorMessage = "Couldn't add that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let session = try await client.auth.session
             let position = (places(for: dayID).map(\.position).max() ?? -1) + 1
@@ -190,6 +255,20 @@ final class TripDetailStore: ObservableObject {
     }
 
     func updatePlace(_ place: PlaceRecord, name: String, notes: String?, category: PlaceCategory) async {
+        if let cloud {
+            do {
+                _ = try await cloud.updatePlace(tripID: trip.id, placeID: place.id, body: [
+                    "name": .string(name),
+                    "notes": .optional(notes),
+                    "category": .string(category.rawValue)
+                ])
+                await reloadPlaces()
+            } catch {
+                errorMessage = "Couldn't save that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let payload = PlaceUpdatePayload(name: name, notes: notes, category: category.rawValue)
             try await client.from("places").update(payload).eq("id", value: place.id.uuidString).execute()
@@ -200,6 +279,16 @@ final class TripDetailStore: ObservableObject {
     }
 
     func deletePlace(_ place: PlaceRecord) async {
+        if let cloud {
+            do {
+                try await cloud.deletePlace(tripID: trip.id, placeID: place.id)
+                places.removeAll { $0.id == place.id }
+            } catch {
+                errorMessage = "Couldn't remove that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("places").delete().eq("id", value: place.id.uuidString).execute()
             places.removeAll { $0.id == place.id }
@@ -214,6 +303,15 @@ final class TripDetailStore: ObservableObject {
         places = places.filter { $0.dayId != dayID } + items
 
         for (index, item) in items.enumerated() where item.position != index {
+            if let cloud {
+                do {
+                    _ = try await cloud.updatePlace(tripID: trip.id, placeID: item.id, body: ["position": .integer(index)])
+                } catch {
+                    errorMessage = "Couldn't reorder places: \(error.localizedDescription)"
+                    return
+                }
+                continue
+            }
             do {
                 try await client.from("places")
                     .update(["position": index])
@@ -252,10 +350,14 @@ final class TripDetailStore: ObservableObject {
 
         do {
             for (index, place) in finalOrder.enumerated() {
-                try await client.from("places")
-                    .update(["position": index])
-                    .eq("id", value: place.id.uuidString)
-                    .execute()
+                if let cloud {
+                    _ = try await cloud.updatePlace(tripID: trip.id, placeID: place.id, body: ["position": .integer(index)])
+                } else {
+                    try await client.from("places")
+                        .update(["position": index])
+                        .eq("id", value: place.id.uuidString)
+                        .execute()
+                }
             }
             await reloadPlaces()
         } catch {
@@ -278,6 +380,20 @@ final class TripDetailStore: ObservableObject {
     }
 
     func assign(_ place: PlaceRecord, to dayID: UUID?) async {
+        if let cloud {
+            do {
+                let position = (places(for: dayID).map(\.position).max() ?? -1) + 1
+                _ = try await cloud.updatePlace(tripID: trip.id, placeID: place.id, body: [
+                    "day_id": .optional(dayID),
+                    "position": .integer(position)
+                ])
+                await reloadPlaces()
+            } catch {
+                errorMessage = "Couldn't move that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let position = (places(for: dayID).map(\.position).max() ?? -1) + 1
             let payload = PlaceDayPayload(dayId: dayID?.uuidString, position: position)
@@ -292,6 +408,14 @@ final class TripDetailStore: ObservableObject {
     }
 
     private func reloadPlaces() async {
+        if let cloud {
+            do {
+                places = try await cloud.places(tripID: trip.id)
+            } catch {
+                errorMessage = "Couldn't refresh places: \(error.localizedDescription)"
+            }
+            return
+        }
         do {
             places = try await client.from("places")
                 .select()
@@ -307,6 +431,18 @@ final class TripDetailStore: ObservableObject {
     // MARK: - Days
 
     func updateDayNotes(_ day: TripDayRecord, notes: String) async {
+        if let cloud {
+            do {
+                let updated = try await cloud.updateDay(tripID: trip.id, dayID: day.id, notes: notes.isEmpty ? nil : notes)
+                if let index = days.firstIndex(where: { $0.id == day.id }) {
+                    days[index] = updated
+                }
+            } catch {
+                errorMessage = "Couldn't save the day note: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("trip_days")
                 .update(["notes": notes])
@@ -335,6 +471,28 @@ final class TripDetailStore: ObservableObject {
         currency: String,
         notes: String?
     ) async {
+        if let cloud {
+            do {
+                _ = try await cloud.addReservation(tripID: trip.id, body: [
+                    "type": .string(type.rawValue),
+                    "title": .string(title),
+                    "provider": .optional(provider),
+                    "confirmation_code": .optional(confirmationCode),
+                    "start_at": .optional(Self.timestamp(startAt)),
+                    "end_at": .optional(Self.timestamp(endAt)),
+                    "start_location": .optional(startLocation),
+                    "end_location": .optional(endLocation),
+                    "cost": .optional(cost),
+                    "currency": .string(currency),
+                    "notes": .optional(notes)
+                ])
+                await reloadReservations()
+            } catch {
+                errorMessage = "Couldn't add that reservation: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let payload = NewReservationPayload(
                 tripId: trip.id.uuidString,
@@ -358,6 +516,16 @@ final class TripDetailStore: ObservableObject {
     }
 
     func deleteReservation(_ reservation: ReservationRecord) async {
+        if let cloud {
+            do {
+                try await cloud.deleteReservation(tripID: trip.id, reservationID: reservation.id)
+                reservations.removeAll { $0.id == reservation.id }
+            } catch {
+                errorMessage = "Couldn't remove that reservation: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("reservations").delete().eq("id", value: reservation.id.uuidString).execute()
             reservations.removeAll { $0.id == reservation.id }
@@ -367,6 +535,14 @@ final class TripDetailStore: ObservableObject {
     }
 
     private func reloadReservations() async {
+        if let cloud {
+            do {
+                reservations = try await cloud.reservations(tripID: trip.id)
+            } catch {
+                errorMessage = "Couldn't refresh reservations: \(error.localizedDescription)"
+            }
+            return
+        }
         do {
             reservations = try await client.from("reservations")
                 .select()
@@ -423,6 +599,35 @@ final class TripDetailStore: ObservableObject {
         spentAt: Date,
         notes: String?
     ) async {
+        if let cloud {
+            do {
+                let participants = splitAmounts.keys.map { $0.uuidString }
+                let splitRows: [JSONValue] = splitAmounts.map { userId, share in
+                    .object([
+                        "user_id": .string(userId.uuidString),
+                        "amount": .number(share)
+                    ])
+                }
+                _ = try await cloud.addExpense(tripID: trip.id, body: [
+                    "title": .string(title),
+                    "amount": .number(amount),
+                    "currency": .string(currency),
+                    "category": .string(category.rawValue),
+                    "paid_by": .optional(paidBy),
+                    "split_with": .array(participants.map { .string($0) }),
+                    "split_mode": .string(splitMode.rawValue),
+                    "spent_at": .string(Self.dayString(spentAt)),
+                    "notes": .optional(notes),
+                    "splits": .array(splitRows)
+                ])
+                await reloadExpenses()
+                await reloadSplits()
+            } catch {
+                errorMessage = "Couldn't add that expense: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let participants = splitAmounts.keys.map { $0.uuidString }
             let payload = NewExpensePayload(
@@ -464,6 +669,17 @@ final class TripDetailStore: ObservableObject {
     }
 
     func deleteExpense(_ expense: ExpenseRecord) async {
+        if let cloud {
+            do {
+                try await cloud.deleteExpense(tripID: trip.id, expenseID: expense.id)
+                expenses.removeAll { $0.id == expense.id }
+                expenseSplits.removeAll { $0.expenseId == expense.id }
+            } catch {
+                errorMessage = "Couldn't remove that expense: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("expenses").delete().eq("id", value: expense.id.uuidString).execute()
             expenses.removeAll { $0.id == expense.id }
@@ -474,6 +690,23 @@ final class TripDetailStore: ObservableObject {
     }
 
     func settleUp(from: UUID, to: UUID, amount: Double, currency: String, note: String?) async {
+        if let cloud {
+            do {
+                _ = try await cloud.addSettlement(tripID: trip.id, body: [
+                    "from_user": .string(from.uuidString),
+                    "to_user": .string(to.uuidString),
+                    "amount": .number(amount),
+                    "currency": .string(currency),
+                    "settled_at": .string(Self.dayString(Date())),
+                    "note": .optional(note)
+                ])
+                await reloadSettlements()
+            } catch {
+                errorMessage = "Couldn't record that payment: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let payload = NewSettlementPayload(
                 tripId: trip.id.uuidString,
@@ -493,6 +726,16 @@ final class TripDetailStore: ObservableObject {
     }
 
     func deleteSettlement(_ settlement: SettlementRecord) async {
+        if let cloud {
+            do {
+                try await cloud.deleteSettlement(tripID: trip.id, settlementID: settlement.id)
+                settlements.removeAll { $0.id == settlement.id }
+            } catch {
+                errorMessage = "Couldn't remove that payment: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("settlements").delete().eq("id", value: settlement.id.uuidString).execute()
             settlements.removeAll { $0.id == settlement.id }
@@ -502,6 +745,14 @@ final class TripDetailStore: ObservableObject {
     }
 
     private func reloadExpenses() async {
+        if let cloud {
+            do {
+                expenses = try await cloud.expenses(tripID: trip.id)
+            } catch {
+                errorMessage = "Couldn't refresh expenses: \(error.localizedDescription)"
+            }
+            return
+        }
         do {
             expenses = try await client.from("expenses")
                 .select()
@@ -515,6 +766,14 @@ final class TripDetailStore: ObservableObject {
     }
 
     private func reloadSplits() async {
+        if let cloud {
+            do {
+                expenseSplits = try await cloud.expenseSplits(tripID: trip.id)
+            } catch {
+                errorMessage = "Couldn't refresh the split details: \(error.localizedDescription)"
+            }
+            return
+        }
         do {
             expenseSplits = try await client.from("expense_splits")
                 .select()
@@ -527,6 +786,14 @@ final class TripDetailStore: ObservableObject {
     }
 
     private func reloadSettlements() async {
+        if let cloud {
+            do {
+                settlements = try await cloud.settlements(tripID: trip.id)
+            } catch {
+                errorMessage = "Couldn't refresh the payments: \(error.localizedDescription)"
+            }
+            return
+        }
         do {
             settlements = try await client.from("settlements")
                 .select()
@@ -542,6 +809,17 @@ final class TripDetailStore: ObservableObject {
     // MARK: - Checklist
 
     func addChecklistItem(title: String) async {
+        if let cloud {
+            do {
+                let position = (checklist.map(\.position).max() ?? -1) + 1
+                _ = try await cloud.addChecklistItem(tripID: trip.id, title: title, position: position)
+                await reloadChecklist()
+            } catch {
+                errorMessage = "Couldn't add that item: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let position = (checklist.map(\.position).max() ?? -1) + 1
             let payload = NewChecklistPayload(
@@ -557,6 +835,16 @@ final class TripDetailStore: ObservableObject {
     }
 
     func toggleChecklist(_ item: ChecklistRecord) async {
+        if let cloud {
+            do {
+                _ = try await cloud.updateChecklistItem(tripID: trip.id, itemID: item.id, isChecked: !item.isChecked)
+                await reloadChecklist()
+            } catch {
+                errorMessage = "Couldn't update that item: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("checklist_items")
                 .update(["is_checked": !item.isChecked])
@@ -569,6 +857,16 @@ final class TripDetailStore: ObservableObject {
     }
 
     func deleteChecklistItem(_ item: ChecklistRecord) async {
+        if let cloud {
+            do {
+                try await cloud.deleteChecklistItem(tripID: trip.id, itemID: item.id)
+                checklist.removeAll { $0.id == item.id }
+            } catch {
+                errorMessage = "Couldn't remove that item: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("checklist_items").delete().eq("id", value: item.id.uuidString).execute()
             checklist.removeAll { $0.id == item.id }
@@ -578,6 +876,14 @@ final class TripDetailStore: ObservableObject {
     }
 
     private func reloadChecklist() async {
+        if let cloud {
+            do {
+                checklist = try await cloud.checklist(tripID: trip.id)
+            } catch {
+                errorMessage = "Couldn't refresh the checklist: \(error.localizedDescription)"
+            }
+            return
+        }
         do {
             checklist = try await client.from("checklist_items")
                 .select()

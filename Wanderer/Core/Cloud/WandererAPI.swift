@@ -188,6 +188,11 @@ struct WandererAPI: Sendable {
         try await send("POST", "/v1/trips/\(tripID.uuidString)/places", body: body)
     }
 
+    /// Bulk insert, used when a guide's stops are copied into a trip.
+    func addPlaces(tripID: UUID, rows: [[String: JSONValue]]) async throws -> [PlaceRecord] {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/places", bodyArray: rows)
+    }
+
     func updatePlace(tripID: UUID, placeID: UUID, body: [String: JSONValue]) async throws -> PlaceRecord {
         try await send("PATCH", "/v1/trips/\(tripID.uuidString)/places/\(placeID.uuidString)", body: body)
     }
@@ -198,6 +203,14 @@ struct WandererAPI: Sendable {
 
     func reservations(tripID: UUID) async throws -> [ReservationRecord] {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/reservations")
+    }
+
+    func addReservation(tripID: UUID, body: [String: JSONValue]) async throws -> ReservationRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/reservations", body: body)
+    }
+
+    func deleteReservation(tripID: UUID, reservationID: UUID) async throws {
+        try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/reservations/\(reservationID.uuidString)")
     }
 
     func expenses(tripID: UUID) async throws -> [ExpenseRecord] {
@@ -212,8 +225,41 @@ struct WandererAPI: Sendable {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/settlements")
     }
 
+    func addSettlement(tripID: UUID, body: [String: JSONValue]) async throws -> SettlementRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/settlements", body: body)
+    }
+
+    func deleteSettlement(tripID: UUID, settlementID: UUID) async throws {
+        try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/settlements/\(settlementID.uuidString)")
+    }
+
+    func addExpense(tripID: UUID, body: [String: JSONValue]) async throws -> ExpenseRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/expenses", body: body)
+    }
+
+    func deleteExpense(tripID: UUID, expenseID: UUID) async throws {
+        try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/expenses/\(expenseID.uuidString)")
+    }
+
     func checklist(tripID: UUID) async throws -> [ChecklistRecord] {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/checklist")
+    }
+
+    func addChecklistItem(tripID: UUID, title: String, position: Int) async throws -> ChecklistRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/checklist", body: [
+            "title": .string(title),
+            "position": .integer(position)
+        ])
+    }
+
+    func updateChecklistItem(tripID: UUID, itemID: UUID, isChecked: Bool) async throws -> ChecklistRecord {
+        try await send("PATCH", "/v1/trips/\(tripID.uuidString)/checklist/\(itemID.uuidString)", body: [
+            "is_checked": .bool(isChecked)
+        ])
+    }
+
+    func deleteChecklistItem(tripID: UUID, itemID: UUID) async throws {
+        try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/checklist/\(itemID.uuidString)")
     }
 
     func members(tripID: UUID) async throws -> [TripMemberProfile] {
@@ -222,6 +268,35 @@ struct WandererAPI: Sendable {
 
     func invites(tripID: UUID) async throws -> [TripInviteRecord] {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/invites")
+    }
+
+    /// Creates the invite and asks the server to email it. `emailed` is false
+    /// when Resend is not configured, so the UI can offer the Mail sheet.
+    func createInvite(tripID: UUID, email: String, role: String = "editor") async throws -> (invite: TripInviteRecord, emailed: Bool) {
+        struct Payload: Decodable {
+            let id: UUID
+            let trip_id: UUID
+            let email: String
+            let role: TripRole
+            let accepted_at: String?
+            let email_delivered: Bool?
+        }
+        let payload: Payload = try await send(
+            "POST",
+            "/v1/trips/\(tripID.uuidString)/invites",
+            body: ["email": .string(email), "role": .string(role)],
+            idempotent: true
+        )
+        return (
+            TripInviteRecord(
+                id: payload.id,
+                tripId: payload.trip_id,
+                email: payload.email,
+                role: payload.role,
+                acceptedAt: payload.accepted_at
+            ),
+            payload.email_delivered ?? false
+        )
     }
 
     // MARK: - Files
@@ -305,6 +380,33 @@ struct WandererAPI: Sendable {
             authenticated: authenticated,
             idempotent: idempotent
         )
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError(
+                status: 500,
+                code: "decode_failed",
+                message: "The server sent a response Wanderer could not read."
+            )
+        }
+    }
+
+    private func send<T: Decodable>(
+        _ method: String,
+        _ path: String,
+        bodyArray: [[String: JSONValue]]
+    ) async throws -> T {
+        var request = try await makeRequest(
+            method: method,
+            path: path,
+            query: [],
+            authenticated: true,
+            idempotent: true
+        )
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = try encoder.encode(bodyArray)
+        let (data, response) = try await execute(request)
+        try validate(response, data: data)
         do {
             return try decoder.decode(T.self, from: data)
         } catch {

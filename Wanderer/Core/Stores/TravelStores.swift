@@ -14,9 +14,23 @@ final class ExploreStore: ObservableObject {
         self.client = client
     }
 
+    private var cloud: WandererAPI? {
+        BackendMode.current == .cloud ? CloudSession.shared.api : nil
+    }
+
     func load() async {
         isLoading = true
         defer { isLoading = false }
+
+        if let cloud {
+            do {
+                guides = try await cloud.guides()
+            } catch {
+                errorMessage = "Couldn't load guides: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             guides = try await client.from("guides")
                 .select()
@@ -31,6 +45,16 @@ final class ExploreStore: ObservableObject {
 
     func loadPlaces(for guideID: UUID) async {
         guard placesByGuide[guideID] == nil else { return }
+
+        if let cloud {
+            do {
+                placesByGuide[guideID] = try await cloud.guidePlaces(guideID: guideID)
+            } catch {
+                errorMessage = "Couldn't load this guide: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let places: [GuidePlaceRecord] = try await client.from("guide_places")
                 .select()
@@ -49,6 +73,26 @@ final class ExploreStore: ObservableObject {
     /// this only writes `places` rows, which RLS allows for trip editors.
     func copyPlaces(_ places: [GuidePlaceRecord], intoTrip tripID: UUID) async throws {
         guard !places.isEmpty else { return }
+
+        if let cloud {
+            let rows = places
+                .sorted { $0.position < $1.position }
+                .enumerated()
+                .map { offset, place -> [String: JSONValue] in
+                    [
+                        "name": .string(place.name),
+                        "address": .optional(place.address),
+                        "lat": .optional(place.lat),
+                        "lng": .optional(place.lng),
+                        "notes": .optional(place.notes),
+                        "photo_url": .optional(place.photoUrl),
+                        "position": .integer(offset)
+                    ]
+                }
+            _ = try await cloud.addPlaces(tripID: tripID, rows: rows)
+            return
+        }
+
         let session = try await client.auth.session
         let payloads = places
             .sorted { $0.position < $1.position }
@@ -103,7 +147,22 @@ final class VisitedStore: ObservableObject {
         visited.compactMap(\.year).min()
     }
 
+    private var cloud: WandererAPI? {
+        BackendMode.current == .cloud ? CloudSession.shared.api : nil
+    }
+
     func load() async {
+        if let cloud {
+            isLoading = true
+            defer { isLoading = false }
+            do {
+                visited = try await cloud.visitedPlaces()
+            } catch {
+                errorMessage = "Couldn't load visited places: \(error.localizedDescription)"
+            }
+            return
+        }
+
         guard WandererSupabase.client.auth.currentSession != nil else { return }
         isLoading = true
         defer { isLoading = false }
@@ -119,6 +178,16 @@ final class VisitedStore: ObservableObject {
     }
 
     func add(countryCode: String, city: String?, year: Int?) async {
+        if let cloud {
+            do {
+                _ = try await cloud.addVisited(countryCode: countryCode, city: city, year: year)
+                await load()
+            } catch {
+                errorMessage = "Couldn't add that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let session = try await client.auth.session
             let payload = NewVisitedPayload(
@@ -135,6 +204,16 @@ final class VisitedStore: ObservableObject {
     }
 
     func delete(_ place: VisitedPlaceRecord) async {
+        if let cloud {
+            do {
+                try await cloud.deleteVisited(id: place.id)
+                visited.removeAll { $0.id == place.id }
+            } catch {
+                errorMessage = "Couldn't remove that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             try await client.from("visited_places").delete().eq("id", value: place.id.uuidString).execute()
             visited.removeAll { $0.id == place.id }
@@ -158,7 +237,22 @@ final class ProfileStore: ObservableObject {
         self.client = client
     }
 
+    private var cloud: WandererAPI? {
+        BackendMode.current == .cloud ? CloudSession.shared.api : nil
+    }
+
     func load() async {
+        if let cloud {
+            isLoading = true
+            defer { isLoading = false }
+            do {
+                profile = try await cloud.profile()
+            } catch {
+                errorMessage = "Couldn't load your profile: \(error.localizedDescription)"
+            }
+            return
+        }
+
         guard WandererSupabase.client.auth.currentSession != nil else { return }
         isLoading = true
         defer { isLoading = false }
@@ -178,6 +272,16 @@ final class ProfileStore: ObservableObject {
 
     func update(locale: String, currency: String, units: String) async {
         guard let profile else { return }
+
+        if let cloud {
+            do {
+                self.profile = try await cloud.updateProfile(locale: locale, currency: currency, units: units)
+            } catch {
+                errorMessage = "Couldn't save your settings: \(error.localizedDescription)"
+            }
+            return
+        }
+
         do {
             let payload = ProfileUpdatePayload(locale: locale, currency: currency, units: units)
             let updated: ProfileRecord = try await client.from("profiles")
@@ -196,6 +300,11 @@ final class ProfileStore: ObservableObject {
     /// Head-only count of trips the user can see (owned or shared). Leaves
     /// `tripCount` nil on failure so the UI can hide the stat instead of showing 0.
     func loadTripCount() async {
+        if let cloud {
+            tripCount = try? await cloud.trips().count
+            return
+        }
+
         guard client.auth.currentSession != nil else { return }
         do {
             let response = try await client.from("trips")
@@ -218,6 +327,16 @@ final class ProfileStore: ObservableObject {
         errorMessage = nil
         isUploadingAvatar = true
         defer { isUploadingAvatar = false }
+
+        if let cloud {
+            do {
+                self.profile = try await cloud.uploadAvatar(imageData)
+                return true
+            } catch {
+                errorMessage = "Couldn't update your photo: \(error.localizedDescription)"
+                return false
+            }
+        }
 
         do {
             let session = try await client.auth.session

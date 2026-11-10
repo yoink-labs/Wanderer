@@ -146,6 +146,17 @@ describe("trips", () => {
     expect(days).toHaveLength(5);
   });
 
+  it("accepts uppercase UUID path segments from Swift", async () => {
+    const trip = await createTrip("owner_case");
+    const upper = trip.id.toUpperCase();
+    const response = await call("GET", `/v1/trips/${upper}`, { token: token("owner_case") });
+    expect(response.status).toBe(200);
+    expect((await json(response)).id).toBe(trip.id);
+
+    const places = await call("GET", `/v1/trips/${upper}/places`, { token: token("owner_case") });
+    expect(places.status).toBe(200);
+  });
+
   it("rejects unknown fields instead of guessing", async () => {
     const response = await call("POST", "/v1/trips", {
       token: token("owner_unknown"),
