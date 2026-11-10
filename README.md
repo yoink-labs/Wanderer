@@ -125,7 +125,7 @@ and planner geometry.
 ## Cloud backend
 
 `worker/` is the Cloudflare Worker + D1 + R2 backend. It is deployed at
-`https://wanderer-api.arulsharma1028.workers.dev` and the app defaults to it.
+`https://api.yoinklabs.dev` and the app defaults to it.
 Supabase remains as a compile-time fallback and is not retired.
 
 ```bash

@@ -110,24 +110,34 @@ Still open:
 
 | Resource | Name / value |
 | --- | --- |
-| Worker | `wanderer-api` at `https://wanderer-api.arulsharma1028.workers.dev` |
-| D1 | `wanderer` (`d3bda4a5-ce71-4ee2-92d8-f98d1e307351`), migration `0001_init.sql` applied |
+| Cloudflare account | Yoink Labs (`2bc9c3c136a62ea9dcbddaa6f59edca4`) |
+| Worker | `wanderer-api` at `https://api.yoinklabs.dev` (custom domain on the yoinklabs.dev zone) |
+| D1 | `wanderer` (`4c188d7a-41d6-40aa-8169-c3dba07482c0`), migrations 0001–0003 applied |
 | R2 | `wanderer-media` |
 | Clerk | Yoink Labs production instance, issuer `https://clerk.yoinklabs.dev` |
-| Media signing | Worker secret set with `wrangler secret put` |
+| Secrets | `MEDIA_SIGNING_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` set with `wrangler secret put` (never printed or committed) |
 
-Blocked at this point:
+The first deployment landed in the ADE Cloudflare account by mistake. That
+Worker, D1 database and R2 bucket were deleted, and the stack was recreated in
+the Yoink Labs account that hosts `yoink-lab-web` and the `yoinklabs.dev` zone.
 
-- `yoinklabs.dev` is not a zone in the Cloudflare account available on this
-  Mac (only `ade-app.dev` is), so `api.yoinklabs.dev` cannot be attached. The
-  Worker stays on workers.dev until the zone is reachable.
-- No Supabase access token or database password is present on this Mac, so the
-  production export/import cannot run.
-- No Resend key is readable locally (the website keeps it as a Worker secret),
-  so invite email is unconfigured and the app falls back to the Mail sheet.
-- `CLERK_AUTHORIZED_PARTIES` is intentionally empty until a real session token
-  shows the native `azp`; pinning it is a follow-up. Signature and issuer are
-  enforced.
+Backend default for this cutover:
+
+- New installs and new sign-ups use the cloud backend.
+- A device that already holds a Supabase session stays on Supabase
+  (`wanderer.hasSupabaseAccount`), so no existing trips disappear before the
+  import. Cloud becomes the default for everyone after the import.
+
+Still open:
+
+- Production Supabase export credentials are not on this Mac, so no rows have
+  been imported. The importer and its tests are ready.
+- The Clerk Backend API exposes no native-application endpoint, so registering
+  the bundle ID remains a dashboard action. Native API sign-in itself works;
+  `CLERK_AUTHORIZED_PARTIES` is set to the two site origins plus
+  `com.wanderer.ios` and will be confirmed against the first real session token.
+- Invite email is configured with the website's verified Resend sender; a live
+  invite send is still to be exercised.
 
 ## Data import
 

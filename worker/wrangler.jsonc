@@ -1,26 +1,29 @@
 {
   "name": "wanderer-api",
+  "account_id": "2bc9c3c136a62ea9dcbddaa6f59edca4",
   "main": "src/index.ts",
-    "compatibility_date": "2026-09-01",
+  "compatibility_date": "2026-09-01",
   "observability": { "enabled": true },
   "vars": {
     "ENVIRONMENT": "production",
     "CLERK_ISSUER": "https://clerk.yoinklabs.dev",
     "CLERK_JWKS_URL": "https://clerk.yoinklabs.dev/.well-known/jwks.json",
-    "CLERK_AUTHORIZED_PARTIES": "",
-    "RESEND_FROM_EMAIL": "",
+    "CLERK_AUTHORIZED_PARTIES": "https://yoinklabs.dev,https://www.yoinklabs.dev,com.wanderer.ios",
     "APP_SHARE_BASE_URL": "https://yoinklabs.dev"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "wanderer",
-      "database_id": "d3bda4a5-ce71-4ee2-92d8-f98d1e307351",
+      "database_id": "4c188d7a-41d6-40aa-8169-c3dba07482c0",
       "migrations_dir": "migrations"
     }
   ],
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "wanderer-media" }
   ],
-  "kv_namespaces": []
+  "kv_namespaces": [],
+  "routes": [
+    { "pattern": "api.yoinklabs.dev", "custom_domain": true }
+  ]
 }
