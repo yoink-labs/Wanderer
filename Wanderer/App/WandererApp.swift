@@ -1,3 +1,4 @@
+import ClerkKit
 import SwiftUI
 import UIKit
 
@@ -11,6 +12,9 @@ struct WandererApp: App {
     }
 
     init() {
+        if let key = CloudConfiguration.clerkPublishableKey, !key.isEmpty {
+            Clerk.configure(publishableKey: key)
+        }
         Self.configureBars()
     }
 

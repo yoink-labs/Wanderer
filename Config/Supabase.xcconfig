@@ -7,8 +7,8 @@ SUPABASE_PUBLISHABLE_KEY =
 
 // Cloudflare Worker API + Clerk (same Yoink identity as yoinklabs.dev).
 // Put local values in Cloud.local.xcconfig (gitignored).
-CLOUD_API_URL =
-CLERK_FRONTEND_API =
-CLERK_PUBLISHABLE_KEY =
+CLOUD_API_URL = https:/$()/wanderer-api.arulsharma1028.workers.dev
+CLERK_FRONTEND_API = https:/$()/clerk.yoinklabs.dev
+CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsueW9pbmtsYWJzLmRldiQ
 
 #include? "Cloud.local.xcconfig"

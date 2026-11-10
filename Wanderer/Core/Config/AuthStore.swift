@@ -1,3 +1,4 @@
+import ClerkKit
 import Foundation
 import Supabase
 
@@ -8,27 +9,34 @@ enum WandererSupabase {
     )
 }
 
+enum AuthMode {
+    case signIn
+    case signUp
+}
+
 /// Authentication for both backends.
 ///
-/// - **Supabase** (current default): the existing email/password session.
-/// - **Clerk** (cloud mode): the same Yoink Labs production instance the
-///   website uses. The session JWT is what the Worker verifies; the app keeps
-///   the Clerk client token in the Keychain so sign-in survives relaunch.
+/// - **Clerk** (default): the same Yoink Labs production instance as
+///   yoinklabs.dev. Sign-in is email + verification code; the Clerk iOS SDK
+///   owns the session, refresh and secure storage.
+/// - **Supabase** (legacy): the previous email/password session, kept only
+///   while the cloud backend is unavailable so the app still builds and runs.
 @MainActor
 final class AuthStore: ObservableObject {
-    @Published private(set) var session: Session?
-    @Published private(set) var clerkSession: ClerkSession?
+    @Published private(set) var session: Supabase.Session?
     @Published private(set) var isRestoring = true
     @Published private(set) var isWorking = false
     @Published var errorMessage: String?
 
+    /// Set once a Clerk code has been sent, so the sheet can show the code step.
+    @Published private(set) var awaitingCode = false
+    @Published private(set) var pendingEmail: String?
+    @Published private(set) var pendingMode: AuthMode = .signIn
+
+    private var signedInUserID: String?
+    private var signedInEmail: String?
+
     private let client: SupabaseClient
-    private let clerkStore = ClerkSessionStore()
-    private var clerkClient: ClerkAuthClient? {
-        guard let domain = CloudConfiguration.clerkFrontendAPI,
-              let url = URL(string: domain) else { return nil }
-        return ClerkAuthClient(frontendAPI: url)
-    }
 
     init(client: SupabaseClient = WandererSupabase.client) {
         self.client = client
@@ -37,20 +45,21 @@ final class AuthStore: ObservableObject {
         }
     }
 
+    var usesClerk: Bool { BackendMode.isCloudAvailable }
+
     var isAuthenticated: Bool {
-        if session != nil || clerkSession != nil { return true }
-        #if DEBUG
-        if CloudSession.shared.debugToken != nil { return true }
-        #endif
-        return false
+        if usesClerk { return signedInUserID != nil }
+        return session != nil
+    }
+
+    var userID: String? {
+        if usesClerk { return signedInUserID }
+        return session?.user.id.uuidString
     }
 
     var userEmail: String {
-        session?.user.email ?? clerkSession?.email ?? ""
-    }
-
-    var usesClerk: Bool {
-        BackendMode.current == .cloud && BackendMode.isCloudAvailable
+        if usesClerk { return signedInEmail ?? "" }
+        return session?.user.email ?? ""
     }
 
     // MARK: - Lifecycle
@@ -59,11 +68,10 @@ final class AuthStore: ObservableObject {
         defer { isRestoring = false }
 
         if usesClerk {
-            guard let stored = clerkStore.load() else { return }
-            clerkSession = stored
-            CloudSession.shared.token = stored.jwt
-            if let expiresAt = stored.expiresAt, expiresAt.timeIntervalSinceNow < 60 {
-                await refreshClerkSession()
+            await waitForClerk()
+            if let user = Clerk.shared.user, Clerk.shared.session != nil {
+                applyClerkUser(user)
+                CloudSession.shared.token = try? await Clerk.shared.auth.getToken()
             }
             return
         }
@@ -75,70 +83,133 @@ final class AuthStore: ObservableObject {
         }
     }
 
-    // MARK: - Sign in / up / out
-
-    func signIn(email: String, password: String) async {
-        guard !isWorking else { return }
-        isWorking = true
-        errorMessage = nil
-        defer { isWorking = false }
-
-        if usesClerk {
-            guard let clerkClient else {
-                errorMessage = "Sign-in is not configured for this build."
-                return
-            }
-            do {
-                let created = try await clerkClient.signIn(email: email, password: password)
-                try persist(created)
-            } catch {
-                errorMessage = friendly(error)
-            }
-            return
-        }
-
-        do {
-            session = try await client.auth.signIn(email: email, password: password)
-        } catch {
-            errorMessage = friendly(error)
+    private func waitForClerk() async {
+        for _ in 0..<40 {
+            if Clerk.shared.isLoaded { return }
+            try? await Task.sleep(for: .milliseconds(100))
         }
     }
 
-    func signUp(email: String, password: String) async {
-        guard !isWorking else { return }
-        isWorking = true
-        errorMessage = nil
+    // MARK: - Email code sign-in
+
+    /// Sends a sign-in code. Returns false when Clerk has no account for that
+    /// email so the sheet can offer "create account" instead.
+    @discardableResult
+    func sendSignInCode(email: String) async -> Bool {
+        guard beginWork() else { return false }
         defer { isWorking = false }
 
-        if usesClerk {
-            guard let clerkClient else {
-                errorMessage = "Sign-in is not configured for this build."
-                return
-            }
-            do {
-                let created = try await clerkClient.signUp(email: email, password: password)
-                try persist(created)
-            } catch {
-                errorMessage = friendly(error)
-            }
-            return
+        if !usesClerk {
+            errorMessage = "Cloud sign-in is not configured for this build."
+            return false
         }
 
         do {
-            let response = try await client.auth.signUp(email: email, password: password)
-            session = response.session
-            if response.session == nil {
-                errorMessage = "Check your email to confirm your account, then sign in."
-            }
+            _ = try await Clerk.shared.auth.signInWithEmailCode(emailAddress: email)
+            pendingEmail = email
+            pendingMode = .signIn
+            awaitingCode = true
+            return true
         } catch {
             errorMessage = friendly(error)
+            return false
         }
     }
+
+    /// Creates the account and sends the verification code. Clerk requires a
+    /// password on this instance even though sign-in uses email codes.
+    @discardableResult
+    func createAccount(email: String, password: String) async -> Bool {
+        guard beginWork() else { return false }
+        defer { isWorking = false }
+
+        if !usesClerk {
+            errorMessage = "Cloud sign-in is not configured for this build."
+            return false
+        }
+
+        do {
+            let signUp = try await Clerk.shared.auth.signUp(emailAddress: email, password: password)
+            _ = try await signUp.sendEmailCode()
+            pendingEmail = email
+            pendingMode = .signUp
+            awaitingCode = true
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func verifyCode(_ code: String) async -> Bool {
+        guard beginWork() else { return false }
+        defer { isWorking = false }
+
+        guard usesClerk else { return false }
+
+        do {
+            let sessionID: String?
+            if let signUp = Clerk.shared.client?.signUp {
+                let verified = try await signUp.verifyEmailCode(code)
+                sessionID = verified.createdSessionId
+            } else if let signIn = Clerk.shared.client?.signIn {
+                let verified = try await signIn.verifyCode(code)
+                sessionID = verified.createdSessionId
+            } else {
+                errorMessage = "That code has expired. Start again."
+                return false
+            }
+
+            guard let sessionID else {
+                errorMessage = "That code didn't finish the sign-in. Request a new one."
+                return false
+            }
+            try await Clerk.shared.auth.setActive(sessionId: sessionID)
+            if let user = Clerk.shared.user {
+                applyClerkUser(user)
+            }
+            CloudSession.shared.token = try? await Clerk.shared.auth.getToken()
+            awaitingCode = false
+            pendingEmail = nil
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func resendCode() async -> Bool {
+        guard let pendingEmail else { return false }
+        if pendingMode == .signUp, let signUp = Clerk.shared.client?.signUp {
+            guard beginWork() else { return false }
+            defer { isWorking = false }
+            do {
+                _ = try await signUp.sendEmailCode()
+                return true
+            } catch {
+                errorMessage = friendly(error)
+                return false
+            }
+        }
+        return await sendSignInCode(email: pendingEmail)
+    }
+
+    func cancelCode() {
+        awaitingCode = false
+        pendingEmail = nil
+        errorMessage = nil
+    }
+
+    // MARK: - Sign out
 
     func signOut() async {
-        if usesClerk || clerkSession != nil {
-            clerkStore.clear()
-            clerkSession = nil
+        if usesClerk {
+            try? await Clerk.shared.auth.signOut()
+            signedInUserID = nil
+            signedInEmail = nil
             CloudSession.shared.token = nil
         }
         do {
@@ -147,52 +218,59 @@ final class AuthStore: ObservableObject {
             // A failed network sign-out should still clear the local session.
         }
         session = nil
+        awaitingCode = false
     }
 
     // MARK: - Tokens
 
-    /// Returns a JWT that is valid for at least the next minute, refreshing it
-    /// when needed. The API client calls this through `CloudSession`.
+    /// Returns a Clerk session JWT, refreshing it when the SDK's cache is
+    /// stale. The API client calls this through `CloudSession`.
     func validCloudToken() async -> String? {
-        guard let current = clerkSession else { return nil }
-        if let expiresAt = current.expiresAt, expiresAt.timeIntervalSinceNow < 60 {
-            await refreshClerkSession()
-        }
-        return clerkSession?.jwt
+        guard usesClerk, signedInUserID != nil else { return nil }
+        return try? await Clerk.shared.auth.getToken()
     }
 
-    private func refreshClerkSession() async {
-        guard let clerkClient, let current = clerkSession else { return }
-        do {
-            let refreshed = try await clerkClient.refresh(current)
-            try persist(refreshed)
-        } catch {
-            // Keep the old token; the next API call will surface the 401 and the
-            // UI can ask for a fresh sign-in.
-            errorMessage = "Your session expired. Sign in again to continue."
-        }
-    }
+    // MARK: - Helpers
 
-    private func persist(_ created: ClerkSession) throws {
-        try clerkStore.save(created)
-        clerkSession = created
-        CloudSession.shared.token = created.jwt
+    private func beginWork() -> Bool {
+        guard !isWorking else { return false }
+        isWorking = true
         errorMessage = nil
+        return true
+    }
+
+    private func applyClerkUser(_ user: ClerkKit.User) {
+        signedInUserID = user.id
+        signedInEmail = user.primaryEmailAddress?.emailAddress
     }
 
     private func friendly(_ error: Error) -> String {
-        if let clerkError = error as? ClerkAuthError {
-            return clerkError.errorDescription ?? "Sign-in failed. Try again."
+        if let apiError = error as? ClerkAPIError {
+            switch apiError.code {
+            case "form_identifier_not_found":
+                return "No account uses that email yet."
+            case "form_code_incorrect":
+                return "That code doesn't match. Check it and try again."
+            case "verification_expired":
+                return "That code expired. Send a new one."
+            case "form_password_length_too_short":
+                return "Use a password with at least 15 characters."
+            case "form_password_pwned":
+                return "That password has appeared in a breach. Choose another."
+            case "form_identifier_exists":
+                return "That email already has an account. Sign in instead."
+            case "form_param_format_invalid":
+                return "Enter a valid email address."
+            default:
+                return apiError.longMessage ?? apiError.message ?? "Sign-in failed. Try again."
+            }
+        }
+        if let clientError = error as? ClerkClientError {
+            return clientError.localizedDescription
         }
         let message = error.localizedDescription
         if message.localizedCaseInsensitiveContains("invalid login credentials") {
             return "That email and password don't match. Try again or sign up."
-        }
-        if message.localizedCaseInsensitiveContains("already registered") {
-            return "That email already has an account. Try signing in."
-        }
-        if message.localizedCaseInsensitiveContains("password should be") {
-            return "Use a password with at least 6 characters."
         }
         return message
     }

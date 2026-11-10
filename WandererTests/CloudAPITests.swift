@@ -228,39 +228,3 @@ final class CloudAPITests: XCTestCase {
         XCTAssertEqual(record.dayCount, 0)
     }
 }
-
-final class ClerkAuthParsingTests: XCTestCase {
-    func testJWTExpiryIsReadFromThePayload() throws {
-        // {"exp": 1800000000}
-        let payload = "eyJleHAiOjE4MDAwMDAwMDB9"
-        let jwt = "header.\(payload).signature"
-        let expiry = try XCTUnwrap(ClerkAuthClient.jwtExpiry(jwt))
-        XCTAssertEqual(expiry.timeIntervalSince1970, 1_800_000_000, accuracy: 0.01)
-    }
-
-    func testJWTExpiryRejectsGarbage() {
-        XCTAssertNil(ClerkAuthClient.jwtExpiry("not-a-jwt"))
-        XCTAssertNil(ClerkAuthClient.jwtExpiry("a.b.c"))
-    }
-
-    func testClerkErrorMessageIsHuman() {
-        let object: [String: Any] = [
-            "errors": [[
-                "code": "form_password_incorrect",
-                "message": "Password is incorrect",
-                "long_message": "Password is incorrect. Try another password."
-            ]]
-        ]
-        XCTAssertEqual(
-            ClerkAuthClient.errorMessage(in: object),
-            "That password doesn't match. Try again."
-        )
-    }
-
-    func testClerkUnknownErrorFallsBackToServerText() {
-        let object: [String: Any] = [
-            "errors": [["code": "something_else", "message": "Unexpected."]]
-        ]
-        XCTAssertEqual(ClerkAuthClient.errorMessage(in: object), "Unexpected.")
-    }
-}

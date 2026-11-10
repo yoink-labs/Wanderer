@@ -46,7 +46,9 @@ enum BackendMode: String {
                let mode = BackendMode(rawValue: raw) {
                 return mode
             }
-            return .supabase
+            // The cloud backend is the default after the cutover; builds
+            // without a Worker URL fall back to Supabase automatically.
+            return .cloud
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: defaultsKey)

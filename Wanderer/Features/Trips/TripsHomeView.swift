@@ -100,7 +100,7 @@ struct TripsHomeView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .task(id: auth.session?.user.id) {
+        .task(id: auth.userID) {
             hasLoadedTrips = false
             tripLoadError = nil
             guard auth.isAuthenticated else { return }

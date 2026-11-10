@@ -9,8 +9,6 @@ struct SignInView: View {
     @State private var showLanguageSheet = false
     @State private var showEmailAuth = false
     @State private var emailAuthSignUp = false
-    @State private var showAuthNotice = false
-    @State private var noticeTitle = "Sign-in is coming next"
 
     private var language: LanguageOption {
         LanguageOption.named(storedLanguage)
@@ -50,11 +48,6 @@ struct SignInView: View {
         .sheet(isPresented: $showEmailAuth) {
             EmailAuthSheet(startInSignUp: emailAuthSignUp)
                 .environmentObject(auth)
-        }
-        .alert(noticeTitle, isPresented: $showAuthNotice) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("We'll connect this button to Supabase Auth in the next step. For now you can sign in with email or keep exploring as a guest.")
         }
     }
 
@@ -124,7 +117,7 @@ struct SignInView: View {
                 .foregroundStyle(WandererTheme.ink)
                 .padding(.horizontal, LiggaSpace.m)
                 .frame(minHeight: 40)
-                .background(.white, in: Capsule())
+                .background(WandererTheme.card, in: Capsule())
                 .shadow(color: .black.opacity(0.12), radius: 6, x: 0, y: 2)
                 .frame(minHeight: 44)
                 .contentShape(Capsule())
@@ -144,43 +137,9 @@ struct SignInView: View {
 
     private var authSheet: some View {
         VStack(spacing: LiggaSpace.s) {
-            SocialSignInButton(
-                title: "Continue with Apple",
-                icon: "apple.logo",
-                foreground: .white,
-                background: WandererTheme.ink,
-                isEnabled: !isBusy
-            ) {
-                noticeTitle = "Apple sign-in is coming next"
-                showAuthNotice = true
-            }
-            .accessibilityIdentifier("auth-apple")
-
-            SocialSignInButton(title: "Continue with Google", icon: "globe", isEnabled: !isBusy) {
-                noticeTitle = "Google sign-in is coming next"
-                showAuthNotice = true
-            }
-            .accessibilityIdentifier("auth-google")
-
-            SocialSignInButton(title: "Continue with Facebook", icon: "f.circle.fill", isEnabled: !isBusy) {
-                noticeTitle = "Facebook sign-in is coming next"
-                showAuthNotice = true
-            }
-            .accessibilityIdentifier("auth-facebook")
-
-            HStack(spacing: LiggaSpace.s) {
-                Rectangle().fill(WandererTheme.line).frame(height: 1)
-                Text("or")
-                    .font(.ligga(.footnote))
-                    .foregroundStyle(WandererTheme.muted)
-                Rectangle().fill(WandererTheme.line).frame(height: 1)
-            }
-            .padding(.vertical, LiggaSpace.xxs)
-            .accessibilityHidden(true)
-
-            SocialSignInButton(
+            PrimaryButton(
                 title: "Continue with email",
-                icon: "envelope",
+                icon: "envelope.fill",
                 isEnabled: !isBusy,
                 isLoading: isBusy && !showEmailAuth
             ) {
@@ -188,6 +147,12 @@ struct SignInView: View {
                 showEmailAuth = true
             }
             .accessibilityIdentifier("auth-email")
+
+            Text("We'll email you a six-digit code. No password to remember.")
+                .font(.ligga(.footnote))
+                .foregroundStyle(WandererTheme.muted)
+                .multilineTextAlignment(.center)
+                .padding(.bottom, LiggaSpace.xxs)
 
             Button {
                 LiggaHaptics.tap()
