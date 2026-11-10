@@ -42,8 +42,9 @@ struct HomeFeaturedTripCard: View {
     let trip: Trip
 
     @ScaledMetric(relativeTo: .title2) private var scaledHeight: CGFloat = 200
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var height: CGFloat { min(max(scaledHeight, 200), 300) }
+    private var height: CGFloat { min(max(scaledHeight, 200), 380) }
 
     private var metaLine: String {
         var parts = [trip.dateRange, trip.days.liggaCounted("day")]
@@ -84,7 +85,7 @@ struct HomeFeaturedTripCard: View {
                     Text(metaLine)
                         .font(.ligga(.footnote, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(1)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
                         .minimumScaleFactor(0.85)
                 }
                 .padding(LiggaSpace.m)
@@ -92,7 +93,6 @@ struct HomeFeaturedTripCard: View {
             .frame(maxWidth: .infinity)
             .frame(height: height)
             .clipShape(RoundedRectangle(cornerRadius: WandererTheme.cardRadius, style: .continuous))
-            .shadow(color: WandererTheme.cardShadow, radius: 10, x: 0, y: 4)
             .contentShape(RoundedRectangle(cornerRadius: WandererTheme.cardRadius, style: .continuous))
         }
         .buttonStyle(.liggaPressable)
@@ -109,6 +109,7 @@ struct HomeTripRow: View {
     let trip: Trip
 
     @ScaledMetric(relativeTo: .headline) private var thumbSize: CGFloat = 56
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var dateLine: String {
         "\(trip.dateRange) · \(trip.days.liggaCounted("day"))"
@@ -143,7 +144,7 @@ struct HomeTripRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if trip.members.count > 1 {
+            if trip.members.count > 1, !dynamicTypeSize.isAccessibilitySize {
                 AvatarStack(initials: Array(trip.members.prefix(3)), size: 24)
                     .accessibilityHidden(true)
             }

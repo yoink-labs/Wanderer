@@ -68,7 +68,7 @@ struct TripToolsView: View {
             .background(WandererTheme.platinum.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
         .task {
             consumePendingError()
             guard !didRequestLoad else { return }
@@ -392,7 +392,7 @@ struct TripToolEmptyState: View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.ligga(.title2, weight: .semibold))
-                .foregroundStyle(WandererTheme.charcoal)
+                .foregroundStyle(WandererTheme.ink)
                 .frame(width: 56, height: 56)
                 .background(WandererTheme.platinum, in: Circle())
                 .accessibilityHidden(true)
@@ -566,13 +566,13 @@ struct TripToolOptionalDate: View {
                     .font(.ligga(.subheadline, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
             }
-            .tint(WandererTheme.charcoal)
+            .tint(WandererTheme.controlTint)
 
             if isEnabled {
                 DatePicker(title, selection: $date, displayedComponents: [.date, .hourAndMinute])
                     .labelsHidden()
                     .datePickerStyle(.compact)
-                    .tint(WandererTheme.charcoal)
+                    .tint(WandererTheme.controlTint)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

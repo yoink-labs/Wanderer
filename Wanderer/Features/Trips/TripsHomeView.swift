@@ -23,6 +23,7 @@ struct TripsHomeView: View {
     @State private var tripLoadError: String?
 
     @FocusState private var searchFocused: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var memberInitials: [String] {
         let email = auth.userEmail
@@ -151,15 +152,20 @@ struct TripsHomeView: View {
                 LiggaHaptics.tap()
                 showPlanner = true
             } label: {
-                Label("New trip", systemImage: "plus")
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .lineLimit(1)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, LiggaSpace.m)
-                    .frame(minHeight: 36)
-                    .background(WandererTheme.charcoal, in: Capsule())
-                    .frame(minHeight: 44)
-                    .contentShape(Capsule())
+                ViewThatFits(in: .horizontal) {
+                    Label("New trip", systemImage: "plus")
+                        .labelStyle(.titleAndIcon)
+                    Image(systemName: "plus")
+                        .accessibilityLabel("Plan a trip")
+                }
+                .font(.ligga(.subheadline, weight: .semibold))
+                .lineLimit(1)
+                .foregroundStyle(WandererTheme.onPrimary)
+                .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? LiggaSpace.s : LiggaSpace.m)
+                .frame(minHeight: 36)
+                .background(WandererTheme.primaryFill, in: Capsule())
+                .frame(minHeight: 44)
+                .contentShape(Capsule())
             }
             .buttonStyle(.liggaPressable)
             .accessibilityLabel("Plan a trip")

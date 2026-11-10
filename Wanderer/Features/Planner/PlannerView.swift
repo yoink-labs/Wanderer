@@ -647,7 +647,7 @@ struct PlannerView: View {
                     .foregroundStyle(WandererTheme.coralDeep)
                 Text(note)
                     .font(.ligga(.footnote))
-                    .foregroundStyle(WandererTheme.charcoal)
+                    .foregroundStyle(WandererTheme.ink)
                     .lineLimit(1)
                 Spacer(minLength: 2)
                 Image(systemName: "chevron.right")
@@ -970,7 +970,7 @@ struct PlannerView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(WandererTheme.charcoal)
+                .foregroundStyle(WandererTheme.ink)
                 .frame(width: 44, height: 44)
                 .background(WandererTheme.card, in: Circle())
                 .shadow(color: WandererTheme.charcoal.opacity(0.18), radius: 10, x: 0, y: 4)
@@ -988,7 +988,7 @@ struct PlannerView: View {
         } label: {
             Image(systemName: "arrow.up.left.and.arrow.down.right")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(WandererTheme.charcoal)
+                .foregroundStyle(WandererTheme.ink)
                 .frame(width: 44, height: 44)
                 .background(WandererTheme.card, in: Circle())
                 .shadow(color: WandererTheme.charcoal.opacity(0.18), radius: 10, x: 0, y: 4)

@@ -10,6 +10,7 @@ struct ProfileView: View {
     @AppStorage("wanderer.isGuest") private var isGuest = false
     @AppStorage("wanderer.currency") private var currency = "USD"
     @AppStorage("wanderer.units") private var units = "Metric"
+    @AppStorage("wanderer.appearance") private var appearanceRaw = WandererAppearance.system.rawValue
 
     @State private var backendMode = BackendMode.current
     @State private var showDeleteAccountConfirm = false
@@ -62,6 +63,10 @@ struct ProfileView: View {
     private var visitedSummary: String {
         "\(countLabel(visitedStore.countryCount, singular: "country", plural: "countries")), "
             + "\(countLabel(visitedStore.cityCount, singular: "city", plural: "cities"))"
+    }
+
+    private var appearance: WandererAppearance {
+        WandererAppearance(rawValue: appearanceRaw) ?? .system
     }
 
     private var unitsLabel: String {
@@ -330,6 +335,15 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
 
+            cardDivider
+
+            Menu {
+                appearanceMenuContent
+            } label: {
+                settingsRow(title: "Appearance", value: appearance.title, icon: "circle.lefthalf.filled")
+            }
+            .buttonStyle(.plain)
+
             if BackendMode.isCloudAvailable {
                 cardDivider
 
@@ -367,6 +381,20 @@ struct ProfileView: View {
     }
 
     @ViewBuilder
+    private var appearanceMenuContent: some View {
+        ForEach(WandererAppearance.allCases) { option in
+            Button {
+                appearanceRaw = option.rawValue
+            } label: {
+                if option == appearance {
+                    Label(option.title, systemImage: "checkmark")
+                } else {
+                    Text(option.title)
+                }
+            }
+        }
+    }
+
     private var languageMenuContent: some View {
         ForEach(LanguageOption.all) { option in
             Button {

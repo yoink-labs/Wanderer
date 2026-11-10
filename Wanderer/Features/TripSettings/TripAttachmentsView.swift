@@ -118,7 +118,7 @@ struct TripAttachmentsView: View {
                 Text(errorText ?? "")
             }
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
     }
 
     // MARK: - Rows

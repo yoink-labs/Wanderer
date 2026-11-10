@@ -12,12 +12,33 @@ profile only.
 | --- | --- |
 | Public marketing pages, guide index/detail, hotels search | Observed in browser |
 | Guest planner (trip create, day panel, place rows, add place, add time, day menu) | Observed in browser |
-| Signed-in account (saved trips, invitations, budget, export, sharing) | **Not observed** — the shared browser profile is signed out |
+| Signed-in home, saved trip overview, reservations, Pro upsell | Observed in the signed-in tab (see below) |
+| Signed-in budget, checklist, notes, export, invite dialog, settings, journal | **Not yet observed** — the tab went unreachable mid-pass |
 | Every gated action (expenses, share, save) | Observed *paywall/sign-up gate* only |
 
-Signed-in parity claims are therefore **not** made in this document. The
-signed-in pass is blocked on one user action: sign in to Wanderlog in the ADE
-browser tab that was opened for this work.
+The signed-in pass started: home, a saved trip, its flight reservations and the
+Pro upsell were observed. It stopped when the user's machine became unreachable
+mid-scroll. Remaining signed-in flows are listed as not observed rather than
+guessed.
+
+### Signed-in observations (2026-11-10)
+
+- **Home**: "Recently viewed and upcoming", one-tap "Plan new trip", trip cards
+  with cover, status pill ("In 6 days"), per-card Share and overflow, title,
+  member avatars with a "+N" overflow, dates and place count ("35 places"),
+  "See all".
+- **Opening a saved trip** shows a Pro upsell first: offline access is paid
+  ($39.99/year, one-week trial), with "Maybe later".
+- **Trip overview**: cover with edit affordance, title card with dates and
+  member avatars, collapsible Explore suggestions with "Browse all", and a
+  persistent "Map view" switch at the bottom.
+- **Reservations** render as travel cards: airport codes with city names
+  (ATL → EZE), date and time range with a next-day marker, airline and flight
+  number, free-text notes, and "Add another flight".
+- **Top bar**: "SAVED" state, undo/redo, Share, overflow menu. The left rail
+  collapses to a hamburger plus a theme control.
+- Offline access being a paid feature is a real product boundary; Wanderer has
+  no offline cache yet and should not claim parity there.
 
 ## Legend
 

@@ -47,16 +47,16 @@ struct PrimaryButton: View {
 
                 if isLoading {
                     ProgressView()
-                        .tint(.white)
+                        .tint(WandererTheme.onPrimary)
                 }
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
             .padding(.horizontal, LiggaSpace.m)
-            .foregroundStyle(isEnabled ? .white : WandererTheme.muted)
+            .foregroundStyle(isEnabled ? WandererTheme.onPrimary : WandererTheme.muted)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isEnabled ? WandererTheme.charcoal : WandererTheme.fillMuted)
+                    .fill(isEnabled ? WandererTheme.primaryFill : WandererTheme.fillMuted)
             )
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
@@ -161,7 +161,7 @@ struct AvatarStack: View {
                         .foregroundStyle(WandererTheme.ink)
                 }
                 .frame(width: size, height: size)
-                .overlay(Circle().stroke(.white, lineWidth: 2))
+                .overlay(Circle().stroke(WandererTheme.card, lineWidth: 2))
             }
         }
     }
@@ -181,11 +181,11 @@ struct LiggaStatusChip: View {
             .font(.ligga(.caption, weight: .semibold))
             .lineLimit(1)
             .fixedSize()
-            .foregroundStyle(tone == .strong ? Color.white : WandererTheme.ink)
+            .foregroundStyle(tone == .strong ? WandererTheme.onPrimary : WandererTheme.ink)
             .padding(.horizontal, LiggaSpace.xs)
             .padding(.vertical, 3)
             .background(
-                tone == .strong ? WandererTheme.charcoal : WandererTheme.fillMuted,
+                tone == .strong ? WandererTheme.primaryFill : WandererTheme.fillMuted,
                 in: Capsule()
             )
     }
@@ -227,14 +227,14 @@ struct LiggaRetryCard: View {
                 ZStack {
                     Text("Retry").opacity(isRetrying ? 0 : 1)
                     if isRetrying {
-                        ProgressView().tint(.white)
+                        ProgressView().tint(WandererTheme.onPrimary)
                     }
                 }
                 .font(.ligga(.subheadline, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(WandererTheme.onPrimary)
                 .padding(.horizontal, LiggaSpace.m)
                 .frame(minHeight: 36)
-                .background(WandererTheme.charcoal, in: Capsule())
+                .background(WandererTheme.primaryFill, in: Capsule())
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
@@ -279,10 +279,10 @@ struct LiggaEmptyState: View {
                 } label: {
                     Text(actionTitle)
                         .font(.ligga(.subheadline, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WandererTheme.onPrimary)
                         .padding(.horizontal, LiggaSpace.m)
                         .frame(minHeight: 44)
-                        .background(WandererTheme.charcoal, in: Capsule())
+                        .background(WandererTheme.primaryFill, in: Capsule())
                 }
                 .buttonStyle(.liggaPressable)
                 .padding(.top, LiggaSpace.xxs)

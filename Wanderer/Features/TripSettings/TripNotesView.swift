@@ -91,7 +91,7 @@ struct TripNotesView: View {
                 }
             }
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
     }
 
     private func save() {

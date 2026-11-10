@@ -494,7 +494,7 @@ struct ExpensesView: View {
         HStack(spacing: 12) {
             Image(systemName: expense.category.icon)
                 .font(.ligga(.subheadline, weight: .semibold))
-                .foregroundStyle(WandererTheme.charcoal)
+                .foregroundStyle(WandererTheme.ink)
                 .frame(width: 38, height: 38)
                 .background(tint(for: expense.category).opacity(0.28), in: Circle())
                 .accessibilityHidden(true)
@@ -695,7 +695,7 @@ private struct BudgetSheet: View {
                 isFocused = true
             }
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
     }
 
     private var helperText: String {
@@ -1066,7 +1066,7 @@ private struct AddExpenseSheet: View {
                                 .foregroundStyle(WandererTheme.muted)
                         }
                         .datePickerStyle(.compact)
-                        .tint(WandererTheme.charcoal)
+                        .tint(WandererTheme.controlTint)
                         .frame(minHeight: 44)
 
                         Divider().overlay(WandererTheme.line)
@@ -1137,7 +1137,7 @@ private struct AddExpenseSheet: View {
                 }
             }
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
     }
 
     private var splitCard: some View {
@@ -1411,7 +1411,7 @@ private struct SettleUpSheet: View {
                 Text(errorText ?? "")
             }
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
     }
 
     private func memberPicker(title: String, selection: Binding<UUID?>) -> some View {

@@ -497,7 +497,7 @@ private struct AddReservationSheet: View {
                 }
             }
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
     }
 
     private func save() {

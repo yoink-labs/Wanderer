@@ -143,7 +143,7 @@ struct TripSettingsView: View {
                 Text(errorText ?? "")
             }
         }
-        .tint(WandererTheme.charcoal)
+        .tint(WandererTheme.controlTint)
     }
 
     private func save() {
@@ -271,7 +271,7 @@ struct TripSettingsView: View {
             DatePicker(label, selection: date, displayedComponents: .date)
                 .labelsHidden()
                 .datePickerStyle(.compact)
-                .tint(WandererTheme.charcoal)
+                .tint(WandererTheme.controlTint)
         }
     }
 
