@@ -59,7 +59,7 @@ guessed.
 | Guest can add expenses / share / save | Gated — sign-up modal | Guest keeps full local data, no gate |
 | Trip cover photo + cover color | Observed (overview) | impl (`updateCover`, `cover_color`) |
 | Trip overview hub (reservations, budget, notes, places, explore) | Observed | partial — tools are tabs inside the trip, no single overview hub |
-| Multiple named lists per trip (“Places to visit” + custom titled lists) | Observed | todo — Wanderer is day-only plus one unscheduled bucket |
+| Multiple named lists per trip (“Places to visit” + custom titled lists) | Observed | impl — unscheduled tray groups by named list; create/delete in the tray, assign in the place sheet |
 | One-click Notes / Checklist sections inside the itinerary | Observed (notes section inserted from rail) | impl — separate notes screen and checklist screen |
 | AI Assistant (10 free messages, then paid) | Observed, gated after quota | Deliberately out of scope (inference cost) |
 

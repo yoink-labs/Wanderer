@@ -326,6 +326,14 @@ struct PlaceDetailSheet: View {
             ?? "USD"
     }
 
+    private var listName: String {
+        guard let listId = currentPlace.listId,
+              let list = store.lists.first(where: { $0.id == listId }) else {
+            return "No list"
+        }
+        return list.title
+    }
+
     private var statusCard: some View {
         VStack(spacing: 0) {
             Button {
@@ -383,6 +391,43 @@ struct PlaceDetailSheet: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("place-cost-add")
+
+            if !store.lists.isEmpty {
+                Divider().overlay(WandererTheme.line)
+
+                Menu {
+                    Button("No list") {
+                        Task { await store.assign(currentPlace, toList: nil) }
+                    }
+                    ForEach(store.lists) { list in
+                        Button(list.title) {
+                            Task { await store.assign(currentPlace, toList: list.id) }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "list.bullet")
+                            .font(.ligga(.body, weight: .semibold))
+                            .foregroundStyle(WandererTheme.ink)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("List")
+                                .font(.ligga(.subheadline, weight: .semibold))
+                                .foregroundStyle(WandererTheme.ink)
+                            Text(listName)
+                                .font(.ligga(.caption))
+                                .foregroundStyle(WandererTheme.muted)
+                        }
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.ligga(.caption, weight: .semibold))
+                            .foregroundStyle(WandererTheme.muted)
+                    }
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityIdentifier("place-list-menu")
+            }
         }
         .padding(.horizontal, 16)
         .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))

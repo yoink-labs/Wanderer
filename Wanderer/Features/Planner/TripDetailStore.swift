@@ -13,6 +13,7 @@ final class TripDetailStore: ObservableObject {
     @Published private(set) var settlements: [SettlementRecord] = []
     @Published private(set) var members: [TripMemberProfile] = []
     @Published private(set) var checklist: [ChecklistRecord] = []
+    @Published private(set) var lists: [TripListRecord] = []
     @Published private(set) var isLoading = false
     @Published private(set) var cloudUserId: UUID?
     @Published var errorMessage: String?
@@ -92,6 +93,22 @@ final class TripDetailStore: ObservableObject {
             .reduce(0) { $0 + $1.amount }
     }
 
+    /// Unscheduled places grouped by list, ordered by list position. Loose
+    /// places (no list) come last.
+    var unscheduledGroups: [(list: TripListRecord?, places: [PlaceRecord])] {
+        let loose = unassignedPlaces
+        var groups = lists
+            .sorted { $0.position < $1.position }
+            .map { list in
+                (list: list as TripListRecord?, places: loose.filter { $0.listId == list.id })
+            }
+        let withoutList = loose.filter { $0.listId == nil }
+        if !withoutList.isEmpty {
+            groups.append((list: nil, places: withoutList))
+        }
+        return groups
+    }
+
     var visitedPlaces: [PlaceRecord] {
         places.filter(\.isVisited).sorted { ($0.visitedAt ?? "") < ($1.visitedAt ?? "") }
     }
@@ -160,9 +177,17 @@ final class TripDetailStore: ObservableObject {
             .execute()
             .value
 
+        async let listsTask: [TripListRecord] = client.from("trip_lists")
+            .select()
+            .eq("trip_id", value: tripID)
+            .order("position", ascending: true)
+            .execute()
+            .value
+
         do {
-            let (loadedDays, loadedPlaces, loadedReservations, loadedExpenses, loadedChecklist, loadedMembers, loadedSplits, loadedSettlements) =
-                try await (daysTask, placesTask, reservationsTask, expensesTask, checklistTask, membersTask, splitsTask, settlementsTask)
+            let (loadedDays, loadedPlaces, loadedReservations, loadedExpenses, loadedChecklist, loadedMembers, loadedSplits, loadedSettlements, loadedLists) =
+                try await (daysTask, placesTask, reservationsTask, expensesTask, checklistTask, membersTask, splitsTask, settlementsTask, listsTask)
+            lists = loadedLists
             days = loadedDays
             places = loadedPlaces
             reservations = loadedReservations
@@ -190,9 +215,10 @@ final class TripDetailStore: ObservableObject {
             async let membersTask = cloud.members(tripID: trip.id)
             async let splitsTask = cloud.expenseSplits(tripID: trip.id)
             async let settlementsTask = cloud.settlements(tripID: trip.id)
+            async let listsTask = cloud.lists(tripID: trip.id)
 
-            let (loadedDays, loadedPlaces, loadedReservations, loadedExpenses, loadedChecklist, loadedMembers, loadedSplits, loadedSettlements) =
-                try await (daysTask, placesTask, reservationsTask, expensesTask, checklistTask, membersTask, splitsTask, settlementsTask)
+            let (loadedDays, loadedPlaces, loadedReservations, loadedExpenses, loadedChecklist, loadedMembers, loadedSplits, loadedSettlements, loadedLists) =
+                try await (daysTask, placesTask, reservationsTask, expensesTask, checklistTask, membersTask, splitsTask, settlementsTask, listsTask)
 
             days = loadedDays
             places = loadedPlaces
@@ -202,6 +228,7 @@ final class TripDetailStore: ObservableObject {
             members = loadedMembers
             expenseSplits = loadedSplits
             settlements = loadedSettlements
+            lists = loadedLists
             cloudUserId = try? await cloud.profile().id
             errorMessage = nil
         } catch {
@@ -532,6 +559,74 @@ final class TripDetailStore: ObservableObject {
         } catch {
             errorMessage = "Couldn't save the day note: \(error.localizedDescription)"
         }
+    }
+
+    // MARK: - Lists
+
+    func addList(title: String) async {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let position = (lists.map(\.position).max() ?? -1) + 1
+        do {
+            if let cloud {
+                _ = try await cloud.addList(tripID: trip.id, title: trimmed, position: position)
+            } else {
+                let payload = NewListPayload(tripId: trip.id.uuidString, title: trimmed, position: position)
+                try await client.from("trip_lists").insert(payload).execute()
+            }
+            await reloadLists()
+        } catch {
+            errorMessage = "Couldn't create that list: \(error.localizedDescription)"
+        }
+    }
+
+    func deleteList(_ list: TripListRecord) async {
+        do {
+            if let cloud {
+                try await cloud.deleteList(tripID: trip.id, listID: list.id)
+            } else {
+                try await client.from("trip_lists").delete().eq("id", value: list.id.uuidString).execute()
+            }
+            await reloadLists()
+            await reloadPlaces()
+        } catch {
+            errorMessage = "Couldn't delete that list: \(error.localizedDescription)"
+        }
+    }
+
+    func assign(_ place: PlaceRecord, toList listID: UUID?) async {
+        if let cloud {
+            do {
+                _ = try await cloud.updatePlace(tripID: trip.id, placeID: place.id, body: ["list_id": .optional(listID)])
+                await reloadPlaces()
+            } catch {
+                errorMessage = "Couldn't move that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
+        do {
+            try await client.from("places")
+                .update(["list_id": listID?.uuidString])
+                .eq("id", value: place.id.uuidString)
+                .execute()
+            await reloadPlaces()
+        } catch {
+            errorMessage = "Couldn't move that place: \(error.localizedDescription)"
+        }
+    }
+
+    private func reloadLists() async {
+        if let cloud {
+            lists = (try? await cloud.lists(tripID: trip.id)) ?? lists
+            return
+        }
+        lists = (try? await client.from("trip_lists")
+            .select()
+            .eq("trip_id", value: trip.id.uuidString)
+            .order("position", ascending: true)
+            .execute()
+            .value) ?? lists
     }
 
     // MARK: - Day management
@@ -1222,6 +1317,18 @@ private struct NewSettlementPayload: Encodable {
         case amount, currency, note
         case settledAt = "settled_at"
         case createdBy = "created_by"
+    }
+}
+
+private struct NewListPayload: Encodable {
+    let tripId: String
+    let title: String
+    let position: Int
+
+    enum CodingKeys: String, CodingKey {
+        case tripId = "trip_id"
+        case title
+        case position
     }
 }
 

@@ -106,6 +106,7 @@ struct PlaceRecord: Codable, Identifiable, Hashable {
     var endTime: String?
     var position: Int
     var visitedAt: String?
+    var listId: UUID?
     var createdBy: UUID?
 
     enum CodingKeys: String, CodingKey {
@@ -127,6 +128,7 @@ struct PlaceRecord: Codable, Identifiable, Hashable {
         case endTime = "end_time"
         case position
         case visitedAt = "visited_at"
+        case listId = "list_id"
         case createdBy = "created_by"
     }
 
@@ -155,6 +157,21 @@ struct PlaceRecord: Codable, Identifiable, Hashable {
 struct Coordinate: Hashable {
     let latitude: Double
     let longitude: Double
+}
+
+/// A named list inside a trip (Wanderlog-style sections).
+struct TripListRecord: Codable, Identifiable, Hashable {
+    let id: UUID
+    let tripId: UUID
+    var title: String
+    var position: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId = "trip_id"
+        case title
+        case position
+    }
 }
 
 // MARK: - Reservations

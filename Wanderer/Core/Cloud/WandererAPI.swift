@@ -244,6 +244,25 @@ struct WandererAPI: Sendable {
         )
     }
 
+    func lists(tripID: UUID) async throws -> [TripListRecord] {
+        try await send("GET", "/v1/trips/\(tripID.uuidString)/lists")
+    }
+
+    func addList(tripID: UUID, title: String, position: Int) async throws -> TripListRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/lists", body: [
+            "title": .string(title),
+            "position": .integer(position)
+        ])
+    }
+
+    func updateList(tripID: UUID, listID: UUID, body: [String: JSONValue]) async throws -> TripListRecord {
+        try await send("PATCH", "/v1/trips/\(tripID.uuidString)/lists/\(listID.uuidString)", body: body)
+    }
+
+    func deleteList(tripID: UUID, listID: UUID) async throws {
+        try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/lists/\(listID.uuidString)")
+    }
+
     func reservations(tripID: UUID) async throws -> [ReservationRecord] {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/reservations")
     }

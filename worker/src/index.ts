@@ -706,10 +706,18 @@ registerTripResource(routes, "places", {
     "end_time",
     "position",
     "visited_at",
+    "list_id",
   ],
   required: ["name"],
   orderBy: "position",
   createdBy: "created_by",
+});
+
+registerTripResource(routes, "lists", {
+  table: "trip_lists",
+  writable: ["title", "position"],
+  required: ["title"],
+  orderBy: "position",
 });
 
 registerTripResource(routes, "reservations", {

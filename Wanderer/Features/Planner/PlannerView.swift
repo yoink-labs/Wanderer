@@ -22,6 +22,8 @@ struct PlannerView: View {
     @State private var panelFraction: CGFloat = 0.55
     @State private var panelDragStart: CGFloat?
     @State private var placePendingDelete: PlaceRecord?
+    @State private var showNewListPrompt = false
+    @State private var newListTitle = ""
     @State private var addedCount = 0
     @State private var removedCount = 0
     @State private var detentIndex = 1
@@ -755,21 +757,62 @@ struct PlannerView: View {
     private var placesList: some View {
         ScrollViewReader { proxy in
             List {
-                Section {
-                    ForEach(Array(selectedPlaces.enumerated()), id: \.element.id) { index, place in
-                        placeRow(place, number: index + 1)
-                    }
-                    .onMove { fromOffsets, toOffset in
-                        let dayID = currentDayID
-                        Task {
-                            await store.movePlaces(in: dayID, fromOffsets: fromOffsets, toOffset: toOffset)
+                if selection == .unscheduled {
+                    ForEach(Array(store.unscheduledGroups.enumerated()), id: \.offset) { _, group in
+                        Section {
+                            ForEach(Array(group.places.enumerated()), id: \.element.id) { index, place in
+                                placeRow(place, number: index + 1)
+                            }
+                            addPlaceRow
+                        } header: {
+                            listGroupHeader(group.list, count: group.places.count)
                         }
                     }
 
-                    addPlaceRow
-                } header: {
-                    if !selectedPlaces.isEmpty {
-                        daySummaryHeader
+                    Section {
+                        Button {
+                            newListTitle = ""
+                            showNewListPrompt = true
+                        } label: {
+                            Label("New list", systemImage: "text.badge.plus")
+                                .font(.ligga(.subheadline, weight: .semibold))
+                                .foregroundStyle(WandererTheme.accentText)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(WandererTheme.card)
+                        .listRowSeparator(.hidden)
+                        .accessibilityIdentifier("planner-new-list")
+                        .alert("New list", isPresented: $showNewListPrompt) {
+                            TextField("List name", text: $newListTitle)
+                            Button("Create") {
+                                let title = newListTitle
+                                newListTitle = ""
+                                Task { await store.addList(title: title) }
+                            }
+                            Button("Cancel", role: .cancel) { newListTitle = "" }
+                        } message: {
+                            Text("Group places you haven't scheduled yet, like Restaurants or Day trips.")
+                        }
+                    }
+                } else {
+                    Section {
+                        ForEach(Array(selectedPlaces.enumerated()), id: \.element.id) { index, place in
+                            placeRow(place, number: index + 1)
+                        }
+                        .onMove { fromOffsets, toOffset in
+                            let dayID = currentDayID
+                            Task {
+                                await store.movePlaces(in: dayID, fromOffsets: fromOffsets, toOffset: toOffset)
+                            }
+                        }
+
+                        addPlaceRow
+                    } header: {
+                        if !selectedPlaces.isEmpty {
+                            daySummaryHeader
+                        }
                     }
                 }
 
@@ -874,6 +917,37 @@ struct PlannerView: View {
             ?? Locale.current.currency?.identifier
             ?? "USD"
         return "\(currency) \(String(format: "%.0f", total))"
+    }
+
+    /// Unscheduled group header: list title, count and a delete action.
+    private func listGroupHeader(_ list: TripListRecord?, count: Int) -> some View {
+        HStack(alignment: .center, spacing: LiggaSpace.xs) {
+            Text(list?.title ?? "No list")
+                .font(.ligga(.subheadline, weight: .semibold))
+                .foregroundStyle(WandererTheme.ink)
+                .textCase(nil)
+            Text("\(count)")
+                .font(.ligga(.caption, weight: .semibold))
+                .foregroundStyle(WandererTheme.muted)
+            Spacer(minLength: 0)
+            if let list {
+                Menu {
+                    Button(role: .destructive) {
+                        Task { await store.deleteList(list) }
+                    } label: {
+                        Label("Delete list", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.ligga(.footnote, weight: .bold))
+                        .foregroundStyle(WandererTheme.muted)
+                        .frame(width: 44, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Options for \(list.title)")
+            }
+        }
+        .padding(.top, LiggaSpace.xs)
     }
 
     private var addPlaceRow: some View {

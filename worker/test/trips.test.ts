@@ -196,6 +196,35 @@ describe("trips", () => {
     expect(afterDelete.map((day: any) => day.day_index)).toEqual([0, 1, 2, 3, 4]);
   });
 
+  it("groups places in named lists and unassigns them when a list is deleted", async () => {
+    const trip = await createTrip("owner_lists");
+    const listResponse = await call("POST", `/v1/trips/${trip.id}/lists`, {
+      token: token("owner_lists"),
+      body: { title: "Restaurants", position: 0 },
+    });
+    expect(listResponse.status).toBe(201);
+    const list = await json(listResponse);
+
+    const place = await json(
+      await call("POST", `/v1/trips/${trip.id}/places`, {
+        token: token("owner_lists"),
+        body: { name: "Cervejaria Ramiro", position: 0, list_id: list.id },
+      }),
+    );
+    expect(place.list_id).toBe(list.id);
+
+    const lists = await json(
+      await call("GET", `/v1/trips/${trip.id}/lists`, { token: token("owner_lists") }),
+    );
+    expect(lists.map((row: any) => row.title)).toEqual(["Restaurants"]);
+
+    expect((await call("DELETE", `/v1/trips/${trip.id}/lists/${list.id}`, { token: token("owner_lists") })).status).toBe(200);
+    const after = await json(
+      await call("GET", `/v1/trips/${trip.id}/places`, { token: token("owner_lists") }),
+    );
+    expect(after[0].list_id).toBeNull();
+  });
+
   it("marks a place visited and clears it again", async () => {
     const trip = await createTrip("owner_visited");
     const place = await json(
