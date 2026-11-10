@@ -16,13 +16,14 @@ AI features are intentionally out of scope for now.
 | Weather | Open-Meteo | free, no key |
 | FX rates | Frankfurter | free, no key |
 | Photos | Unsplash CDN + user uploads | free |
-| Auth | Supabase Auth today; Clerk (same Yoink account as the website) as the migration target | free |
+| Auth | Clerk production (same Yoink account as the website), email codes | free tier |
 
 ## What is built
 
 - **Onboarding** — language picker, persisted locale.
-- **Auth** — email sign-up / sign-in, guest mode, session restore, sign out.
-  Apple / Google buttons are present but intentionally not wired yet.
+- **Auth** — Clerk (same Yoink Labs instance as yoinklabs.dev), email-only:
+  a six-digit emailed code signs in, guest mode, session restore, sign out.
+  Social sign-in is intentionally removed for this round.
 - **Home** — smart ordering (in progress / recently opened / up next), combined
   trip-and-guide search, photo covers, guide carousel, Booking.com stay search,
   travel stats, loading skeletons and a recoverable load error.
@@ -121,11 +122,11 @@ xcodebuild test -project Wanderer.xcodeproj -scheme Wanderer \
 The `WandererTests` target covers split and settle-up math, Home search/order
 and planner geometry.
 
-## Cloud backend (migration in progress)
+## Cloud backend
 
-`worker/` is the Cloudflare Worker + D1 + R2 backend that replaces Supabase.
-It is additive today: the app still defaults to Supabase until the Worker is
-deployed and Clerk sign-in is verified.
+`worker/` is the Cloudflare Worker + D1 + R2 backend. It is deployed at
+`https://wanderer-api.arulsharma1028.workers.dev` and the app defaults to it.
+Supabase remains as a compile-time fallback and is not retired.
 
 ```bash
 cd worker
