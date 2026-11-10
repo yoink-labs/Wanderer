@@ -6,5 +6,11 @@
 	<string>$(SUPABASE_URL)</string>
 	<key>SupabasePublishableKey</key>
 	<string>$(SUPABASE_PUBLISHABLE_KEY)</string>
+	<key>WandererAPIURL</key>
+	<string>$(CLOUD_API_URL)</string>
+	<key>ClerkFrontendAPI</key>
+	<string>$(CLERK_FRONTEND_API)</string>
+	<key>ClerkPublishableKey</key>
+	<string>$(CLERK_PUBLISHABLE_KEY)</string>
 </dict>
 </plist>

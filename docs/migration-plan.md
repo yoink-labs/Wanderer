@@ -47,15 +47,35 @@ part of this change.
 - Supabase migration + seed retained for reference and rollback until the
   cutover is verified.
 
-### Phase B — Swift client and Clerk sign-in
+### Phase B — Swift client and Clerk sign-in (in progress)
 
-- `AppConfig` (Worker URL, Clerk publishable key, Clerk domain) from Info.plist.
-- `ClerkAuthStore`: native `ASWebAuthenticationSession` + PKCE + refresh,
-  exposing the same surface `RootView`/`SignInView` already use.
-- `CloudClient`: typed client for the Worker API.
-- Stores migrated off `SupabaseClient` (trips, trip detail, profile, guides,
-  visited, share, attachments) with the same call sites.
-- Supabase path kept selection-compatible until the cutover is proven.
+Done:
+
+- `CloudConfiguration` reads the Worker URL and Clerk Frontend API from
+  Info.plist (`Config/Cloud.local.xcconfig`, gitignored).
+- `WandererAPI`: typed client for the Worker API (trips, days, places,
+  bookings, money, checklist, members, invites, attachments, guides, visited,
+  profile, media) with typed `APIError`, offline mapping, idempotency keys for
+  POST and bearer auth from `CloudSession`.
+- `ClerkAuthClient`: Clerk Frontend API email/password sign-in, sign-up and
+  token refresh, with the session in the Keychain. `AuthStore` now fronts both
+  backends and refreshes an expiring JWT before each request.
+- `TripsStore` moved behind a `TripsBacking` protocol with a Supabase and a
+  Cloud implementation; the screens are unchanged. The backend switch appears
+  in Profile only when the cloud build is configured.
+- 12 Swift tests cover request shaping, decoding, auth failure, offline
+  mapping, error mapping and Clerk JWT/error parsing.
+
+Still open:
+
+- Sign-in has not been exercised against a live Clerk instance (no keys in
+  this worktree), so "same Yoink account works in the app and the site" is not
+  claimed.
+- The remaining stores (trip detail, profile, guides, visited, share,
+  attachments) still call Supabase directly.
+- Google/Apple/Facebook buttons are still not wired; in cloud mode they should
+  go through Clerk OAuth.
+- Polling replaces Supabase Realtime for collaboration.
 
 ### Phase C — UI/UX
 

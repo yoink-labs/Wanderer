@@ -4,3 +4,11 @@ SUPABASE_URL =
 SUPABASE_PUBLISHABLE_KEY =
 
 #include? "Supabase.local.xcconfig"
+
+// Cloudflare Worker API + Clerk (same Yoink identity as yoinklabs.dev).
+// Put local values in Cloud.local.xcconfig (gitignored).
+CLOUD_API_URL =
+CLERK_FRONTEND_API =
+CLERK_PUBLISHABLE_KEY =
+
+#include? "Cloud.local.xcconfig"

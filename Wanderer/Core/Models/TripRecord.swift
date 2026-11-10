@@ -27,6 +27,24 @@ struct TripRecord: Codable, Identifiable, Hashable {
         case coverColor = "cover_color"
         case notes
         case timezone
+        case placeCount = "place_count"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        ownerId = try container.decode(UUID.self, forKey: .ownerId)
+        title = try container.decode(String.self, forKey: .title)
+        destination = try container.decodeIfPresent(String.self, forKey: .destination)
+        startDate = try container.decodeIfPresent(String.self, forKey: .startDate)
+        endDate = try container.decodeIfPresent(String.self, forKey: .endDate)
+        currency = try container.decodeIfPresent(String.self, forKey: .currency) ?? "USD"
+        coverUrl = try container.decodeIfPresent(String.self, forKey: .coverUrl)
+        coverColor = try container.decodeIfPresent(String.self, forKey: .coverColor)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        timezone = try container.decodeIfPresent(String.self, forKey: .timezone) ?? TimeZone.current.identifier
+        // The Worker returns the count inline; Supabase selects the row only.
+        placeCount = try container.decodeIfPresent(Int.self, forKey: .placeCount) ?? 0
     }
 
     var dayCount: Int {

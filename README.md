@@ -121,6 +121,24 @@ xcodebuild test -project Wanderer.xcodeproj -scheme Wanderer \
 The `WandererTests` target covers split and settle-up math, Home search/order
 and planner geometry.
 
+## Cloud backend (migration in progress)
+
+`worker/` is the Cloudflare Worker + D1 + R2 backend that replaces Supabase.
+It is additive today: the app still defaults to Supabase until the Worker is
+deployed and Clerk sign-in is verified.
+
+```bash
+cd worker
+npm install
+npx wrangler d1 migrations apply wanderer --local
+npm test
+```
+
+To point a build at the Worker, copy `Config/Cloud.local.example.xcconfig` to
+`Config/Cloud.local.xcconfig`, fill in the Worker URL and Clerk Frontend API,
+then switch Backend in Profile. See `worker/README.md` and
+`docs/migration-plan.md`.
+
 ## Supabase
 
 Wanderer needs your own Supabase project. A fresh clone builds without one, but

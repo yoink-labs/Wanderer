@@ -9,7 +9,7 @@ struct RootView: View {
     private var phase: Phase {
         if selectedLanguage.isEmpty { return .language }
         if auth.isRestoring { return .restoring }
-        if auth.session == nil && !isGuest { return .auth }
+        if !auth.isAuthenticated && !isGuest { return .auth }
         return .app
     }
 

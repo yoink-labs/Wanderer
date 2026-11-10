@@ -11,6 +11,7 @@ struct ProfileView: View {
     @AppStorage("wanderer.currency") private var currency = "USD"
     @AppStorage("wanderer.units") private var units = "Metric"
 
+    @State private var backendMode = BackendMode.current
     @State private var didApplyRemoteSettings = false
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarSavedCount = 0
@@ -322,8 +323,41 @@ struct ProfileView: View {
                 settingsRow(title: "Units", value: unitsLabel, icon: "ruler")
             }
             .buttonStyle(.plain)
+
+            if BackendMode.isCloudAvailable {
+                cardDivider
+
+                Menu {
+                    Button {
+                        switchBackend(to: .supabase)
+                    } label: {
+                        Label("Supabase (current)", systemImage: "cylinder.split.1x2")
+                    }
+                    Button {
+                        switchBackend(to: .cloud)
+                    } label: {
+                        Label("Cloudflare + Clerk", systemImage: "cloud")
+                    }
+                } label: {
+                    settingsRow(
+                        title: "Backend",
+                        value: backendMode == .cloud ? "Cloudflare" : "Supabase",
+                        icon: "server.rack"
+                    )
+                }
+                .buttonStyle(.plain)
+            }
         }
         .liggaCard()
+    }
+
+    /// Switching backends also changes identity providers, so the safest reset
+    /// is to sign out and let the root flow ask again.
+    private func switchBackend(to mode: BackendMode) {
+        guard mode != backendMode else { return }
+        BackendMode.current = mode
+        backendMode = mode
+        Task { await auth.signOut() }
     }
 
     @ViewBuilder
