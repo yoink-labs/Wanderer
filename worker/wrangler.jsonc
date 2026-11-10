@@ -1,0 +1,28 @@
+{
+  "name": "wanderer-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "CLERK_ISSUER": "",
+    "CLERK_JWKS_URL": "",
+    "CLERK_AUTHORIZED_PARTIES": "",
+    "RESEND_FROM_EMAIL": "",
+    "APP_SHARE_BASE_URL": "https://wanderer.app"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wanderer",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "wanderer-media" }
+  ],
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "00000000000000000000000000000000" }
+  ]
+}

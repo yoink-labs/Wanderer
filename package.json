@@ -9,7 +9,11 @@
     "db:stop": "supabase stop",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
-    "db:lint": "supabase db lint"
+    "db:lint": "supabase db lint",
+    "api:test": "npm --prefix worker test",
+    "api:dev": "npm --prefix worker run dev",
+    "api:typecheck": "npm --prefix worker run typecheck",
+    "api:migrate:local": "npm --prefix worker run db:migrate:local"
   },
   "devDependencies": {
     "supabase": "^3.0.0"

@@ -16,4 +16,7 @@ xcuserdata/
 Config/Supabase.local.xcconfig
 
 # ADE local state
-.ade/
+
+# Worker local dev
+worker/.wrangler/
+worker/.dev.vars
