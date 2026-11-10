@@ -14,6 +14,8 @@ struct PlaceDetailSheet: View {
     @State private var isSaving = false
     @State private var isDeleting = false
     @State private var showDeleteConfirmation = false
+    @State private var showCostPrompt = false
+    @State private var costAmount = ""
 
     init(place: PlaceRecord, store: TripDetailStore) {
         self.place = place
@@ -33,6 +35,7 @@ struct PlaceDetailSheet: View {
                 if hasFacts {
                     factsRow
                 }
+                statusCard
                 categoryCard
                 notesCard
                 if websiteURL != nil || phoneURL != nil {
@@ -45,6 +48,14 @@ struct PlaceDetailSheet: View {
             .padding(.bottom, 28)
         }
         .background(WandererTheme.sand.ignoresSafeArea())
+        .alert("Add a cost", isPresented: $showCostPrompt) {
+            TextField("Amount", text: $costAmount)
+                .keyboardType(.decimalPad)
+            Button("Add") { addCost() }
+            Button("Cancel", role: .cancel) { costAmount = "" }
+        } message: {
+            Text("This adds an expense tagged to \(currentPlace.name).")
+        }
         .confirmationDialog(
             "Remove this place?",
             isPresented: $showDeleteConfirmation,
@@ -102,7 +113,7 @@ struct PlaceDetailSheet: View {
                     .font(.ligga(.footnote, weight: .bold))
                     .foregroundStyle(WandererTheme.ink)
                     .frame(width: 32, height: 32)
-                    .background(.white, in: Circle())
+                    .background(WandererTheme.card, in: Circle())
                     .overlay(Circle().stroke(WandererTheme.line, lineWidth: 1))
                     .frame(width: 44, height: 44)
                     .contentShape(Circle())
@@ -295,6 +306,97 @@ struct PlaceDetailSheet: View {
         }
         .padding(16)
         .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    // MARK: - Status & cost
+
+    /// The latest copy of the place: the sheet keeps its own snapshot, while the
+    /// store refreshes after each write.
+    private var currentPlace: PlaceRecord {
+        store.places.first(where: { $0.id == place.id }) ?? place
+    }
+
+    private var placeCost: Double {
+        store.cost(for: currentPlace)
+    }
+
+    private var costCurrency: String {
+        store.expenses.first(where: { $0.placeId == place.id })?.currency
+            ?? Locale.current.currency?.identifier
+            ?? "USD"
+    }
+
+    private var statusCard: some View {
+        VStack(spacing: 0) {
+            Button {
+                Task { await store.setVisited(currentPlace, visited: !currentPlace.isVisited) }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: currentPlace.isVisited ? "checkmark.circle.fill" : "circle")
+                        .font(.ligga(.title3, weight: .semibold))
+                        .foregroundStyle(currentPlace.isVisited ? WandererTheme.mint : WandererTheme.muted)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Visited")
+                            .font(.ligga(.subheadline, weight: .semibold))
+                            .foregroundStyle(WandererTheme.ink)
+                        Text(currentPlace.isVisited ? "Marked as visited" : "Mark this stop once you've been")
+                            .font(.ligga(.caption))
+                            .foregroundStyle(WandererTheme.muted)
+                    }
+                    Spacer(minLength: 4)
+                }
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("place-visited-toggle")
+
+            Divider().overlay(WandererTheme.line)
+
+            Button {
+                costAmount = placeCost > 0 ? String(format: "%.2f", placeCost) : ""
+                showCostPrompt = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "banknote")
+                        .font(.ligga(.body, weight: .semibold))
+                        .foregroundStyle(WandererTheme.coralDeep)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Cost")
+                            .font(.ligga(.subheadline, weight: .semibold))
+                            .foregroundStyle(WandererTheme.ink)
+                        Text(placeCost > 0
+                             ? "\(costCurrency) \(String(format: "%.2f", placeCost)) recorded"
+                             : "Add what this stop cost")
+                            .font(.ligga(.caption))
+                            .foregroundStyle(WandererTheme.muted)
+                    }
+                    Spacer(minLength: 4)
+                    Image(systemName: "plus.circle")
+                        .font(.ligga(.body, weight: .semibold))
+                        .foregroundStyle(WandererTheme.coralDeep)
+                }
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("place-cost-add")
+        }
+        .padding(.horizontal, 16)
+        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func addCost() {
+        guard let amount = Double(costAmount.replacingOccurrences(of: ",", with: ".")), amount > 0 else {
+            costAmount = ""
+            return
+        }
+        let target = currentPlace
+        let currency = costCurrency
+        costAmount = ""
+        Task { await store.addCost(for: target, amount: amount, currency: currency) }
     }
 
     // MARK: - Links

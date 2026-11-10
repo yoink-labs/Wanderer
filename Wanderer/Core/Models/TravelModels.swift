@@ -105,6 +105,7 @@ struct PlaceRecord: Codable, Identifiable, Hashable {
     var startTime: String?
     var endTime: String?
     var position: Int
+    var visitedAt: String?
     var createdBy: UUID?
 
     enum CodingKeys: String, CodingKey {
@@ -125,6 +126,7 @@ struct PlaceRecord: Codable, Identifiable, Hashable {
         case startTime = "start_time"
         case endTime = "end_time"
         case position
+        case visitedAt = "visited_at"
         case createdBy = "created_by"
     }
 
@@ -146,6 +148,8 @@ struct PlaceRecord: Codable, Identifiable, Hashable {
         guard let lat, let lng else { return nil }
         return Coordinate(latitude: lat, longitude: lng)
     }
+
+    var isVisited: Bool { visitedAt != nil }
 }
 
 struct Coordinate: Hashable {
@@ -323,6 +327,7 @@ struct ExpenseRecord: Codable, Identifiable, Hashable {
     var splitMode: ExpenseSplitMode
     var spentAt: String
     var notes: String?
+    var placeId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -336,6 +341,7 @@ struct ExpenseRecord: Codable, Identifiable, Hashable {
         case splitMode = "split_mode"
         case spentAt = "spent_at"
         case notes
+        case placeId = "place_id"
     }
 }
 

@@ -85,6 +85,17 @@ final class TripDetailStore: ObservableObject {
         places(for: nil)
     }
 
+    /// Total recorded cost for a stop, from expenses tagged with its id.
+    func cost(for place: PlaceRecord) -> Double {
+        expenses
+            .filter { $0.placeId == place.id }
+            .reduce(0) { $0 + $1.amount }
+    }
+
+    var visitedPlaces: [PlaceRecord] {
+        places.filter(\.isVisited).sorted { ($0.visitedAt ?? "") < ($1.visitedAt ?? "") }
+    }
+
     func load() async {
         if let cloud {
             await loadFromCloud(cloud)
@@ -428,6 +439,73 @@ final class TripDetailStore: ObservableObject {
         }
     }
 
+    func setVisited(_ place: PlaceRecord, visited: Bool) async {
+        let stamp = visited ? Self.timestamp(Date()) : nil
+        if let cloud {
+            do {
+                _ = try await cloud.setPlaceVisited(tripID: trip.id, placeID: place.id, visitedAt: stamp)
+                await reloadPlaces()
+            } catch {
+                errorMessage = "Couldn't update that place: \(error.localizedDescription)"
+            }
+            return
+        }
+
+        do {
+            try await client.from("places")
+                .update(["visited_at": stamp])
+                .eq("id", value: place.id.uuidString)
+                .execute()
+            await reloadPlaces()
+        } catch {
+            errorMessage = "Couldn't update that place: \(error.localizedDescription)"
+        }
+    }
+
+    func addCost(for place: PlaceRecord, amount: Double, currency: String) async {
+        guard amount > 0 else { return }
+        if let cloud {
+            do {
+                _ = try await cloud.addExpense(tripID: trip.id, body: [
+                    "title": .string(place.name),
+                    "amount": .number(amount),
+                    "currency": .string(currency),
+                    "category": .string(ExpenseCategory.activities.rawValue),
+                    "paid_by": .optional(currentUserId),
+                    "split_with": .array(currentUserId.map { [.string($0.uuidString)] } ?? []),
+                    "split_mode": .string(ExpenseSplitMode.equal.rawValue),
+                    "spent_at": .string(Self.dayString(Date())),
+                    "place_id": .optional(place.id),
+                    "splits": .array([])
+                ])
+                await reloadExpenses()
+                await reloadSplits()
+            } catch {
+                errorMessage = "Couldn't add that cost: \(error.localizedDescription)"
+            }
+            return
+        }
+
+        do {
+            let payload = NewPlaceCostPayload(
+                tripId: trip.id.uuidString,
+                title: place.name,
+                amount: amount,
+                currency: currency,
+                category: ExpenseCategory.activities.rawValue,
+                paidBy: currentUserId?.uuidString,
+                splitWith: currentUserId.map { [$0.uuidString] } ?? [],
+                splitMode: ExpenseSplitMode.equal.rawValue,
+                spentAt: Self.dayString(Date()),
+                placeId: place.id.uuidString
+            )
+            try await client.from("expenses").insert(payload).execute()
+            await reloadExpenses()
+        } catch {
+            errorMessage = "Couldn't add that cost: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Days
 
     func updateDayNotes(_ day: TripDayRecord, notes: String) async {
@@ -454,6 +532,120 @@ final class TripDetailStore: ObservableObject {
         } catch {
             errorMessage = "Couldn't save the day note: \(error.localizedDescription)"
         }
+    }
+
+    // MARK: - Day management
+
+    @Published private(set) var isChangingDays = false
+
+    /// Inserts an empty day after `day`, shifting later days (and their dates)
+    /// by one. The trip's end date grows with it so the range stays truthful.
+    func insertDay(after day: TripDayRecord) async {
+        guard !isChangingDays, let newDate = Self.shifted(day.date, by: 1) else { return }
+        isChangingDays = true
+        defer { isChangingDays = false }
+
+        do {
+            let later = days
+                .filter { $0.dayIndex > day.dayIndex }
+                .sorted { $0.dayIndex > $1.dayIndex }
+
+            if let cloud {
+                for item in later {
+                    guard let date = Self.shifted(item.date, by: 1) else { continue }
+                    _ = try await cloud.updateDay(
+                        tripID: trip.id,
+                        dayID: item.id,
+                        body: ["day_index": .integer(item.dayIndex + 1), "date": .string(date)]
+                    )
+                }
+                _ = try await cloud.addDay(tripID: trip.id, index: day.dayIndex + 1, date: newDate)
+            } else {
+                for item in later {
+                    guard let date = Self.shifted(item.date, by: 1) else { continue }
+                    try await client.from("trip_days")
+                        .update(ManagedDayUpdate(dayIndex: item.dayIndex + 1, date: date))
+                        .eq("id", value: item.id.uuidString)
+                        .execute()
+                }
+                let payload = NewManagedDayPayload(
+                    tripId: trip.id.uuidString,
+                    dayIndex: day.dayIndex + 1,
+                    date: newDate,
+                    title: nil
+                )
+                try await client.from("trip_days").insert(payload).execute()
+            }
+
+            await syncTripEndDate()
+            await load()
+            if let inserted = days.first(where: { $0.dayIndex == day.dayIndex + 1 }) {
+                selectedDayHint = inserted.id
+            }
+        } catch {
+            errorMessage = "Couldn't insert a day: \(error.localizedDescription)"
+        }
+    }
+
+    /// Removes a day. Its places become unscheduled (the day reference clears)
+    /// rather than being deleted.
+    func deleteDay(_ day: TripDayRecord) async {
+        guard !isChangingDays, days.count > 1 else { return }
+        isChangingDays = true
+        defer { isChangingDays = false }
+
+        do {
+            if let cloud {
+                try await cloud.deleteDay(tripID: trip.id, dayID: day.id)
+                for item in days.filter({ $0.dayIndex > day.dayIndex }).sorted(by: { $0.dayIndex < $1.dayIndex }) {
+                    guard let date = Self.shifted(item.date, by: -1) else { continue }
+                    _ = try await cloud.updateDay(
+                        tripID: trip.id,
+                        dayID: item.id,
+                        body: ["day_index": .integer(item.dayIndex - 1), "date": .string(date)]
+                    )
+                }
+            } else {
+                try await client.from("trip_days").delete().eq("id", value: day.id.uuidString).execute()
+                for item in days.filter({ $0.dayIndex > day.dayIndex }).sorted(by: { $0.dayIndex < $1.dayIndex }) {
+                    guard let date = Self.shifted(item.date, by: -1) else { continue }
+                    try await client.from("trip_days")
+                        .update(ManagedDayUpdate(dayIndex: item.dayIndex - 1, date: date))
+                        .eq("id", value: item.id.uuidString)
+                        .execute()
+                }
+            }
+
+            await syncTripEndDate()
+            await load()
+        } catch {
+            errorMessage = "Couldn't delete that day: \(error.localizedDescription)"
+        }
+    }
+
+    /// Set by day management so the planner can select a newly inserted day.
+    @Published var selectedDayHint: UUID?
+
+    private func syncTripEndDate() async {
+        guard let start = trip.startDate, let startDate = TripDayRecord.date(from: start) else { return }
+        let count = max(1, (days.map(\.dayIndex).max() ?? 0) + 1)
+        let end = Calendar.current.date(byAdding: .day, value: count - 1, to: startDate) ?? startDate
+        let endString = Self.dayString(end)
+
+        if let cloud {
+            _ = try? await cloud.updateTripEndDate(tripID: trip.id, endDate: endString)
+        } else {
+            try? await client.from("trips")
+                .update(["end_date": endString])
+                .eq("id", value: trip.id.uuidString)
+                .execute()
+        }
+    }
+
+    private static func shifted(_ value: String?, by days: Int) -> String? {
+        guard let date = TripDayRecord.date(from: value) else { return nil }
+        guard let shifted = Calendar.current.date(byAdding: .day, value: days, to: date) else { return nil }
+        return dayString(shifted)
     }
 
     // MARK: - Reservations
@@ -1030,6 +1222,53 @@ private struct NewSettlementPayload: Encodable {
         case amount, currency, note
         case settledAt = "settled_at"
         case createdBy = "created_by"
+    }
+}
+
+private struct ManagedDayUpdate: Encodable {
+    let dayIndex: Int
+    let date: String
+
+    enum CodingKeys: String, CodingKey {
+        case dayIndex = "day_index"
+        case date
+    }
+}
+
+private struct NewManagedDayPayload: Encodable {
+    let tripId: String
+    let dayIndex: Int
+    let date: String
+    let title: String?
+
+    enum CodingKeys: String, CodingKey {
+        case tripId = "trip_id"
+        case dayIndex = "day_index"
+        case date
+        case title
+    }
+}
+
+private struct NewPlaceCostPayload: Encodable {
+    let tripId: String
+    let title: String
+    let amount: Double
+    let currency: String
+    let category: String
+    let paidBy: String?
+    let splitWith: [String]
+    let splitMode: String
+    let spentAt: String
+    let placeId: String
+
+    enum CodingKeys: String, CodingKey {
+        case tripId = "trip_id"
+        case title, amount, currency, category
+        case paidBy = "paid_by"
+        case splitWith = "split_with"
+        case splitMode = "split_mode"
+        case spentAt = "spent_at"
+        case placeId = "place_id"
     }
 }
 

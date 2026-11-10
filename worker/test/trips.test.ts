@@ -157,6 +157,69 @@ describe("trips", () => {
     expect(places.status).toBe(200);
   });
 
+  it("supports inserting and deleting a day with reindexing", async () => {
+    const trip = await createTrip("owner_day_edit");
+    const days = await json(await call("GET", `/v1/trips/${trip.id}/days`, { token: token("owner_day_edit") }));
+    expect(days).toHaveLength(5);
+
+    // Insert after index 1: shift the tail up in descending order, then insert.
+    for (const day of [...days].filter((row: any) => row.day_index > 1).sort((a: any, b: any) => b.day_index - a.day_index)) {
+      const response = await call("PATCH", `/v1/trips/${trip.id}/days/${day.id}`, {
+        token: token("owner_day_edit"),
+        body: { day_index: day.day_index + 1, date: "2026-11-18" },
+      });
+      expect(response.status).toBe(200);
+    }
+    const inserted = await call("POST", `/v1/trips/${trip.id}/days`, {
+      token: token("owner_day_edit"),
+      body: { day_index: 2, date: "2026-11-14" },
+    });
+    expect(inserted.status).toBe(201);
+
+    const afterInsert = await json(
+      await call("GET", `/v1/trips/${trip.id}/days`, { token: token("owner_day_edit") }),
+    );
+    expect(afterInsert.map((day: any) => day.day_index)).toEqual([0, 1, 2, 3, 4, 5]);
+
+    // Delete the inserted day and pull the tail back down.
+    const insertedID = (await json(inserted)).id;
+    expect((await call("DELETE", `/v1/trips/${trip.id}/days/${insertedID}`, { token: token("owner_day_edit") })).status).toBe(200);
+    for (const day of [...afterInsert].filter((row: any) => row.day_index > 2).sort((a: any, b: any) => a.day_index - b.day_index)) {
+      await call("PATCH", `/v1/trips/${trip.id}/days/${day.id}`, {
+        token: token("owner_day_edit"),
+        body: { day_index: day.day_index - 1, date: "2026-11-16" },
+      });
+    }
+    const afterDelete = await json(
+      await call("GET", `/v1/trips/${trip.id}/days`, { token: token("owner_day_edit") }),
+    );
+    expect(afterDelete.map((day: any) => day.day_index)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("marks a place visited and clears it again", async () => {
+    const trip = await createTrip("owner_visited");
+    const place = await json(
+      await call("POST", `/v1/trips/${trip.id}/places`, {
+        token: token("owner_visited"),
+        body: { name: "Time Out Market", position: 0 },
+      }),
+    );
+    expect(place.visited_at).toBeNull();
+
+    const visited = await call("PATCH", `/v1/trips/${trip.id}/places/${place.id}`, {
+      token: token("owner_visited"),
+      body: { visited_at: "2026-11-12T18:30:00.000Z" },
+    });
+    expect(visited.status).toBe(200);
+    expect((await json(visited)).visited_at).toBe("2026-11-12T18:30:00.000Z");
+
+    const cleared = await call("PATCH", `/v1/trips/${trip.id}/places/${place.id}`, {
+      token: token("owner_visited"),
+      body: { visited_at: null },
+    });
+    expect((await json(cleared)).visited_at).toBeNull();
+  });
+
   it("rejects unknown fields instead of guessing", async () => {
     const response = await call("POST", "/v1/trips", {
       token: token("owner_unknown"),

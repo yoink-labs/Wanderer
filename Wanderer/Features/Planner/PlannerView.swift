@@ -425,6 +425,11 @@ struct PlannerView: View {
             .onChange(of: store.days.count) { _, _ in
                 proxy.scrollTo(selection, anchor: .center)
             }
+            .onChange(of: store.selectedDayHint) { _, hint in
+                guard let hint, let day = store.days.first(where: { $0.id == hint }) else { return }
+                selection = .day(day.id)
+                store.selectedDayHint = nil
+            }
         }
     }
 
@@ -441,16 +446,16 @@ struct PlannerView: View {
                 Text(labels.0)
                     .font(.ligga(.caption2, weight: .semibold))
                     .tracking(0.5)
-                    .foregroundStyle(isSelected ? .white.opacity(0.7) : WandererTheme.muted)
+                    .foregroundStyle(isSelected ? WandererTheme.onPrimary.opacity(0.75) : WandererTheme.muted)
                 Text(labels.1)
                     .font(.ligga(.subheadline, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(isSelected ? .white : WandererTheme.ink)
+                    .foregroundStyle(isSelected ? WandererTheme.onPrimary : WandererTheme.ink)
             }
             .frame(minWidth: 58, minHeight: 40)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? WandererTheme.charcoal : WandererTheme.card)
+                    .fill(isSelected ? WandererTheme.primaryFill : WandererTheme.card)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -463,6 +468,31 @@ struct PlannerView: View {
         .accessibilityIdentifier("planner-day-\(day.dayIndex)")
         .accessibilityLabel("Day \(day.dayIndex + 1), \(labels.0) \(labels.1)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .contextMenu {
+            Button {
+                Task {
+                    await store.insertDay(after: day)
+                    LiggaHaptics.success()
+                }
+            } label: {
+                Label("Insert day after", systemImage: "plus.rectangle.on.rectangle")
+            }
+            Button(role: .destructive) {
+                Task {
+                    await store.deleteDay(day)
+                    LiggaHaptics.success()
+                }
+            } label: {
+                Label("Delete day", systemImage: "trash")
+            }
+            .disabled(store.days.count <= 1)
+        }
+        .accessibilityAction(named: "Insert day after") {
+            Task { await store.insertDay(after: day) }
+        }
+        .accessibilityAction(named: "Delete day") {
+            Task { await store.deleteDay(day) }
+        }
     }
 
     private var unscheduledChip: some View {
@@ -789,7 +819,8 @@ struct PlannerView: View {
                 number: number,
                 timeZoneIdentifier: trip.timezone,
                 isFocused: isFocused,
-                leg: editMode.isEditing ? nil : travelLegs[place.id]
+                leg: editMode.isEditing ? nil : travelLegs[place.id],
+                costLabel: costLabel(for: place)
             )
         }
         .buttonStyle(.plain)
@@ -811,6 +842,38 @@ struct PlannerView: View {
                 Label("Remove", systemImage: "trash")
             }
         }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                Task { await store.setVisited(place, visited: !place.isVisited) }
+            } label: {
+                Label(place.isVisited ? "Unvisit" : "Visited",
+                      systemImage: place.isVisited ? "arrow.uturn.backward" : "checkmark")
+            }
+            .tint(WandererTheme.mint)
+        }
+        .contextMenu {
+            Button {
+                Task { await store.setVisited(place, visited: !place.isVisited) }
+            } label: {
+                Label(place.isVisited ? "Mark not visited" : "Mark visited",
+                      systemImage: place.isVisited ? "circle" : "checkmark.circle")
+            }
+            Button {
+                activeSheet = .place(place)
+            } label: {
+                Label("Details and cost", systemImage: "info.circle")
+            }
+        }
+    }
+
+    /// Cost chip label for a stop, in the currency its expenses were recorded.
+    private func costLabel(for place: PlaceRecord) -> String? {
+        let total = store.cost(for: place)
+        guard total > 0 else { return nil }
+        let currency = store.expenses.first(where: { $0.placeId == place.id })?.currency
+            ?? Locale.current.currency?.identifier
+            ?? "USD"
+        return "\(currency) \(String(format: "%.0f", total))"
     }
 
     private var addPlaceRow: some View {
@@ -1223,6 +1286,8 @@ private struct PlannerPlaceRow: View {
     var isFocused = false
     /// Travel from the previous pinned stop, if any.
     var leg: PlannerTravelLeg?
+    /// Recorded spend for this stop, when any.
+    var costLabel: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -1258,6 +1323,18 @@ private struct PlannerPlaceRow: View {
                     }
                     .font(.ligga(.footnote))
                     .foregroundStyle(WandererTheme.muted)
+
+                    if place.isVisited || costLabel != nil {
+                        HStack(spacing: 5) {
+                            if place.isVisited {
+                                chip("Visited", icon: "checkmark.circle.fill", tint: WandererTheme.mint)
+                            }
+                            if let costLabel {
+                                chip(costLabel, icon: "banknote", tint: WandererTheme.coralDeep)
+                            }
+                        }
+                        .padding(.top, 1)
+                    }
 
                     if let notes = place.notes, !notes.isEmpty {
                         Text(notes)
@@ -1303,6 +1380,16 @@ private struct PlannerPlaceRow: View {
             .padding(.vertical, 6)
         }
         .contentShape(Rectangle())
+    }
+
+    private func chip(_ text: String, icon: String, tint: Color) -> some View {
+        Label(text, systemImage: icon)
+            .font(.ligga(.caption2, weight: .semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(tint.opacity(0.12), in: Capsule())
+            .accessibilityLabel(text)
     }
 }
 

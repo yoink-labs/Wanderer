@@ -195,6 +195,25 @@ struct WandererAPI: Sendable {
         ])
     }
 
+    func updateDay(tripID: UUID, dayID: UUID, body: [String: JSONValue]) async throws -> TripDayRecord {
+        try await send("PATCH", "/v1/trips/\(tripID.uuidString)/days/\(dayID.uuidString)", body: body)
+    }
+
+    func addDay(tripID: UUID, index: Int, date: String) async throws -> TripDayRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/days", body: [
+            "day_index": .integer(index),
+            "date": .string(date)
+        ])
+    }
+
+    func deleteDay(tripID: UUID, dayID: UUID) async throws {
+        try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/days/\(dayID.uuidString)")
+    }
+
+    func updateTripEndDate(tripID: UUID, endDate: String) async throws -> TripRecord {
+        try await send("PATCH", "/v1/trips/\(tripID.uuidString)", body: ["end_date": .string(endDate)])
+    }
+
     func places(tripID: UUID) async throws -> [PlaceRecord] {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/places")
     }
@@ -214,6 +233,15 @@ struct WandererAPI: Sendable {
 
     func deletePlace(tripID: UUID, placeID: UUID) async throws {
         try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/places/\(placeID.uuidString)")
+    }
+
+    /// `visitedAt` is an ISO-8601 timestamp, or nil to clear the mark.
+    func setPlaceVisited(tripID: UUID, placeID: UUID, visitedAt: String?) async throws -> PlaceRecord {
+        try await send(
+            "PATCH",
+            "/v1/trips/\(tripID.uuidString)/places/\(placeID.uuidString)",
+            body: ["visited_at": .optional(visitedAt)]
+        )
     }
 
     func reservations(tripID: UUID) async throws -> [ReservationRecord] {

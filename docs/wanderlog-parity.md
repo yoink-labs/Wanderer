@@ -68,7 +68,7 @@ guessed.
 | Capability | Wanderlog | Wanderer |
 | --- | --- | --- |
 | Collapsible days with per-day menu | Observed | partial — day chips + sheet, no collapse |
-| Insert day after / delete day | Observed | todo (days are derived from date range) |
+| Insert day after / delete day | Observed | impl — day-chip context menu, shifts later days and the trip end date |
 | Day subheading | Observed | todo |
 | Day color | Observed | todo |
 | Expand all days | Observed | n/a (single selected day) |
@@ -77,9 +77,9 @@ guessed.
 | Auto-fill day (free) | Observed | todo — this is an AI/paid-data feature |
 | Optimize route | Gated PRO | impl (nearest-neighbour reorder, free) |
 | Start/end time per place, 30-minute steps | Observed | impl (`start_time` / `end_time`) |
-| Mark as visited | Observed | todo |
+| Mark as visited | Observed | impl — swipe/context menu on the row and a toggle in the place sheet |
 | Add note / link per place | Observed (inline) | partial — notes + website fields in place editor |
-| Add cost per place | Gated (expense) | impl (expense records) |
+| Add cost per place | Gated (expense) | impl — cost from the place sheet tags an expense with `place_id`; the row shows the total |
 | Drag to reorder, manual arrange | Observed | impl (drag rows, manual arrange) |
 | Add place from anywhere (Chrome extension) | Observed (extension promo) | todo (share extension plausible, free) |
 

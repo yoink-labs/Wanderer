@@ -53,6 +53,38 @@ describe("expenses and splits", () => {
     expect(response.status).toBe(400);
   });
 
+  it("tags an expense to a place", async () => {
+    const trip = await createTrip("owner_place_cost");
+    const place = await json(
+      await call("POST", `/v1/trips/${trip.id}/places`, {
+        token: token("owner_place_cost"),
+        body: { name: "Belém Tower", position: 0 },
+      }),
+    );
+    const me = await json(await call("GET", "/v1/me", { token: token("owner_place_cost") }));
+    const response = await call("POST", `/v1/trips/${trip.id}/expenses`, {
+      token: token("owner_place_cost"),
+      body: {
+        title: "Belém Tower",
+        amount: 12,
+        currency: "EUR",
+        category: "activities",
+        paid_by: me.id,
+        split_with: [me.id],
+        split_mode: "equal",
+        spent_at: "2026-11-13",
+        place_id: place.id,
+      },
+    });
+    expect(response.status).toBe(201);
+    expect((await json(response)).place_id).toBe(place.id);
+
+    const expenses = await json(
+      await call("GET", `/v1/trips/${trip.id}/expenses`, { token: token("owner_place_cost") }),
+    );
+    expect(expenses[0].place_id).toBe(place.id);
+  });
+
   it("records settlements", async () => {
     const trip = await createTrip("owner_settle");
     const a = await json(await call("GET", "/v1/me", { token: token("owner_settle") }));
