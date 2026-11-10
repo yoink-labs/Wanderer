@@ -1,21 +1,23 @@
-Wanderer proof index
-====================
-00-signin-email-only.png        Email-only sign-in (light), before the code step.
-00-signin-email-only-dark.png   Email-only sign-in in dark mode.
-01-signup.png                   Clerk sign-up submitted; "Check your email" (code not shown).
-02-verify-email.png             The code entry step (no code visible).
-08-worker-health.png            Deployed wanderer-api /health returns {"ok":true}.
-10-tests-worker.png             46-worker-test run (see txt for the exact tail).
-10-tests-swift.png              20 Swift unit tests, TEST SUCCEEDED (before parity additions).
+Wanderer proof index — 2026-11-10
+=================================
+00-signin-email-only.png        Email-only Clerk sign-in (light).
+00-signin-email-only-dark.png   Email-only Clerk sign-in in dark mode.
+01-signup.png                   Clerk sign-up submitted; "Check your email" (no code shown).
+02-verify-email.png             The code entry step before verification (no code shown).
+03-trips-signed-in.png          Signed-in home with the "Yoink Test Trip" created through the app.
+04-trip-places.png              Trip detail reading two places from D1, routed on the map.
+05-file-upload.png              e2e-receipt.txt uploaded to R2 and listed for the trip.
+06-signout.png                  Sign-in screen after signing out.
+06b-signin-code-sent.png        Sign-in code requested after sign-out (no code shown).
+07-same-account-site.png        yoinklabs.dev recognized arul+wanderertest@undrift.dev and asked
+                                for Clerk's new-device verification code.
+08-worker-health.png            api.yoinklabs.dev/health returns {"ok":true}.
+10-tests-worker.png             Worker test run (51 passing).
+10-tests-swift.png              Swift unit tests (24 passing).
 11-ui-before.png                UI before the redo: forced light, light-only palette.
 12-ui-after-light.png           UI after: light, semantic surfaces.
 13-ui-after-dark.png            UI after: dark mode.
-14-ui-after-ax-xxl.png          UI after: AX-XXL Dynamic Type (icon-only New trip, wrapped meta).
+14-ui-after-ax-xxl.png          UI after: AX-XXL Dynamic Type.
 
-Pending (blocked, see report):
-03-trips-signed-in.png          Waiting on the code from arul.
-04-trip-places.png              Same.
-05-file-upload.png              Same.
-06-signout-signin.png           Same.
-07-same-account-site.png        Same.
+Pending:
 09-d1-import-counts.png         Blocked: no Supabase export credentials on this Mac.
