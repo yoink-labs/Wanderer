@@ -1,0 +1,21 @@
+Wanderer proof index
+====================
+00-signin-email-only.png        Email-only sign-in (light), before the code step.
+00-signin-email-only-dark.png   Email-only sign-in in dark mode.
+01-signup.png                   Clerk sign-up submitted; "Check your email" (code not shown).
+02-verify-email.png             The code entry step (no code visible).
+08-worker-health.png            Deployed wanderer-api /health returns {"ok":true}.
+10-tests-worker.png             46-worker-test run (see txt for the exact tail).
+10-tests-swift.png              20 Swift unit tests, TEST SUCCEEDED (before parity additions).
+11-ui-before.png                UI before the redo: forced light, light-only palette.
+12-ui-after-light.png           UI after: light, semantic surfaces.
+13-ui-after-dark.png            UI after: dark mode.
+14-ui-after-ax-xxl.png          UI after: AX-XXL Dynamic Type (icon-only New trip, wrapped meta).
+
+Pending (blocked, see report):
+03-trips-signed-in.png          Waiting on the code from arul.
+04-trip-places.png              Same.
+05-file-upload.png              Same.
+06-signout-signin.png           Same.
+07-same-account-site.png        Same.
+09-d1-import-counts.png         Blocked: no Supabase export credentials on this Mac.
