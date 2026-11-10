@@ -39,6 +39,9 @@ enum BackendMode: String {
     case cloud
 
     static let defaultsKey = "wanderer.backendMode"
+    /// Set once this device has held a Supabase session. Those people keep
+    /// using Supabase until their trips are imported into D1.
+    static let supabaseHistoryKey = "wanderer.hasSupabaseAccount"
 
     static var current: BackendMode {
         get {
@@ -46,8 +49,12 @@ enum BackendMode: String {
                let mode = BackendMode(rawValue: raw) {
                 return mode
             }
-            // The cloud backend is the default after the cutover; builds
-            // without a Worker URL fall back to Supabase automatically.
+            // New installs and new sign-ups start on the cloud backend.
+            // Anyone who already has Supabase data stays there until the
+            // import lands, so no existing trips disappear.
+            if UserDefaults.standard.bool(forKey: supabaseHistoryKey) {
+                return .supabase
+            }
             return .cloud
         }
         set {

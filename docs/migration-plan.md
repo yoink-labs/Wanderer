@@ -132,6 +132,13 @@ Still open:
 
 - Production Supabase export credentials are not on this Mac, so no rows have
   been imported. The importer and its tests are ready.
+- End-to-end against the deployed Worker is partly verified: sign-up + email
+  verification, trip creation, two places and a file upload all wrote to D1/R2
+  and render in the app; sign-out works. Sign-in after sign-out and the site's
+  new-device verification are waiting on fresh email codes.
+- Writing this pass caught a second UUID-case bug: bodies carried uppercase ids
+  while paths were normalized, so foreign keys failed. All UUID-shaped body
+  values are normalized now, with a regression test.
 - The Clerk Backend API exposes no native-application endpoint, so registering
   the bundle ID remains a dashboard action. Native API sign-in itself works;
   `CLERK_AUTHORIZED_PARTIES` is set to the two site origins plus

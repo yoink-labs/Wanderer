@@ -88,6 +88,8 @@ async function readJson<T = Record<string, unknown>>(request: Request, limit = J
   }
 }
 
+const UUID_PATTERN = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -141,6 +143,7 @@ async function authenticate(request: Request, env: Env): Promise<User | null> {
     throw new ApiError(503, "auth_not_configured", "Sign-in is not configured on this server.");
   }
   const claims = await verifyClerkJwt(token, config);
+  console.log(JSON.stringify({ authAzp: typeof claims.azp === "string" ? claims.azp : null }));
   return resolveProfile(env, claims);
 }
 
@@ -260,7 +263,9 @@ function pickWritable(
       unknown.push(key);
       continue;
     }
-    values[key] = value;
+    // Swift renders UUIDs uppercase; D1 compares text exactly. Normalize any
+    // UUID-shaped body value so foreign keys still match.
+    values[key] = typeof value === "string" && UUID_PATTERN.test(value) ? value.toLowerCase() : value;
   }
   if (unknown.length > 0) {
     throw new ApiError(400, "unknown_fields", `Unknown field(s): ${unknown.join(", ")}`);
@@ -782,7 +787,11 @@ registerTripResource(routes, "expenses", {
   orderDir: "desc",
   createdBy: "created_by",
   prepare: (values) => {
-    if (Array.isArray(values.split_with)) values.split_with = JSON.stringify(values.split_with);
+    if (Array.isArray(values.split_with)) {
+      values.split_with = JSON.stringify(
+        values.split_with.map((item) => (typeof item === "string" && UUID_PATTERN.test(item) ? item.toLowerCase() : item)),
+      );
+    }
     if (values.amount !== undefined) {
       const amount = Number(values.amount);
       if (!Number.isFinite(amount) || amount < 0) {
@@ -810,6 +819,7 @@ registerTripResource(routes, "expenses", {
     const statements = [];
     for (const split of splits) {
       if (!isRecord(split) || typeof split.user_id !== "string") continue;
+      if (UUID_PATTERN.test(split.user_id)) split.user_id = split.user_id.toLowerCase();
       statements.push(
         env.DB.prepare(
           "INSERT INTO expense_splits (id, trip_id, expense_id, user_id, amount, weight) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (expense_id, user_id) DO UPDATE SET amount = excluded.amount, weight = excluded.weight",

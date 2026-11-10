@@ -249,6 +249,23 @@ describe("trips", () => {
     expect((await json(cleared)).visited_at).toBeNull();
   });
 
+  it("accepts uppercase UUIDs in bodies, not just paths", async () => {
+    const trip = await createTrip("owner_case_body");
+    const days = await json(
+      await call("GET", `/v1/trips/${trip.id}/days`, { token: token("owner_case_body") }),
+    );
+    const response = await call("POST", `/v1/trips/${trip.id}/places`, {
+      token: token("owner_case_body"),
+      body: {
+        name: "Uppercase day",
+        day_id: days[0].id.toUpperCase(),
+        position: 0,
+      },
+    });
+    expect(response.status).toBe(201);
+    expect((await json(response)).day_id).toBe(days[0].id);
+  });
+
   it("rejects unknown fields instead of guessing", async () => {
     const response = await call("POST", "/v1/trips", {
       token: token("owner_unknown"),

@@ -293,6 +293,10 @@ struct EmailAuthSheet: View {
         if email.isEmpty, let value = environment["WANDERER_TEST_EMAIL"] {
             email = value
         }
+        if password.isEmpty, let value = environment["WANDERER_TEST_PASSWORD"] {
+            password = value
+            confirmPassword = value
+        }
         if code.isEmpty, auth.awaitingCode, let value = environment["WANDERER_TEST_CODE"] {
             code = value
         }

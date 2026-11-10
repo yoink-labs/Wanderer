@@ -109,6 +109,9 @@ struct TripsHomeView: View {
             guard auth.isAuthenticated else { return }
             await importGuestTripsIfNeeded()
             await loadTrips()
+            #if DEBUG
+            await DebugSeed.runIfRequested()
+            #endif
             if visitedStore.visited.isEmpty {
                 await visitedStore.load()
             }

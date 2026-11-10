@@ -152,10 +152,12 @@ async function verifyWithKey(
   if (config.issuer && claims.iss !== config.issuer) {
     throw new AuthError("wrong_issuer", "The session token came from another issuer.");
   }
+  // Native clients do not always carry `azp`. Enforce it when present, and
+  // let a missing claim through: the token is still signed by this instance.
   const parties = config.authorizedParties.filter((value) => value.length > 0);
   if (parties.length > 0) {
     const azp = typeof claims.azp === "string" ? claims.azp : "";
-    if (!parties.includes(azp)) {
+    if (azp.length > 0 && !parties.includes(azp)) {
       throw new AuthError("untrusted_party", "The session token was issued to an untrusted client.");
     }
   }

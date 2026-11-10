@@ -72,15 +72,37 @@ final class AuthStore: ObservableObject {
             if let user = Clerk.shared.user, Clerk.shared.session != nil {
                 applyClerkUser(user)
                 CloudSession.shared.token = try? await Clerk.shared.auth.getToken()
+            } else {
+                resumePendingVerificationIfTesting()
             }
             return
         }
 
         do {
             session = try await client.auth.session
+            if session != nil { markSupabaseHistory() }
         } catch {
             session = nil
         }
+    }
+
+    /// Records that this device has Supabase data, so the backend default does
+    /// not move those trips to the cloud before the import runs.
+    private func markSupabaseHistory() {
+        UserDefaults.standard.set(true, forKey: BackendMode.supabaseHistoryKey)
+    }
+
+    /// Debug builds only: if a verification attempt survived a relaunch, show
+    /// the code step again so simulator automation can finish it.
+    private func resumePendingVerificationIfTesting() {
+        #if DEBUG
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["WANDERER_TEST_CODE"] != nil else { return }
+        guard Clerk.shared.client?.signUp != nil || Clerk.shared.client?.signIn != nil else { return }
+        awaitingCode = true
+        pendingMode = Clerk.shared.client?.signUp != nil ? .signUp : .signIn
+        pendingEmail = environment["WANDERER_TEST_EMAIL"]
+        #endif
     }
 
     private func waitForClerk() async {
