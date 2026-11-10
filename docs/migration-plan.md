@@ -106,6 +106,29 @@ Still open:
 3. Verify counts and checksums per table, then flip the app config.
 4. Rollback is config-only while the Supabase project and migrations remain.
 
+## Deployed infrastructure (2026-11-10)
+
+| Resource | Name / value |
+| --- | --- |
+| Worker | `wanderer-api` at `https://wanderer-api.arulsharma1028.workers.dev` |
+| D1 | `wanderer` (`d3bda4a5-ce71-4ee2-92d8-f98d1e307351`), migration `0001_init.sql` applied |
+| R2 | `wanderer-media` |
+| Clerk | Yoink Labs production instance, issuer `https://clerk.yoinklabs.dev` |
+| Media signing | Worker secret set with `wrangler secret put` |
+
+Blocked at this point:
+
+- `yoinklabs.dev` is not a zone in the Cloudflare account available on this
+  Mac (only `ade-app.dev` is), so `api.yoinklabs.dev` cannot be attached. The
+  Worker stays on workers.dev until the zone is reachable.
+- No Supabase access token or database password is present on this Mac, so the
+  production export/import cannot run.
+- No Resend key is readable locally (the website keeps it as a Worker secret),
+  so invite email is unconfigured and the app falls back to the Mail sheet.
+- `CLERK_AUTHORIZED_PARTIES` is intentionally empty until a real session token
+  shows the native `azp`; pinning it is a follow-up. Signature and issuer are
+  enforced.
+
 ## Data import
 
 `worker/scripts/import-supabase.ts` turns `<table>.ndjson` Supabase exports
