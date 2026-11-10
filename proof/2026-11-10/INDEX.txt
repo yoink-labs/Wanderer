@@ -9,6 +9,9 @@ Wanderer proof index — 2026-11-10
 05-file-upload.png              e2e-receipt.txt uploaded to R2 and listed for the trip.
 06-signout.png                  Sign-in screen after signing out.
 06b-signin-code-sent.png        Sign-in code requested after sign-out (no code shown).
+03b-trips-after-signin.png      Signed back in: the same trip is still on Home.
+04b-trip-after-signin.png       After sign-in: both places still load from D1.
+05b-file-after-signin.png       After sign-in: e2e-receipt.txt still loads from R2.
 07-same-account-site.png        yoinklabs.dev asked for new-device verification for
                                 arul+wanderertest@undrift.dev.
 07b-site-signed-in.png          After verification: the site opens signed in (no sign-in prompt).
