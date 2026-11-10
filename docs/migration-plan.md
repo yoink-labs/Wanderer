@@ -102,6 +102,14 @@ Still open:
 3. Verify counts and checksums per table, then flip the app config.
 4. Rollback is config-only while the Supabase project and migrations remain.
 
+## Data import
+
+`worker/scripts/import-supabase.ts` turns `<table>.ndjson` Supabase exports
+into an idempotent D1 import: original UUIDs kept, UUIDs lowercased (Swift
+sends uppercase while D1 compares text exactly), booleans and `split_with`
+arrays converted, parents written before children. Tests run the same plan
+twice against local D1 and assert no duplicates.
+
 ## Open items (not done)
 
 - Clerk publishable key/domain and Worker URL are not configured in this

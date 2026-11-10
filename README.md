@@ -11,12 +11,12 @@ AI features are intentionally out of scope for now.
 | Layer | Choice | Cost |
 | --- | --- | --- |
 | App | SwiftUI, iOS 18+, XcodeGen | free |
-| Backend | Supabase (Postgres, Auth, Storage, Realtime, RLS) | free tier |
+| Backend | Supabase today; Cloudflare Worker + D1 + R2 as the migration target | free tiers |
 | Maps & place search | MapKit / MKLocalSearch | free |
 | Weather | Open-Meteo | free, no key |
 | FX rates | Frankfurter | free, no key |
 | Photos | Unsplash CDN + user uploads | free |
-| Auth | Supabase Auth (email/password; social later) | free |
+| Auth | Supabase Auth today; Clerk (same Yoink account as the website) as the migration target | free |
 
 ## What is built
 

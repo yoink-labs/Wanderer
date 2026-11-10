@@ -103,3 +103,20 @@ and the Worker rejects it unless `ENVIRONMENT === "test"` and
 `ENVIRONMENT === "test"` **and** `ALLOW_TEST_AUTH === "true"`. Production
 configuration never sets the flag, and a test asserts that both conditions are
 required.
+
+## Importing existing Supabase data
+
+Export each table to NDJSON (`<table>.ndjson`) from the Supabase table editor,
+then:
+
+```bash
+npm run import:supabase -- --dir ./export --out ./import.sql --dry-run
+npm run import:supabase -- --dir ./export --out ./import.sql
+npx wrangler d1 execute wanderer --remote --file import.sql
+```
+
+Rows keep their original UUIDs and every statement is an upsert, so the import
+is safe to run twice. UUIDs are lowercased because Swift sends uppercase and
+D1 compares text exactly. Provide `identities.ndjson` (`{clerk_sub,
+profile_id, email}`) to map old users to Clerk subjects; unmapped profiles
+still import, they just cannot sign in yet.
