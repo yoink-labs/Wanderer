@@ -9,7 +9,7 @@ final class TripsStore: ObservableObject {
     private let backing: TripsBacking
 
     init(backing: TripsBacking? = nil) {
-        self.backing = backing ?? CloudTripsBacking()
+        self.backing = backing ?? (LocalTrips.isActive ? GuestTripsBacking() : CloudTripsBacking())
     }
 
     func load() async {

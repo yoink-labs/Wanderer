@@ -142,3 +142,66 @@ final class GuestTripImporterTests: XCTestCase {
         XCTAssertEqual(expense?.placeId, copied.first?.id)
     }
 }
+
+@MainActor
+final class GuestTripsBackingTests: XCTestCase {
+    private var root: URL!
+    private var backing: GuestTripsBacking!
+    private var savedTrips: [Trip] = []
+
+    override func setUp() async throws {
+        savedTrips = GuestTripsStore.load()
+        GuestTripsStore.clear()
+        root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let server = LocalTripServer.api(LocalTripServer(store: LocalTripStore(directory: root)))
+        backing = GuestTripsBacking(server: server, coversDirectory: root.appendingPathComponent("covers"))
+    }
+
+    override func tearDown() async throws {
+        GuestTripsStore.clear()
+        if !savedTrips.isEmpty { GuestTripsStore.save(savedTrips) }
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    func testEditingASampleSavesTheSamplesAndTheChange() async throws {
+        let sample = Trip.samples[1]
+        let start = TripDayRecord.date(from: "2026-12-01")!
+        let end = TripDayRecord.date(from: "2026-12-03")!
+        let record = try await backing.update(sample, title: "Barcelona, finally", destination: "Barcelona", startDate: start, endDate: end)
+        XCTAssertEqual(record.title, "Barcelona, finally")
+        XCTAssertEqual(record.dayCount, 3)
+        let saved = GuestTripsStore.load()
+        XCTAssertEqual(saved.count, Trip.samples.count, "All samples are kept once one is edited")
+        XCTAssertEqual(saved.first { $0.id == sample.id }?.days, 3)
+    }
+
+    func testChangingDatesResizesTheDaysAndKeepsStops() async throws {
+        let trip = Trip.samples[0]
+        let start = TripDayRecord.date(from: "2026-12-01")!
+        _ = try await backing.update(trip, title: trip.title, destination: trip.destination, startDate: start,
+                                     endDate: Calendar.current.date(byAdding: .day, value: 4, to: start)!)
+        let days = try await backing.server.days(tripID: trip.id)
+        XCTAssertEqual(days.count, 5)
+        let lastDay = days.max { $0.dayIndex < $1.dayIndex }!
+        _ = try await backing.server.addPlace(tripID: trip.id, body: ["name": .string("Late stop"), "day_id": .optional(lastDay.id)])
+
+        _ = try await backing.update(trip, title: trip.title, destination: trip.destination, startDate: start,
+                                     endDate: Calendar.current.date(byAdding: .day, value: 1, to: start)!)
+        let shorter = try await backing.server.days(tripID: trip.id)
+        XCTAssertEqual(shorter.map(\.date), ["2026-12-01", "2026-12-02"])
+        let places = try await backing.server.places(tripID: trip.id)
+        XCTAssertEqual(places.first?.name, "Late stop")
+        XCTAssertNil(places.first?.dayId, "A stop on a removed day moves to Ideas")
+    }
+
+    func testNotesCoverAndDelete() async throws {
+        let trip = Trip.samples[2]
+        let noted = try await backing.updateNotes(trip, notes: "Bring the rail pass")
+        XCTAssertEqual(noted.notes, "Bring the rail pass")
+        let cover = try await backing.updateCover(trip, imageData: Data([0xFF, 0xD8, 0xFF]))
+        XCTAssertTrue(cover?.hasPrefix("file://") == true)
+        try await backing.delete(trip)
+        let remaining = try await backing.load()
+        XCTAssertFalse(remaining.contains { $0.id == trip.id })
+    }
+}

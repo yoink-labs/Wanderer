@@ -146,9 +146,13 @@ struct TripsHomeView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .tripsChanged)) { _ in
+            // Guests: pick up edits saved on the phone (rename, dates, cover, delete).
+            guestTrips = GuestTripsStore.load()
             Task { await loadTrips() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .tripDeleted)) { _ in
+            // Guests: pick up edits saved on the phone (rename, dates, cover, delete).
+            guestTrips = GuestTripsStore.load()
             Task { await loadTrips() }
         }
         .alert("Something went wrong", isPresented: Binding(

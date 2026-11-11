@@ -68,6 +68,7 @@
 		C286E481FCCD60AF37B29298 /* CloudConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DCC795CE658B7BD1697781E /* CloudConfiguration.swift */; };
 		C5AF9EF650590A855022CD30 /* TripDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E8C79615FAB050DEC30A5E3 /* TripDetailView.swift */; };
 		CC1C73CDCED3D441BDC4C21F /* ShareTripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A397EC5A5BBC91655CF501D2 /* ShareTripView.swift */; };
+		CC3D5714E664E124A84C30C7 /* GuestTripsBacking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF7C94D0B8E212B94CA5733 /* GuestTripsBacking.swift */; };
 		CC66BEAE5BE8C7927890CCD7 /* EmailAuthSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE27CCE1B726D127167825E0 /* EmailAuthSheet.swift */; };
 		CCD3CA48AC49C45FDAA22475 /* LanguagePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37DD9D79B1A57BE12E142567 /* LanguagePickerView.swift */; };
 		D139EFE2DA68DFA507F1DEB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47D71F678F3B4C1FC21ED47D /* Assets.xcassets */; };
@@ -102,6 +103,7 @@
 		07BCF1FD5AB8A2D095611C80 /* HomeSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSkeleton.swift; sourceTree = "<group>"; };
 		09159DF78F452ED84A8316FB /* LegacyBackendCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBackendCleanupTests.swift; sourceTree = "<group>"; };
 		0B0D5B7BCC7CFFFF1A7D4205 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
+		0BF7C94D0B8E212B94CA5733 /* GuestTripsBacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestTripsBacking.swift; sourceTree = "<group>"; };
 		0F821EEAC812B7309DAAB142 /* TripsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsHomeView.swift; sourceTree = "<group>"; };
 		0FFE84B509D6A42620681B9B /* TripPDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPDFExporter.swift; sourceTree = "<group>"; };
 		10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerStartDayTests.swift; sourceTree = "<group>"; };
@@ -458,6 +460,7 @@
 				7826EBF72AA8AD4BAEE74BBB /* DebugSeed.swift */,
 				5D2518F768DF200D5EBD7C6A /* DemoTripSeed.swift */,
 				9A938EDE5556DD46D58EA8B0 /* GuestTripImporter.swift */,
+				0BF7C94D0B8E212B94CA5733 /* GuestTripsBacking.swift */,
 				CE2F38C76DD3D2DE1394C419 /* LocalTripServer.swift */,
 				53CE45DE2D1E4D3D8DA0E507 /* OfflineReadCache.swift */,
 				139E6CDC21F9B4DB1ECA89A7 /* TripsBacking.swift */,
@@ -574,6 +577,7 @@
 				2A86BCA769BE5C0C54B726B3 /* ExpensesView.swift in Sources */,
 				9FA8AA633269ED1A2C8C05FF /* ExploreView.swift in Sources */,
 				43F0E4D9B372A4F50382F3C6 /* GuestTripImporter.swift in Sources */,
+				CC3D5714E664E124A84C30C7 /* GuestTripsBacking.swift in Sources */,
 				0377ADC9CCC4A161D2461FBD /* GuestTripsStore.swift in Sources */,
 				84C1A21D029A8C34D999EE04 /* GuideDetailView.swift in Sources */,
 				A4969B7060AD45D48DDED22B /* HomeCards.swift in Sources */,
