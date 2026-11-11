@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var auth: AuthStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @StateObject private var profileStore = ProfileStore()
     @StateObject private var visitedStore = VisitedStore()
 
@@ -162,7 +163,12 @@ struct ProfileView: View {
     private var guestCard: some View {
         let tripCount = GuestTripsStore.load().count
         return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
+            // The mark goes above the title at large sizes so the title
+            // gets the full width instead of breaking mid-word.
+            let headerLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+                : AnyLayout(HStackLayout(spacing: 12))
+            headerLayout {
                 WandererMark(size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Planning as a guest")

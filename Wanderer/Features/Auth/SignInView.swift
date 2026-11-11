@@ -18,6 +18,7 @@ struct SignInView: View {
     private var isBusy: Bool { auth.isWorking }
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private func startApple() {
         guard !isBusy else { return }
@@ -77,6 +78,8 @@ struct SignInView: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        // The hero sits over a map; past AX2 it would bury the whole map.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, WandererTheme.gutter)
         // Clears the top bar above, and the sheet, which overlaps by 24pt.
@@ -94,8 +97,10 @@ struct SignInView: View {
                 LinearGradient(
                     stops: [
                         .init(color: WandererTheme.charcoal.opacity(0.55), location: 0),
-                        .init(color: WandererTheme.charcoal.opacity(0), location: 0.28),
-                        .init(color: WandererTheme.charcoal.opacity(0), location: 0.4),
+                        // Large text climbs up over the route, so the shade
+                        // comes in earlier and the headline never sits on bare map.
+                        .init(color: WandererTheme.charcoal.opacity(dynamicTypeSize.isAccessibilitySize ? 0.6 : 0), location: 0.28),
+                        .init(color: WandererTheme.charcoal.opacity(dynamicTypeSize.isAccessibilitySize ? 0.8 : 0), location: 0.4),
                         .init(color: WandererTheme.charcoal.opacity(0.94), location: 0.92)
                     ],
                     startPoint: .top,
@@ -228,8 +233,14 @@ struct SignInView: View {
                 Label("Continue with email", systemImage: "envelope")
                     .font(.ligga(.headline, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 52)
+                    .frame(minHeight: 52)
+                    // Sized to match the Apple and Google buttons above,
+                    // which are fixed-size, so the three read as one set.
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     .overlay(
                         RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                             .strokeBorder(WandererTheme.line, lineWidth: 1.5)

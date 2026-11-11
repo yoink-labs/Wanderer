@@ -428,6 +428,7 @@ enum GuideFilter {
 
 private struct FeaturedGuideCard: View {
     let guide: GuideRecord
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -458,14 +459,14 @@ private struct FeaturedGuideCard: View {
                 Text(guide.title)
                     .font(.display(.title2))
                     .foregroundStyle(.white)
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
 
                 if let summary = guide.summary, !summary.isEmpty {
                     Text(summary)
                         .font(.ligga(.footnote))
                         .foregroundStyle(.white.opacity(0.82))
-                        .lineLimit(2)
-                        .frame(maxWidth: 280, alignment: .leading)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 5 : 2)
+                        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 280, alignment: .leading)
                 }
 
                 HStack(spacing: 6) {
@@ -478,7 +479,8 @@ private struct FeaturedGuideCard: View {
             .padding(20)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 300)
+        // Grows with large text instead of cutting the title off.
+        .frame(minHeight: 300)
         .clipShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Featured guide: \(guide.title), \(guide.destination ?? "curated route")")
