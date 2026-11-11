@@ -1,0 +1,9 @@
+UI redo slice 3: planner (main 71fcf49)
+Guest mode, Kyoto demo trip stored on the device.
+
+00-before-planner-dark.png  Before (dark): unreadable pin numbers, white weather pill, invisible selected day.
+01-planner-light.png        After (light): opens on today (Day 3), display title, day strip with fullness dots
+                            and marigold selection, "Ideas" chip, stops threaded on the marigold route line.
+02-planner-dark.png         After (dark): same screen; pins, weather and selection all legible.
+
+Tests: Swift 41 passed (3 new PlannerStartDay tests).
