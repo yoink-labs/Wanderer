@@ -1,0 +1,14 @@
+UI redo slice 15: large-text pass
+Text size: accessibility-extra-extra-extra-large (AX5), iPhone simulator, demo guest trip.
+Main commits: 904bfcd, c4f182e, 3a9579d, 3f452d4
+
+before/                         AX5 before the pass (light)
+01-guest-settings-after-light   Trip settings for a guest trip, which errored before (904bfcd)
+after/signin-{light,dark}       Map shaded behind a capped headline; email button sized with Apple/Google
+after/explore-{light,dark}      Featured guide grows; title and summary no longer cut off
+after/profile-{light,dark}      Guest card: mark above the title, no mid-word break
+after/planner-{light,dark}      Panel opens tall; header, day chips and section header stack; stop names wrap
+after/expenses-{light,dark}     Tools header capped at AX1; "Set a budget" wraps instead of truncating
+after/checklist-{light,dark}    Ticks scale with the text and line up with the first line
+after/files-{light,dark}        One column at AX sizes; full file names; badge size capped
+Already fine at AX5, unchanged: Share, Notes, Settings, Language.
