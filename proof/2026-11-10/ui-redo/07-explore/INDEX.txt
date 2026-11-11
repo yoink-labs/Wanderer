@@ -1,0 +1,10 @@
+UI redo slice 7: Explore (main 2a53fc9)
+Captured against a LOCAL Worker seeded with worker/seed.sql, because the production D1 has no guides
+(the seed was never applied there; applying it is a production write awaiting approval).
+
+00-before-explore.png       Before: production build, empty Explore ("No guides yet").
+01-explore-light.png        After (light): display title, region chips, postcard featured guide, guide list.
+02-explore-dark.png         After (dark): selected chip legible (marigold), hairline cards.
+03-home-guides-dark.png     Home in dark with the guide carousel populated.
+
+Tests: Swift 47 passed.
