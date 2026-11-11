@@ -1,0 +1,10 @@
+UI redo slice 5: guest profile, sign-in, onboarding
+No email addresses or account data shown.
+
+00-before-profile.png          Before: guest saw "Couldn't load your profile" and 0/0 stats.
+01-profile-guest-light.png     After (light): guest card with "Create a free account" / "I already have an account".
+02-profile-guest-dark.png      After (dark).
+03-signin-light.png            Email-only sign-in: display headline, marigold route pins, taller map hero.
+04-signin-dark.png             Same in dark: marigold primary button.
+
+Tests: Swift 43 passed.
