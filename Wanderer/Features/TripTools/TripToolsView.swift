@@ -113,6 +113,8 @@ struct TripToolsView: View {
             Text("Trip tools")
                 .font(.ligga(.headline, weight: .semibold))
                 .foregroundStyle(WandererTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .accessibilityAddTraits(.isHeader)
             Spacer()
             Button {
@@ -148,6 +150,9 @@ struct TripToolsView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("trip-tools-done")
         }
+        // Like a navigation bar, this row stops growing at AX1 so the title
+        // and three controls still fit on one line.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
 
     private func exportPDF() {
@@ -448,10 +453,12 @@ struct TripToolSecondaryLabel: View {
             }
             Text(title)
                 .font(.ligga(.subheadline, weight: .semibold))
-                .lineLimit(1)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
         }
         .foregroundStyle(WandererTheme.ink)
         .padding(.horizontal, 14)
+        .padding(.vertical, 6)
         .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 44)
         .background(WandererTheme.platinum, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

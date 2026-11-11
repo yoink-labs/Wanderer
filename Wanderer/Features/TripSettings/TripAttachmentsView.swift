@@ -18,8 +18,15 @@ struct TripAttachmentsView: View {
     @State private var showPhotos = false
     @State private var previewURL: URL?
     @AppStorage("wanderer.isGuest") private var isGuest = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
+    /// Two or more tiles a row normally; one full-width tile at large sizes
+    /// so file names have room to read.
+    private var columns: [GridItem] {
+        dynamicTypeSize.isAccessibilitySize
+            ? [GridItem(.flexible())]
+            : [GridItem(.adaptive(minimum: 150), spacing: 12)]
+    }
 
     var body: some View {
         NavigationStack {
@@ -160,7 +167,7 @@ struct TripAttachmentsView: View {
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 FileThumbnail(url: url, glyph: glyph(for: attachment), isImage: attachment.icon == "photo")
-                    .frame(height: 118)
+                    .frame(height: dynamicTypeSize.isAccessibilitySize ? 160 : 118)
                     .frame(maxWidth: .infinity)
                     .clipped()
                     .overlay(alignment: .bottomLeading) {
@@ -171,13 +178,14 @@ struct TripAttachmentsView: View {
                             .padding(.vertical, 3)
                             .background(Color(hex: 0x10283A).opacity(0.85), in: Capsule())
                             .padding(8)
+                            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                     }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(attachment.name)
                         .font(.ligga(.subheadline, weight: .semibold))
                         .foregroundStyle(WandererTheme.ink)
-                        .lineLimit(2, reservesSpace: true)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2, reservesSpace: !dynamicTypeSize.isAccessibilitySize)
                         .truncationMode(.middle)
                         .multilineTextAlignment(.leading)
                     Text(attachment.sizeLabel)

@@ -2,6 +2,8 @@ import Foundation
 import SwiftUI
 
 struct ChecklistView: View {
+    /// The tick grows with the item text so it stays an obvious target.
+    @ScaledMetric(relativeTo: .body) private var tickSize: CGFloat = 22
     @ObservedObject var store: TripDetailStore
 
     @State private var newItem = ""
@@ -227,18 +229,18 @@ struct ChecklistView: View {
         Button {
             Task { await store.toggleChecklist(item) }
         } label: {
-            HStack(spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
                 ZStack {
                     Circle()
                         .strokeBorder(item.isChecked ? Color.clear : WandererTheme.dust, lineWidth: 2)
                     if item.isChecked {
                         Circle().fill(WandererTheme.route)
                         Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .heavy))
+                            .font(.system(size: tickSize * 0.55, weight: .heavy))
                             .foregroundStyle(WandererTheme.onAccent)
                     }
                 }
-                .frame(width: 22, height: 22)
+                .frame(width: tickSize, height: tickSize)
                 .accessibilityHidden(true)
 
                 Text(item.title)
