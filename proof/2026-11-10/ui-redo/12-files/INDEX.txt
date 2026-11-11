@@ -1,0 +1,11 @@
+UI redo slice 12: Files (main 4a65966)
+Guest mode, Kyoto demo trip; both files are generated demo content stored on the device.
+
+Before (no screenshot): a guest opening Files got "Sign in to use this on a guest trip."; signed-in files
+were a plain list with an icon, name and size.
+01-files-light.png   After, light: two-column grid with real Quick Look thumbnails (PDF cropped from the
+                     top), PNG/PDF badges, "Saved on this phone" footer for guests.
+02-files-dark.png    After, dark.
+
+Tests: Swift 59 passed (2 new: device files stored/opened/deleted with path-safe names, 10 MB limit;
+guest import now copies files into the account).
