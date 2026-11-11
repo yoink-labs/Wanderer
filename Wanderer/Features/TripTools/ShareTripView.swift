@@ -19,18 +19,21 @@ struct ShareTripView: View {
     @State private var inviteError: String?
     @FocusState private var emailFocused: Bool
 
-    private var webLink: String {
-        "https://wanderer.app/trip/\(trip.id.uuidString)"
+    @AppStorage("wanderer.isGuest") private var isGuest = false
+    @State private var confirmReset = false
+    @State private var linkReset = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The public, read-only page for this trip on api.yoinklabs.dev.
+    private var shareURL: URL? {
+        store.shareToken.flatMap { store.shareURL(for: $0) }
     }
 
-    private var webURL: URL {
-        URL(string: webLink) ?? URL(string: "https://wanderer.app")!
-    }
-
-    /// Short, human-readable form of the link. The full URL is what gets
-    /// copied and shared.
+    /// Short, readable form of the link; the full URL is what's copied.
     private var displayLink: String {
-        "wanderer.app/trip/\(trip.id.uuidString.prefix(8).lowercased())…"
+        guard let shareURL else { return "" }
+        let text = (shareURL.host() ?? "") + shareURL.path()
+        return text.count > 34 ? String(text.prefix(33)) + "…" : text
     }
 
     private var ownerDisplayName: String {
@@ -47,14 +50,19 @@ struct ShareTripView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
-                TripToolGroupLabel(title: "People", trailing: people.isEmpty ? nil : "\(people.count)")
-                peopleCard
+                if !store.isAvailable {
+                    guestCard
+                } else {
+                    if shareURL != nil {
+                        linkCard
+                    }
 
-                TripToolGroupLabel(title: "Invite by email")
-                inviteCard
+                    TripToolGroupLabel(title: "People", trailing: people.isEmpty ? nil : "\(people.count)")
+                    peopleCard
 
-                TripToolGroupLabel(title: "Link")
-                linkCard
+                    TripToolGroupLabel(title: "Invite by email")
+                    inviteCard
+                }
             }
             .padding(.horizontal, TripToolsLayout.gutter)
             .padding(.top, 4)
@@ -63,6 +71,7 @@ struct ShareTripView: View {
         .scrollDismissesKeyboard(.interactively)
         .background(WandererTheme.platinum.ignoresSafeArea())
         .task {
+            store.setInitialToken(trip.shareToken)
             await store.load(tripID: trip.id)
         }
         .onChange(of: store.errorMessage) { _, message in
@@ -70,6 +79,20 @@ struct ShareTripView: View {
                 inviteError = message
                 store.errorMessage = nil
             }
+        }
+        .confirmationDialog("Make a new link?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Make a new link", role: .destructive) {
+                Task {
+                    await store.resetLink(tripID: trip.id)
+                    LiggaHaptics.success()
+                    withAnimation(WandererMotion.animation(WandererMotion.snappy, reduceMotion: reduceMotion)) {
+                        linkReset = true
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The current link stops working for everyone who has it.")
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { inviteError != nil },
@@ -79,6 +102,44 @@ struct ShareTripView: View {
         } message: {
             Text(inviteError ?? "")
         }
+    }
+
+    // MARK: - Guest
+
+    private var guestCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Image(systemName: "person.2.fill")
+                .font(.ligga(.title2, weight: .bold))
+                .foregroundStyle(Color(hex: 0xF2A922))
+                .accessibilityHidden(true)
+            Text("Plan this trip together")
+                .font(.display(.title3))
+                .foregroundStyle(.white)
+            Text("Sharing a link and inviting people need a free Yoink Labs account. Everything you've planned on this phone comes with you.")
+                .font(.ligga(.subheadline))
+                .foregroundStyle(.white.opacity(0.88))
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                LiggaHaptics.tap()
+                withAnimation { isGuest = false }
+            } label: {
+                Text("Create a free account")
+                    .font(.ligga(.headline, weight: .bold))
+                    .foregroundStyle(Color(hex: 0x10283A))
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 50)
+                    .background(Color(hex: 0xF2A922), in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
+            }
+            .buttonStyle(.liggaPressable)
+            .accessibilityIdentifier("share-guest-create-account")
+            Text("You can still send the itinerary as a PDF with the share button at the top.")
+                .font(.ligga(.footnote))
+                .foregroundStyle(.white.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(hex: 0x10283A), in: RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
     }
 
     // MARK: - People
@@ -300,9 +361,8 @@ struct ShareTripView: View {
                         openMail(to: email)
                     }
                     ShareLink(
-                        item: webURL,
-                        subject: Text("Join \(trip.title) on Wanderer"),
-                        message: Text("I added you to \(trip.title) on Wanderer. Sign in with \(email) to join.")
+                        item: inviteMessage(for: email),
+                        subject: Text("Join \(trip.title) on Wanderer")
                     ) {
                         TripToolSecondaryLabel(title: "Share invite", icon: "square.and.arrow.up")
                     }
@@ -335,9 +395,19 @@ struct ShareTripView: View {
         }
     }
 
+    /// Invites are claimed by signing in with the invited email, so the
+    /// message says exactly that; the read-only link is added when there is one.
+    private func inviteMessage(for email: String) -> String {
+        var text = "I added you to \(trip.title) on Wanderer. Install Wanderer and sign in with \(email), and the trip shows up in your Trips."
+        if let shareURL {
+            text += "\n\nPreview the plan: \(shareURL.absoluteString)"
+        }
+        return text
+    }
+
     private func openMail(to email: String) {
         let subject = "Join my trip on Wanderer: \(trip.title)"
-        let body = "I added you to \(trip.title) on Wanderer. Sign in with \(email) to join.\n\n\(webLink)"
+        let body = inviteMessage(for: email)
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         guard let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)") else {
@@ -348,26 +418,43 @@ struct ShareTripView: View {
 
     // MARK: - Link
 
+    /// The read-only link, first because it's the quickest way to share.
     private var linkCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "link")
-                    .font(.ligga(.body, weight: .semibold))
-                    .foregroundStyle(WandererTheme.muted)
-                    .frame(width: 24)
+                    .font(.ligga(.headline, weight: .bold))
+                    .foregroundStyle(WandererTheme.onAccent)
+                    .frame(width: 36, height: 36)
+                    .background(WandererTheme.route, in: Circle())
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Anyone with the link can view")
-                        .font(.ligga(.subheadline, weight: .semibold))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Anyone with the link can view the plan")
+                        .font(.ligga(.headline, weight: .semibold))
                         .foregroundStyle(WandererTheme.ink)
-                    Text(verbatim: displayLink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Days and stops only. People, notes, costs, bookings and files stay private.")
                         .font(.ligga(.footnote))
                         .foregroundStyle(WandererTheme.muted)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .accessibilityLabel("Trip link")
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 0)
+            }
+
+            Text(verbatim: displayLink)
+                .font(.system(.footnote, design: .monospaced).weight(.semibold))
+                .foregroundStyle(WandererTheme.ink)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                .background(WandererTheme.fillMuted, in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
+                .accessibilityLabel("Trip link")
+                .accessibilityValue(shareURL?.absoluteString ?? "")
+
+            if linkReset {
+                Label("New link made. The old one no longer works.", systemImage: "checkmark.circle.fill")
+                    .font(.ligga(.footnote, weight: .semibold))
+                    .foregroundStyle(WandererTheme.lagoon)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             HStack(spacing: 8) {
@@ -379,29 +466,45 @@ struct ShareTripView: View {
                 }
                 .accessibilityIdentifier("share-copy-link")
 
-                ShareLink(
-                    item: webURL,
-                    subject: Text(trip.title),
-                    message: Text("Follow \(trip.title) on Wanderer.")
-                ) {
-                    TripToolSecondaryLabel(title: "Share", icon: "square.and.arrow.up")
+                if let shareURL {
+                    ShareLink(
+                        item: shareURL,
+                        subject: Text(trip.title),
+                        message: Text("Here's the plan for \(trip.title).")
+                    ) {
+                        TripToolSecondaryLabel(title: "Share", icon: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("share-link")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("share-link")
             }
             .sensoryFeedback(.success, trigger: copied) { _, new in new }
+
+            Button {
+                confirmReset = true
+            } label: {
+                Text(store.isResettingLink ? "Making a new link…" : "Make a new link")
+                    .font(.ligga(.subheadline, weight: .semibold))
+                    .foregroundStyle(WandererTheme.accentText)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
+            .disabled(store.isResettingLink || trip.shareToken == nil && store.shareToken == nil)
+            .accessibilityHint("The current link stops working")
+            .accessibilityIdentifier("share-reset-link")
         }
         .padding(16)
         .liggaCard()
     }
 
     private func copyLink() {
-        UIPasteboard.general.string = webLink
-        withAnimation(.easeOut(duration: 0.18)) {
+        guard let shareURL else { return }
+        UIPasteboard.general.string = shareURL.absoluteString
+        withAnimation(WandererMotion.animation(WandererMotion.snappy, reduceMotion: reduceMotion)) {
             copied = true
         }
         Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            try? await Task.sleep(for: .seconds(2))
             withAnimation(.easeOut(duration: 0.18)) {
                 copied = false
             }

@@ -9,7 +9,7 @@
     "CLERK_ISSUER": "https://clerk.yoinklabs.dev",
     "CLERK_JWKS_URL": "https://clerk.yoinklabs.dev/.well-known/jwks.json",
     "CLERK_AUTHORIZED_PARTIES": "https://yoinklabs.dev,https://www.yoinklabs.dev,com.wanderer.ios",
-    "APP_SHARE_BASE_URL": "https://yoinklabs.dev"
+    "APP_SHARE_BASE_URL": "https://api.yoinklabs.dev"
   },
   "d1_databases": [
     {

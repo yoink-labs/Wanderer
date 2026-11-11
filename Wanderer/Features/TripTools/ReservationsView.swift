@@ -18,9 +18,9 @@ struct ReservationsView: View {
             if store.reservations.isEmpty {
                 TripToolEmptyState(
                     icon: "ticket",
-                    title: "No reservations yet",
+                    title: "No bookings yet",
                     message: "Keep flights, stays, cars and tables in one place, sorted by day.",
-                    actionTitle: "Add reservation"
+                    actionTitle: "Add booking"
                 ) {
                     showAdd = true
                 }
@@ -35,7 +35,7 @@ struct ReservationsView: View {
                 }
 
                 if sections.isEmpty {
-                    Text("No \(filter?.title.lowercased() ?? "") reservations.")
+                    Text("No \(filter?.title.lowercased() ?? "") bookings.")
                         .font(.ligga(.subheadline))
                         .foregroundStyle(WandererTheme.muted)
                         .frame(maxWidth: .infinity, minHeight: 80)
@@ -67,7 +67,7 @@ struct ReservationsView: View {
                                 Button(role: .destructive) {
                                     pendingDelete = reservation
                                 } label: {
-                                    Label("Delete reservation", systemImage: "trash")
+                                    Label("Delete booking", systemImage: "trash")
                                 }
                             }
                     }
@@ -78,7 +78,7 @@ struct ReservationsView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !store.reservations.isEmpty {
                 TripToolBottomBar {
-                    TripToolPrimaryButton(title: "Add reservation", icon: "plus") {
+                    TripToolPrimaryButton(title: "Add booking", icon: "plus") {
                         showAdd = true
                     }
                     .accessibilityIdentifier("reservations-add")
@@ -91,7 +91,7 @@ struct ReservationsView: View {
                 .presentationDragIndicator(.visible)
         }
         .confirmationDialog(
-            "Delete this reservation?",
+            "Delete this booking?",
             isPresented: Binding(
                 get: { pendingDelete != nil },
                 set: { if !$0 { pendingDelete = nil } }
@@ -394,7 +394,7 @@ private struct AddReservationSheet: View {
                         }
                     }
 
-                    TripToolPrimaryButton(title: "Save reservation", icon: "checkmark", isEnabled: canSave) {
+                    TripToolPrimaryButton(title: "Save booking", icon: "checkmark", isEnabled: canSave) {
                         save()
                     }
                     .accessibilityIdentifier("reservation-save")
@@ -413,7 +413,7 @@ private struct AddReservationSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(WandererTheme.platinum.ignoresSafeArea())
-            .navigationTitle("New reservation")
+            .navigationTitle("New booking")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(WandererTheme.platinum, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)

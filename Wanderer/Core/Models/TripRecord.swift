@@ -14,6 +14,8 @@ struct TripRecord: Codable, Identifiable, Hashable {
     var notes: String?
     var timezone: String
     var placeCount: Int = 0
+    /// Token for the public read-only link; nil for guest trips.
+    var shareToken: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -28,6 +30,7 @@ struct TripRecord: Codable, Identifiable, Hashable {
         case notes
         case timezone
         case placeCount = "place_count"
+        case shareToken = "share_token"
     }
 
     init(from decoder: Decoder) throws {
@@ -45,6 +48,7 @@ struct TripRecord: Codable, Identifiable, Hashable {
         timezone = try container.decodeIfPresent(String.self, forKey: .timezone) ?? TimeZone.current.identifier
         // The Worker returns the count inline; older rows may omit it.
         placeCount = try container.decodeIfPresent(Int.self, forKey: .placeCount) ?? 0
+        shareToken = try container.decodeIfPresent(String.self, forKey: .shareToken)
     }
 
     var dayCount: Int {
@@ -83,7 +87,8 @@ struct TripRecord: Codable, Identifiable, Hashable {
             endDate: endDate,
             coverUrl: coverUrl,
             notes: notes,
-            timezone: timezone
+            timezone: timezone,
+            shareToken: shareToken
         )
     }
 

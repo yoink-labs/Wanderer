@@ -55,14 +55,14 @@ struct HomeTripOrdering {
         var featured: Trip?
         var reason: Reason = .latest
 
-        if let live = byRecency.first(where: { $0.phase == .inProgress }) {
+        if let live = byRecency.first(where: { $0.phase(on: now) == .inProgress }) {
             featured = live
             reason = .inProgress
-        } else if let recent = byRecency.first(where: { recencyRank[$0.id] != nil && $0.phase != .past }) {
+        } else if let recent = byRecency.first(where: { recencyRank[$0.id] != nil && $0.phase(on: now) != .past }) {
             featured = recent
             reason = .recent
         } else if let next = trips
-            .filter({ $0.phase == .upcoming })
+            .filter({ $0.phase(on: now) == .upcoming })
             .compactMap({ trip in Self.startDate(of: trip).map { (trip, $0) } })
             .min(by: { $0.1 < $1.1 }) {
             featured = next.0
@@ -76,8 +76,8 @@ struct HomeTripOrdering {
         self.reason = reason
 
         let remaining = byRecency.filter { $0.id != featured?.id }
-        let current = remaining.filter { $0.phase != .past }
-        let past = remaining.filter { $0.phase == .past }
+        let current = remaining.filter { $0.phase(on: now) != .past }
+        let past = remaining.filter { $0.phase(on: now) == .past }
         self.others = current + past
     }
 

@@ -12,7 +12,7 @@ enum TripToolTab: Hashable, CaseIterable {
 
     var title: String {
         switch self {
-        case .reservations: return "Reservations"
+        case .reservations: return "Bookings"
         case .expenses: return "Expenses"
         case .checklist: return "Checklist"
         case .share: return "Share"
@@ -42,6 +42,10 @@ struct TripToolsView: View {
     @State private var selectedTab: TripToolTab
     @State private var errorText: String?
     @State private var didRequestLoad = false
+    @Namespace private var tabNamespace
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @State private var exportURL: URL?
     @State private var showShareSheet = false
     @State private var showJournal = false
@@ -163,35 +167,59 @@ struct TripToolsView: View {
     }
 
     private var tabBar: some View {
-        HStack(spacing: 2) {
-            ForEach(TripToolTab.allCases, id: \.self) { tab in
-                Button {
-                    withAnimation(.easeOut(duration: 0.18)) {
-                        selectedTab = tab
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                // Large text: full-width labels that scroll instead of truncating.
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 2) { tabButtons(equalWidth: false) }
                     }
-                } label: {
-                    Text(tab.title)
-                        .font(.ligga(.footnote, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .padding(.horizontal, 4)
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .foregroundStyle(selectedTab == tab ? WandererTheme.ink : WandererTheme.muted)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(selectedTab == tab ? WandererTheme.card : Color.clear)
-                                .shadow(color: selectedTab == tab ? WandererTheme.shadow : .clear, radius: 3, x: 0, y: 1)
-                        )
-                        .contentShape(Rectangle())
+                    .onChange(of: selectedTab) { _, tab in
+                        withAnimation(reduceMotion ? nil : WandererMotion.snappy) { proxy.scrollTo(tab, anchor: .center) }
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(tab.title)
-                .accessibilityAddTraits(selectedTab == tab ? [.isSelected] : [])
+            } else {
+                HStack(spacing: 2) { tabButtons(equalWidth: true) }
             }
         }
         .padding(3)
-        .background(WandererTheme.dust.opacity(0.45), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .background(WandererTheme.fillMuted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .sensoryFeedback(.selection, trigger: selectedTab)
+    }
+
+    @ViewBuilder
+    private func tabButtons(equalWidth: Bool) -> some View {
+        ForEach(TripToolTab.allCases, id: \.self) { tab in
+            let isSelected = selectedTab == tab
+            Button {
+                withAnimation(WandererMotion.animation(WandererMotion.snappy, reduceMotion: reduceMotion)) {
+                    selectedTab = tab
+                }
+            } label: {
+                Text(tab.title)
+                    .font(.ligga(.subheadline, weight: .semibold))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: !equalWidth, vertical: false)
+                    .minimumScaleFactor(equalWidth ? 0.8 : 1)
+                    .padding(.horizontal, equalWidth ? 4 : 14)
+                    .frame(maxWidth: equalWidth ? .infinity : nil, minHeight: 40)
+                    .foregroundStyle(isSelected ? WandererTheme.ink : WandererTheme.muted)
+                    .background {
+                        if isSelected {
+                            // One pill that slides between tabs.
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .fill(WandererTheme.cardElevated)
+                                .shadow(color: WandererTheme.cardShadow(colorScheme), radius: 3, x: 0, y: 1)
+                                .matchedGeometryEffect(id: "tool-tab", in: tabNamespace)
+                        }
+                    }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .id(tab)
+            .accessibilityLabel(tab.title)
+            .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        }
     }
 
     @ViewBuilder

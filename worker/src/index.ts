@@ -1,5 +1,7 @@
 import { AuthError, verifyClerkJwt, type ClerkClaims } from "./auth";
 
+import { serveInvitePage, serveSharedTrip } from "./publicPages";
+
 export interface Env {
   DB: D1Database;
   MEDIA: R2Bucket;
@@ -126,9 +128,10 @@ async function authenticate(request: Request, env: Env): Promise<User | null> {
   // Test-only: never reachable in production because the environment check
   // must be exactly "test" and the flag must be set on that environment.
   if (env.ENVIRONMENT === "test" && env.ALLOW_TEST_AUTH === "true" && token.startsWith("test:")) {
-    const sub = token.slice("test:".length);
+    // "test:<sub>" or "test:<sub>|<email>" (test environment only).
+    const [sub, email] = token.slice("test:".length).split("|");
     if (!sub) throw new AuthError("missing_subject", "The test token has no subject.");
-    return resolveProfile(env, { sub });
+    return resolveProfile(env, email ? { sub, email } : { sub });
   }
 
   const config = {
@@ -152,7 +155,21 @@ async function resolveProfile(env: Env, claims: ClerkClaims): Promise<User> {
     .bind(claims.sub)
     .first<{ profile_id: string; email: string | null }>();
 
+  // Clerk only puts the (verified, primary) email in the token when the
+  // instance's session token is customised to include it.
+  const email = typeof claims.email === "string" && claims.email.includes("@") ? claims.email.toLowerCase() : null;
+
   if (existing) {
+    if (email && email !== existing.email) {
+      // Keep the stored email current so invites sent to it can be claimed.
+      await env.DB.batch([
+        env.DB.prepare("UPDATE identities SET email = ?, last_seen_at = ? WHERE clerk_sub = ?")
+          .bind(email, new Date().toISOString(), claims.sub),
+        env.DB.prepare("UPDATE profiles SET email = ?, updated_at = ? WHERE id = ?")
+          .bind(email, new Date().toISOString(), existing.profile_id),
+      ]);
+      return { id: existing.profile_id, email };
+    }
     await env.DB.prepare("UPDATE identities SET last_seen_at = ? WHERE clerk_sub = ?")
       .bind(new Date().toISOString(), claims.sub)
       .run()
@@ -160,7 +177,6 @@ async function resolveProfile(env: Env, claims: ClerkClaims): Promise<User> {
     return { id: existing.profile_id, email: existing.email };
   }
 
-  const email = typeof claims.email === "string" ? claims.email : null;
   const profileId = crypto.randomUUID();
   const displayName =
     (typeof claims.name === "string" && claims.name.trim()) ||
@@ -668,6 +684,19 @@ on("DELETE", "/v1/trips/:tripId", async ({ env, user, params }) => {
   return json({ deleted: true });
 });
 
+// A new share token turns the old public link off. Owner only.
+on("POST", "/v1/trips/:tripId/share-link", async ({ env, user, params }) => {
+  const access = await requireTrip(env, user.id, params.tripId, "write");
+  if (access.role !== "owner") {
+    throw new ApiError(403, "owner_only", "Only the trip owner can change the share link.");
+  }
+  const token = crypto.randomUUID();
+  await env.DB.prepare("UPDATE trips SET share_token = ?, updated_at = ? WHERE id = ?")
+    .bind(token, new Date().toISOString(), params.tripId)
+    .run();
+  return json({ share_token: token });
+});
+
 on("POST", "/v1/trips/:tripId/cover", async ({ env, request, user, params }) => {
   await requireTrip(env, user.id, params.tripId, "write");
   const contentType = request.headers.get("content-type") ?? "";
@@ -912,7 +941,7 @@ on("POST", "/v1/trips/:tripId/invites", async ({ env, request, user, params }) =
     .bind(inviteId, params.tripId, email, role, token, expiresAt)
     .first<Record<string, unknown>>();
 
-  const link = `${env.APP_SHARE_BASE_URL ?? "https://wanderer.app"}/invite/${token}`;
+  const link = `${env.APP_SHARE_BASE_URL ?? "https://api.yoinklabs.dev"}/invite/${token}`;
   const delivered = await sendInviteEmail(env, {
     to: email,
     tripTitle: trip?.title ?? "a trip",
@@ -959,6 +988,38 @@ on("POST", "/v1/invites/:token/accept", async ({ env, user, params }) => {
     env.DB.prepare("UPDATE trip_invites SET accepted_at = ? WHERE id = ?").bind(new Date().toISOString(), invite.id),
   ]);
   return json({ trip_id: invite.trip_id, role: invite.role });
+});
+
+// Accepts every pending, unexpired invite sent to the signed-in person's
+// email. The app calls this after sign-in, so an invite works without the
+// app having to open the emailed link.
+on("POST", "/v1/invites/claim", async ({ env, user }) => {
+  const profile = await env.DB.prepare("SELECT email FROM profiles WHERE id = ?")
+    .bind(user.id)
+    .first<{ email: string | null }>();
+  const email = (profile?.email ?? user.email ?? "").toLowerCase();
+  if (!email) return json({ claimed: [] });
+  const now = new Date().toISOString();
+  const pending = (
+    await env.DB.prepare(
+      `SELECT id, trip_id, role FROM trip_invites
+       WHERE lower(email) = ? AND accepted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)`,
+    )
+      .bind(email, now)
+      .all<{ id: string; trip_id: string; role: string }>()
+  ).results ?? [];
+  if (pending.length > 0) {
+    await env.DB.batch(
+      pending.flatMap((invite) => [
+        env.DB.prepare(
+          `INSERT INTO trip_members (trip_id, user_id, role) VALUES (?, ?, ?)
+           ON CONFLICT (trip_id, user_id) DO UPDATE SET role = CASE WHEN trip_members.role = 'owner' THEN 'owner' ELSE excluded.role END`,
+        ).bind(invite.trip_id, user.id, invite.role),
+        env.DB.prepare("UPDATE trip_invites SET accepted_at = ? WHERE id = ?").bind(now, invite.id),
+      ]),
+    );
+  }
+  return json({ claimed: pending.map((invite) => invite.trip_id) });
 });
 
 // --- attachments -----------------------------------------------------------
@@ -1246,6 +1307,15 @@ export default {
         return await serveMedia(env, url);
       }
 
+      // Public, read-only pages a shared link or an invite email opens.
+      const publicPage = url.pathname.match(/^\/(s|invite)\/([^/]+)$/);
+      if (request.method === "GET" && publicPage) {
+        await enforceRateLimit(env, `public:${await clientBucket(request)}`, 120, 60);
+        return publicPage[1] === "s"
+          ? await serveSharedTrip(env, decodeURIComponent(publicPage[2]))
+          : await serveInvitePage(env, decodeURIComponent(publicPage[2]));
+      }
+
       let matched: { route: Route; params: Record<string, string> } | null = null;
       for (const route of routes) {
         if (route.method !== request.method) continue;
@@ -1287,6 +1357,13 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+/** Rate-limit bucket for anonymous pages: a short hash, never the raw IP. */
+async function clientBucket(request: Request): Promise<string> {
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`wanderer-public:${ip}`));
+  return [...new Uint8Array(digest).slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 async function replayIdempotent(
   env: Env,

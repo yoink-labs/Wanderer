@@ -327,6 +327,25 @@ struct WandererAPI: Sendable {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/members")
     }
 
+    /// Replaces the trip's share token, which turns the old public link off.
+    func resetShareLink(tripID: UUID) async throws -> String {
+        struct Payload: Decodable { let share_token: String }
+        let payload: Payload = try await send("POST", "/v1/trips/\(tripID.uuidString)/share-link")
+        return payload.share_token
+    }
+
+    /// Accepts pending invites sent to the signed-in person's email.
+    func claimInvites() async throws -> [UUID] {
+        struct Payload: Decodable { let claimed: [UUID] }
+        let payload: Payload = try await send("POST", "/v1/invites/claim")
+        return payload.claimed
+    }
+
+    /// The public, read-only page for a share token.
+    func sharePageURL(token: String) -> URL {
+        baseURL.appendingPathComponent("s").appendingPathComponent(token.lowercased())
+    }
+
     func invites(tripID: UUID) async throws -> [TripInviteRecord] {
         try await send("GET", "/v1/trips/\(tripID.uuidString)/invites")
     }

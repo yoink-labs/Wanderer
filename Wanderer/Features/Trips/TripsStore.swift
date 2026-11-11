@@ -16,6 +16,10 @@ final class TripsStore: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        // Trips someone invited this email to join appear without a link.
+        if !LocalTrips.isActive, let api = CloudSession.shared.api {
+            _ = try? await api.claimInvites()
+        }
         do {
             trips = try await backing.load()
             errorMessage = nil

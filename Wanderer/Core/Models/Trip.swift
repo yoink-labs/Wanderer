@@ -15,6 +15,7 @@ struct Trip: Identifiable, Hashable, Codable {
     var coverUrl: String?
     var notes: String?
     var timezone: String
+    var shareToken: String? = nil
 
     init(
         id: UUID = UUID(),
@@ -30,7 +31,8 @@ struct Trip: Identifiable, Hashable, Codable {
         endDate: String? = nil,
         coverUrl: String? = nil,
         notes: String? = nil,
-        timezone: String = TimeZone.current.identifier
+        timezone: String = TimeZone.current.identifier,
+        shareToken: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -46,6 +48,7 @@ struct Trip: Identifiable, Hashable, Codable {
         self.coverUrl = coverUrl
         self.notes = notes
         self.timezone = timezone
+        self.shareToken = shareToken
     }
 
     /// First-run guest samples, dated relative to today so Home always shows
@@ -104,8 +107,12 @@ enum TripPhase {
 }
 
 extension Trip {
-    var phase: TripPhase {
-        let today = Calendar.current.startOfDay(for: Date())
+    var phase: TripPhase { phase(on: Date()) }
+
+    /// Phase relative to a given day, so ordering and tests don't depend on
+    /// the wall clock.
+    func phase(on now: Date) -> TripPhase {
+        let today = Calendar.current.startOfDay(for: now)
         guard let start = TripDayRecord.date(from: startDate),
               let end = TripDayRecord.date(from: endDate) else {
             return .upcoming
