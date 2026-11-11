@@ -36,7 +36,7 @@ targets:
         PRODUCT_NAME: Wanderer
         PRODUCT_MODULE_NAME: Wanderer
         MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Wanderer
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
