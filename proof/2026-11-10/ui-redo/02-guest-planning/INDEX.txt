@@ -1,0 +1,9 @@
+UI redo slice 2: plan guest trips on the device (main fc087e7)
+Guest mode, no account. Kyoto sample filled by the DEBUG demo seed through the local API.
+
+01-guest-trip-planned-light.png  Guest trip with 11 places, 5 days, routed map, lists - all stored on the device.
+02-guest-trip-planned-dark.png   Same in dark. Known issues fixed in slice 3 (planner redesign): pin numbers
+                                 unreadable on dark pins, weather pill stays white, selected day chip blends in.
+
+Tests: Swift 38 passed (6 LocalTripServer tests incl. persistence across instances and uppercase ids;
+1 GuestTripImporter test: places keep their day, costs move to the signed-in payer).
