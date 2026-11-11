@@ -1,0 +1,8 @@
+UI redo slice 6: offline reading for signed-in trips (main 7965869)
+
+offline-tests.txt  OfflineReadCacheTests run on the simulator: last good read served offline (marked with
+                   x-wanderer-offline), another account never sees the copy, writes are never answered
+                   from cache, clear() removes everything.
+
+No screenshot: demonstrating it needs a signed-in session on the simulator, and the test account would
+need a fresh email code. Guest trips (slice 2) already work fully offline and are shown there.

@@ -1,0 +1,12 @@
+Test Case '-[WandererTests.OfflineReadCacheTests testAnotherAccountNeverSeesTheCopy]' started.
+Test Case '-[WandererTests.OfflineReadCacheTests testAnotherAccountNeverSeesTheCopy]' passed (0.026 seconds).
+Test Case '-[WandererTests.OfflineReadCacheTests testClearRemovesEverything]' started.
+Test Case '-[WandererTests.OfflineReadCacheTests testClearRemovesEverything]' passed (0.016 seconds).
+Test Case '-[WandererTests.OfflineReadCacheTests testServesTheLastGoodReadWhenOffline]' started.
+Test Case '-[WandererTests.OfflineReadCacheTests testServesTheLastGoodReadWhenOffline]' passed (0.028 seconds).
+Test Case '-[WandererTests.OfflineReadCacheTests testWritesAreNeverAnsweredFromCache]' started.
+Test Case '-[WandererTests.OfflineReadCacheTests testWritesAreNeverAnsweredFromCache]' passed (0.001 seconds).
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.071 (0.079) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.071 (0.079) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.071 (0.082) seconds
+** TEST SUCCEEDED **
