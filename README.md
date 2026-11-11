@@ -12,7 +12,7 @@ AI features are intentionally out of scope.
 | --- | --- | --- |
 | App | SwiftUI, iOS 18+, XcodeGen | free |
 | Backend | Cloudflare Worker + D1 + R2 (`worker/`) | free tier |
-| Auth | Clerk production (same Yoink Labs account as yoinklabs.dev), email codes | free tier |
+| Auth | Clerk production (same Yoink Labs account as yoinklabs.dev): Apple, Google, email codes | free tier |
 | Maps & place search | MapKit / MKLocalSearch | free |
 | Weather | Open-Meteo | free, no key |
 | FX rates | Frankfurter | free, no key |
@@ -24,8 +24,10 @@ account.
 
 ## What is built
 
-- **Auth** — Clerk, email-only: a six-digit emailed code signs in. Account
-  creation uses Clerk's required password. Google/Apple are removed for now.
+- **Auth** — Clerk (same Yoink Labs account as yoinklabs.dev): native Sign in
+  with Apple, Google (Clerk OAuth, returns to `com.wanderer.ios://callback`),
+  or a six-digit emailed code. Team `64PUT29XZ8`, Sign in with Apple entitlement
+  in `Wanderer/Resources/Wanderer.entitlements`.
 - **Onboarding** — language picker, persisted locale.
 - **Home** — smart ordering (in progress / recently opened / up next), combined
   trip-and-guide search, covers, guide carousel, Booking.com stay search,

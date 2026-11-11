@@ -1,3 +1,4 @@
+import AuthenticationServices
 import MapKit
 import SwiftUI
 
@@ -15,6 +16,14 @@ struct SignInView: View {
     }
 
     private var isBusy: Bool { auth.isWorking }
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private func startApple() {
+        guard !isBusy else { return }
+        LiggaHaptics.tap()
+        Task { await auth.signInWithApple() }
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -137,22 +146,96 @@ struct SignInView: View {
 
     private var authSheet: some View {
         VStack(spacing: LiggaSpace.s) {
-            PrimaryButton(
-                title: "Continue with email",
-                icon: "envelope.fill",
-                isEnabled: !isBusy,
-                isLoading: isBusy && !showEmailAuth
-            ) {
+            // Apple first and at full prominence (App Review 4.8, HIG): the
+            // system button, black on light and white on dark.
+            SignInWithAppleButton(.continue) { request in
+                request.requestedScopes = [.email, .fullName]
+            } onCompletion: { _ in
+                // Clerk runs its own authorization; this button only starts it.
+            }
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+            // The system button keeps its first style; rebuild it on change.
+            .id(colorScheme)
+            .frame(height: 52)
+            .clipShape(RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
+            .overlay {
+                // Intercept the tap so Clerk drives the ASAuthorization request.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { startApple() }
+                    .accessibilityHidden(true)
+            }
+            .disabled(isBusy)
+            .opacity(isBusy ? 0.6 : 1)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Continue with Apple")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { startApple() }
+            .accessibilityIdentifier("auth-apple")
+
+            Button {
+                LiggaHaptics.tap()
+                Task { await auth.signInWithGoogle() }
+            } label: {
+                HStack(spacing: 10) {
+                    GoogleMark()
+                        .frame(width: 18, height: 18)
+                    Text("Continue with Google")
+                        .font(.system(size: 19, weight: .medium))
+                }
+                .foregroundStyle(colorScheme == .dark ? Color.white : Color(hex: 0x1F1F1F))
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(
+                    colorScheme == .dark ? Color(hex: 0x131314) : Color.white,
+                    in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
+                        .strokeBorder(colorScheme == .dark ? Color(hex: 0x8E918F) : Color(hex: 0x747775), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.liggaPressable)
+            .disabled(isBusy)
+            .accessibilityIdentifier("auth-google")
+
+            if let message = auth.errorMessage, !showEmailAuth {
+                Text(message)
+                    .font(.ligga(.footnote))
+                    .foregroundStyle(WandererTheme.signal)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("auth-social-error")
+            }
+
+            HStack(spacing: LiggaSpace.s) {
+                Rectangle().fill(WandererTheme.line).frame(height: 1)
+                Text("or")
+                    .font(.ligga(.footnote))
+                    .foregroundStyle(WandererTheme.muted)
+                Rectangle().fill(WandererTheme.line).frame(height: 1)
+            }
+            .accessibilityHidden(true)
+
+            Button {
+                LiggaHaptics.tap()
                 emailAuthSignUp = false
                 showEmailAuth = true
+            } label: {
+                Label("Continue with email", systemImage: "envelope")
+                    .font(.ligga(.headline, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
+                            .strokeBorder(WandererTheme.line, lineWidth: 1.5)
+                    )
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.liggaPressable)
+            .disabled(isBusy)
+            .accessibilityHint("We'll email you a six-digit code")
             .accessibilityIdentifier("auth-email")
-
-            Text("We'll email you a six-digit code. No password to remember.")
-                .font(.ligga(.footnote))
-                .foregroundStyle(WandererTheme.muted)
-                .multilineTextAlignment(.center)
-                .padding(.bottom, LiggaSpace.xxs)
 
             Button {
                 LiggaHaptics.tap()
@@ -317,4 +400,37 @@ private struct LanguageSheet: View {
 #Preview {
     SignInView()
         .environmentObject(AuthStore())
+}
+
+/// Google's four-colour "G", drawn as arcs so no raster asset is bundled.
+/// Angles run clockwise from three o'clock; the gap sits top-right.
+private struct GoogleMark: View {
+    private static let segments: [(Double, Double, UInt32)] = [
+        (0, 45, 0x4285F4),    // blue, lower right
+        (45, 135, 0x34A853),  // green, bottom
+        (135, 200, 0xFBBC05), // yellow, lower left
+        (200, 315, 0xEA4335)  // red, top
+    ]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = min(proxy.size.width, proxy.size.height)
+            let line = size * 0.2
+            ZStack {
+                ForEach(0..<Self.segments.count, id: \.self) { index in
+                    let segment = Self.segments[index]
+                    Circle()
+                        .trim(from: segment.0 / 360, to: segment.1 / 360)
+                        .stroke(Color(hex: segment.2), style: StrokeStyle(lineWidth: line, lineCap: .butt))
+                        .padding(line / 2)
+                }
+                Rectangle()
+                    .fill(Color(hex: 0x4285F4))
+                    .frame(width: size * 0.5 - line / 2, height: line)
+                    .offset(x: size * 0.25 - line / 4)
+            }
+            .frame(width: size, height: size)
+        }
+        .accessibilityHidden(true)
+    }
 }

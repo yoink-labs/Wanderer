@@ -1,3 +1,4 @@
+import AuthenticationServices
 import ClerkKit
 import Foundation
 
@@ -166,6 +167,70 @@ final class AuthStore: ObservableObject {
         awaitingCode = false
         pendingEmail = nil
         errorMessage = nil
+    }
+
+    // MARK: - Apple and Google
+
+    /// Native Sign in with Apple through Clerk. Apple returns an ID token and
+    /// Clerk signs in or creates the same Yoink Labs account the site uses.
+    @discardableResult
+    func signInWithApple() async -> Bool {
+        await socialSignIn(provider: "Apple") {
+            try await Clerk.shared.auth.signInWithApple()
+        }
+    }
+
+    /// Google through Clerk's OAuth flow in an ASWebAuthenticationSession,
+    /// returning to `com.wanderer.ios://callback`.
+    @discardableResult
+    func signInWithGoogle() async -> Bool {
+        await socialSignIn(provider: "Google") {
+            try await Clerk.shared.auth.signInWithOAuth(provider: .google)
+        }
+    }
+
+    private func socialSignIn(provider: String, _ start: () async throws -> TransferFlowResult) async -> Bool {
+        guard beginWork() else { return false }
+        defer { isWorking = false }
+        do {
+            let result = try await start()
+            let sessionID: String?
+            switch result {
+            case .signIn(let signIn): sessionID = signIn.createdSessionId
+            case .signUp(let signUp): sessionID = signUp.createdSessionId
+            }
+            if let sessionID {
+                try await Clerk.shared.auth.setActive(sessionId: sessionID)
+            }
+            guard let user = Clerk.shared.user, Clerk.shared.session != nil else {
+                errorMessage = Self.incompleteSocialMessage(provider: provider)
+                return false
+            }
+            applyClerkUser(user)
+            CloudSession.shared.token = try? await Clerk.shared.auth.getToken()
+            awaitingCode = false
+            return true
+        } catch {
+            if Self.isCancellation(error) {
+                errorMessage = nil
+            } else {
+                errorMessage = friendly(error)
+            }
+            return false
+        }
+    }
+
+    nonisolated static func incompleteSocialMessage(provider: String) -> String {
+        "\(provider) didn't finish signing you in. Try again, or continue with email."
+    }
+
+    /// Closing the Apple sheet or the Google browser is not an error.
+    nonisolated static func isCancellation(_ error: Error) -> Bool {
+        if let auth = error as? ASAuthorizationError, auth.code == .canceled { return true }
+        if let web = error as? ASWebAuthenticationSessionError, web.code == .canceledLogin { return true }
+        let ns = error as NSError
+        return (ns.domain == ASAuthorizationError.errorDomain && ns.code == ASAuthorizationError.canceled.rawValue)
+            || (ns.domain == ASWebAuthenticationSessionError.errorDomain && ns.code == ASWebAuthenticationSessionError.canceledLogin.rawValue)
     }
 
     // MARK: - Sign out
