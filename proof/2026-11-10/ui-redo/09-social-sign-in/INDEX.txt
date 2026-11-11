@@ -1,0 +1,15 @@
+Step 9: Sign in with Apple + Google via the Yoink Clerk production instance (main 85b76c0)
+
+00-before-signin-light.png   Before: email-only sign-in.
+01-signin-social-light.png   After, light: system "Continue with Apple" (black) first, "Continue with Google"
+                             (same size, Google colours) second, "or", email as a secondary outlined button.
+02-signin-social-dark.png    After, dark: Apple button switches to white per Apple's HIG.
+
+Verified: build + 52 Swift tests (5 new: cancel handling for Apple/Google, real failures surface,
+entitlement contains com.apple.developer.applesignin = Default). Entitlement present in the
+simulator build's signed entitlements. Clerk prod redirect URL allowlist now contains
+com.wanderer.ios://callback.
+
+NOT verified: an actual Apple or Google sign-in. Simulator taps do not reach the app on this
+device, Sign in with Apple needs a device or simulator signed into an Apple ID plus a provisioning
+profile for team 64PUT29XZ8, and the Clerk native-app registration (below) is still outstanding.
