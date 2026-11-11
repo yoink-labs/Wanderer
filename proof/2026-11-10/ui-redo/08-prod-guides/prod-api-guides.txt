@@ -1,0 +1,1 @@
+3 guides: ['48 hours in Kyoto', 'Lisbon in a long weekend', 'Reykjavík road trip']

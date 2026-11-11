@@ -1,0 +1,11 @@
+Step 8: Explore guides seeded in PRODUCTION (approved by arul)
+worker/seed.sql applied to D1 `wanderer` (Yoink Labs account) behind https://api.yoinklabs.dev.
+Counts: before 0 guides / 0 stops -> after 3 guides / 9 stops. Re-running the seed wrote 0 rows (idempotent).
+
+prod-api-guides.txt               GET https://api.yoinklabs.dev/v1/guides -> 3 guides (Kyoto, Lisbon, Reykjavik).
+01-explore-prod-light.png         Explore against production, light.
+02-explore-prod-dark.png          Explore against production, dark.
+03-home-carousel-prod-light.png   Home guide carousel against production, light.
+04-home-carousel-prod-dark.png    Home guide carousel against production, dark.
+
+Build: Debug, no local override (Config/App.local.xcconfig absent), guest mode.
