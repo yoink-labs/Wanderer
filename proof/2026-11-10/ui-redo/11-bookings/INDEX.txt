@@ -1,0 +1,12 @@
+UI redo slice 11: bookings as tickets
+Guest mode, Kyoto demo trip on the device (a demo flight and stay; the confirmation code is fictional demo data).
+
+00-before-bookings-light.png   Before: plain cards with an icon and text lines.
+01-bookings-light.png          After, light: flight ticket (NRT -> ITM on the marigold route line, times, 1h,
+                               tear line, JAL 105, $184, tap-to-copy code) and stay ticket (Nov 8 -> Nov 12,
+                               check in/out times, 4 nights).
+02-bookings-dark.png           After, dark.
+03-bookings-ax-large.png       Accessibility Large: route and stub stack; notches follow the stub.
+                               (The Trip tools tab labels truncate here; fixed in a later slice.)
+
+Tests: Swift 57 passed (5 new BookingTicketModel tests).
