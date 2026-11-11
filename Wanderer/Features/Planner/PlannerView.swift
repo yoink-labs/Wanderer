@@ -54,9 +54,12 @@ struct PlannerView: View {
         case nearby
         case dayNote(TripDayRecord)
         case place(PlaceRecord)
+        case tools(TripToolTab)
 
         var id: String {
             switch self {
+            case .tools(let tab):
+                return "tools-\(tab)"
             case .addPlace:
                 return "add-place"
             case .reservations:
@@ -1154,6 +1157,8 @@ struct PlannerView: View {
                 .presentationDragIndicator(.visible)
         case .reservations:
             TripToolsView(trip: trip, store: store, initialTab: .reservations)
+        case .tools(let tab):
+            TripToolsView(trip: trip, store: store, initialTab: tab)
         case .share:
             TripToolsView(trip: trip, store: store, initialTab: .share)
         case .settings:
@@ -1193,7 +1198,22 @@ struct PlannerView: View {
 
         framePlaces()
         await frameDestinationIfNeeded()
+        openDebugSheetIfRequested()
         await loadWeather()
+    }
+
+    /// DEBUG launch route (`-uiSheet`); a no-op in release builds.
+    private func openDebugSheetIfRequested() {
+        switch DebugLaunch.sheet {
+        case "expenses": activeSheet = .tools(.expenses)
+        case "bookings": activeSheet = .tools(.reservations)
+        case "checklist": activeSheet = .tools(.checklist)
+        case "share": activeSheet = .tools(.share)
+        case "files": activeSheet = .attachments
+        case "settings": activeSheet = .settings
+        case "notes": activeSheet = .notes
+        default: break
+        }
     }
 
     private func updateViewport(_ proxy: GeometryProxy) {

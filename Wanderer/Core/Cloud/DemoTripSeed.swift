@@ -62,16 +62,20 @@ enum DemoTripSeed {
         ])
 
         let me = LocalTripStore.localUserID
-        let expenses: [(String, Double, String)] = [
-            ("Machiya near Gion", 620, "lodging"), ("Flights", 184, "transport"),
-            ("Nishiki Market lunch", 38, "food"), ("Temple entries", 24, "activities"),
-            ("Kimono rental", 55, "shopping")
+        // Day offsets from the trip start; negative means paid before the trip.
+        let expenses: [(String, Double, String, Int)] = [
+            ("Machiya near Gion", 620, "lodging", -30), ("Flights", 184, "transport", -45),
+            ("Fushimi breakfast", 22, "food", 0), ("Tofuku-ji entry", 8, "activities", 0),
+            ("Nishiki Market lunch", 38, "food", 1), ("Kinkaku-ji entry", 4, "activities", 1),
+            ("Kaiseki dinner", 160, "food", 1), ("Kimono rental", 55, "shopping", 2),
+            ("Arashiyama rickshaw", 90, "activities", 2)
         ]
         for expense in expenses {
+            let day = Calendar.current.date(byAdding: .day, value: expense.3, to: start) ?? start
             _ = try? await api.addExpense(tripID: trip.id, body: [
                 "title": .string(expense.0), "amount": .number(expense.1), "currency": .string("USD"),
                 "category": .string(expense.2), "paid_by": .string(me), "split_with": .array([.string(me)]),
-                "split_mode": .string("equal"), "spent_at": .string(String(at(0, 0).prefix(10))), "splits": .array([])
+                "split_mode": .string("equal"), "spent_at": .string(Trip.isoDay(day)), "splits": .array([])
             ])
         }
         for (index, item) in ["Passport", "Suica card", "Rail pass voucher", "Comfortable shoes", "Pocket wifi"].enumerated() {

@@ -380,10 +380,10 @@ struct TripToolPrimaryButton: View {
             }
             .frame(maxWidth: .infinity, minHeight: 48)
             .padding(.horizontal, 12)
-            .foregroundStyle(.white)
+            .foregroundStyle(WandererTheme.onPrimary)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isEnabled ? WandererTheme.charcoal : WandererTheme.muted.opacity(0.35))
+                    .fill(isEnabled ? WandererTheme.primaryFill : WandererTheme.muted.opacity(0.35))
             )
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
@@ -562,10 +562,10 @@ struct TripToolChip: View {
             }
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, minHeight: 44)
-            .foregroundStyle(isSelected ? .white : WandererTheme.ink)
+            .foregroundStyle(isSelected ? WandererTheme.onPrimary : WandererTheme.ink)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? WandererTheme.charcoal : WandererTheme.platinum)
+                    .fill(isSelected ? WandererTheme.primaryFill : WandererTheme.platinum)
             )
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
@@ -594,8 +594,8 @@ struct TripToolFilterChip: View {
             }
             .padding(.horizontal, 14)
             .frame(minHeight: 34)
-            .foregroundStyle(isSelected ? .white : WandererTheme.ink)
-            .background(isSelected ? WandererTheme.charcoal : WandererTheme.card, in: Capsule())
+            .foregroundStyle(isSelected ? WandererTheme.onPrimary : WandererTheme.ink)
+            .background(isSelected ? WandererTheme.primaryFill : WandererTheme.card, in: Capsule())
             .overlay(Capsule().stroke(isSelected ? Color.clear : WandererTheme.line, lineWidth: 1))
             .padding(.vertical, 5)
             .contentShape(Rectangle())

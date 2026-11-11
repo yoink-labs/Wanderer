@@ -211,10 +211,10 @@ struct PlaceSearchView: View {
                 Text("Add")
                     .font(.ligga(.caption, weight: .bold))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(WandererTheme.onPrimary)
             .padding(.horizontal, 12)
             .frame(height: 34)
-            .background(WandererTheme.charcoal, in: Capsule())
+            .background(WandererTheme.primaryFill, in: Capsule())
         }
     }
 

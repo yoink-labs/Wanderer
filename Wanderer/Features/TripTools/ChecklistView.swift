@@ -93,9 +93,9 @@ struct ChecklistView: View {
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(WandererTheme.platinum)
+                    Capsule().fill(WandererTheme.fillMuted)
                     Capsule()
-                        .fill(WandererTheme.charcoal)
+                        .fill(WandererTheme.route)
                         .frame(width: progress > 0 ? max(8, proxy.size.width * CGFloat(progress)) : 0)
                 }
             }
@@ -131,10 +131,10 @@ struct ChecklistView: View {
             if canAdd {
                 Button("Add", action: addItem)
                     .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WandererTheme.onPrimary)
                     .padding(.horizontal, 14)
                     .frame(minHeight: 34)
-                    .background(WandererTheme.charcoal, in: Capsule())
+                    .background(WandererTheme.primaryFill, in: Capsule())
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
                     .buttonStyle(.plain)
@@ -232,10 +232,10 @@ struct ChecklistView: View {
                     Circle()
                         .strokeBorder(item.isChecked ? Color.clear : WandererTheme.dust, lineWidth: 2)
                     if item.isChecked {
-                        Circle().fill(WandererTheme.charcoal)
+                        Circle().fill(WandererTheme.route)
                         Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(WandererTheme.onAccent)
                     }
                 }
                 .frame(width: 22, height: 22)

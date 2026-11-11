@@ -42,14 +42,21 @@ struct ExpensesView: View {
                 .tripToolListRow()
                 .accessibilityIdentifier("expenses-empty-add")
             } else {
+                SpendByDayChart(
+                    series: DailySpend.series(expenses: store.expenses, days: store.days),
+                    dailyBudget: budget > 0 && !store.days.isEmpty ? budget / Double(store.days.count) : nil,
+                    currency: currencyCode
+                )
+                .tripToolListRow()
+
                 breakdownCard
                     .tripToolListRow()
 
                 TripToolGroupLabel(title: "Expenses", trailing: "\(store.expenses.count)")
                     .tripToolListRow()
 
-                ForEach(store.expenses) { expense in
-                    row(for: expense)
+                ForEach(Array(store.expenses.enumerated()), id: \.element.id) { index, expense in
+                    row(for: expense, isFirst: index == 0, isLast: index == store.expenses.count - 1)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 Task { await store.deleteExpense(expense) }
@@ -135,11 +142,11 @@ struct ExpensesView: View {
 
     private func tint(for category: ExpenseCategory) -> Color {
         switch category {
-        case .food: return WandererTheme.salmon
-        case .lodging: return WandererTheme.desert
-        case .transport: return WandererTheme.charcoal
-        case .activities: return WandererTheme.peach
-        case .shopping: return WandererTheme.dust
+        case .food: return WandererTheme.route
+        case .lodging: return WandererTheme.sea
+        case .transport: return Color(light: 0x10283A, dark: 0xB7C6D0)
+        case .activities: return WandererTheme.lagoon
+        case .shopping: return Color(light: 0xB4508A, dark: 0xF09AC8)
         case .other: return WandererTheme.muted
         }
     }
@@ -185,7 +192,7 @@ struct ExpensesView: View {
                         .font(.ligga(.footnote, weight: .semibold))
                         .foregroundStyle(WandererTheme.muted)
                     Text(money(spent))
-                        .font(.ligga(.title, weight: .bold))
+                        .font(.display(.largeTitle))
                         .monospacedDigit()
                         .foregroundStyle(WandererTheme.ink)
                         .lineLimit(1)
@@ -226,12 +233,12 @@ struct ExpensesView: View {
     private var totalCaption: String {
         let count = "\(store.expenses.count) \(store.expenses.count == 1 ? "expense" : "expenses")"
         if convertedTotal != nil {
-            return "\(count) · converted to \(currencyCode)"
+            return "\(count), converted to \(currencyCode)"
         }
         if hasMixedCurrencies {
-            return "\(count) · mixed currencies, not converted"
+            return "\(count), mixed currencies, not converted"
         }
-        return "\(count) · \(currencyCode)"
+        return "\(count) in \(currencyCode)"
     }
 
     @ViewBuilder
@@ -307,10 +314,10 @@ struct ExpensesView: View {
                 } label: {
                     Text("Settle up")
                         .font(.ligga(.subheadline, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(WandererTheme.onPrimary)
                         .padding(.horizontal, 14)
                         .frame(minHeight: 36)
-                        .background(WandererTheme.charcoal, in: Capsule())
+                        .background(WandererTheme.primaryFill, in: Capsule())
                         .padding(.vertical, 4)
                         .contentShape(Rectangle())
                 }
@@ -490,16 +497,18 @@ struct ExpensesView: View {
 
     // MARK: - Rows
 
-    private func row(for expense: ExpenseRecord) -> some View {
+    /// Expenses read as one grouped list: rows share a surface, the first
+    /// and last round the corners, hairlines sit between them.
+    private func row(for expense: ExpenseRecord, isFirst: Bool, isLast: Bool) -> some View {
         HStack(spacing: 12) {
             Image(systemName: expense.category.icon)
                 .font(.ligga(.subheadline, weight: .semibold))
-                .foregroundStyle(WandererTheme.ink)
-                .frame(width: 38, height: 38)
-                .background(tint(for: expense.category).opacity(0.28), in: Circle())
+                .foregroundStyle(tint(for: expense.category))
+                .frame(width: 36, height: 36)
+                .background(tint(for: expense.category).opacity(0.15), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(expense.title)
                     .font(.ligga(.subheadline, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
@@ -518,10 +527,26 @@ struct ExpensesView: View {
                 .monospacedDigit()
                 .foregroundStyle(WandererTheme.ink)
         }
-        .padding(14)
-        .liggaCard()
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .overlay(alignment: .bottom) {
+            if !isLast {
+                Rectangle().fill(WandererTheme.line).frame(height: 1).padding(.leading, 62)
+            }
+        }
         .accessibilityElement(children: .combine)
-        .tripToolListRow()
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(
+            UnevenRoundedRectangle(
+                topLeadingRadius: isFirst ? WandererTheme.cardRadius : 0,
+                bottomLeadingRadius: isLast ? WandererTheme.cardRadius : 0,
+                bottomTrailingRadius: isLast ? WandererTheme.cardRadius : 0,
+                topTrailingRadius: isFirst ? WandererTheme.cardRadius : 0,
+                style: .continuous
+            )
+            .fill(WandererTheme.card)
+        )
     }
 
     private func rowSubtitle(for expense: ExpenseRecord) -> String {
@@ -604,13 +629,13 @@ private struct BudgetBar: View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(WandererTheme.platinum)
+                    .fill(WandererTheme.fillMuted)
                 Capsule()
-                    .fill(isOver ? WandererTheme.peach : WandererTheme.charcoal)
+                    .fill(isOver ? WandererTheme.signal : WandererTheme.route)
                     .frame(width: max(fraction > 0 ? 6 : 0, proxy.size.width * CGFloat(min(1, max(0, fraction)))))
             }
         }
-        .frame(height: 6)
+        .frame(height: 8)
     }
 }
 
