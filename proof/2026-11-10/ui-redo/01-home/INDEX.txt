@@ -1,0 +1,11 @@
+UI redo slice 1: Atlas tokens + route-spine Home (main 2571653)
+Guest mode with first-run samples; no account data shown.
+
+00-before-home.png          Before: terracotta/charcoal theme, small featured card.
+01-home-light.png           After, light: expanded display title, marigold add button, photo postcard
+                            with "Happening now", route spine (2 days behind, today ringed, 2 ahead),
+                            "Day 3 of 5"; other trips with countdowns.
+02-home-dark.png            After, dark: same layout on night surface, hairline cards.
+03-home-ax-large-dark.png   Accessibility Large text, dark: postcard footer stacks instead of truncating.
+
+Tests: Swift 31 passed (4 new TripRouteProgress tests).
