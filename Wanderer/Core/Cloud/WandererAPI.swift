@@ -99,7 +99,7 @@ struct WandererAPI: Sendable {
 
     static func live(auth: APIAuth) -> WandererAPI? {
         guard let url = CloudConfiguration.apiURL else { return nil }
-        return WandererAPI(baseURL: url, auth: auth)
+        return WandererAPI(baseURL: url, auth: auth, session: OfflineReadCache.shared)
     }
 
     // MARK: - Health / identity

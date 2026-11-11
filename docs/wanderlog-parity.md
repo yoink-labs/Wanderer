@@ -55,8 +55,8 @@ guessed.
 | Create trip with destination autosuggest (disambiguated cities) | Observed | impl (MapKit search), not tested |
 | Date range optional, two-month range picker | Observed | impl (start/end pickers), not tested |
 | Guest planning with “Skip and sign up later” | Observed | impl — guest trips persist to disk and copy into the account on sign-in |
-| Guest can add places / times | Observed | impl (local guest stores) |
-| Guest can add expenses / share / save | Gated — sign-up modal | Guest keeps full local data, no gate |
+| Guest can add places / times | Observed | impl, tested — guest trips run through an on-device copy of the API (`LocalTripServer`), so days, places, lists, bookings, costs and checklist all work offline |
+| Guest can add expenses / share / save | Gated — sign-up modal | impl, tested — expenses and checklist work locally; share and files say they need an account. On sign-in the trip's contents (not just the trip) copy into the account (`GuestTripImporter`) |
 | Trip cover photo + cover color | Observed (overview) | impl (`updateCover`, `cover_color`) |
 | Trip overview hub (reservations, budget, notes, places, explore) | Observed | partial — tools are tabs inside the trip, no single overview hub |
 | Multiple named lists per trip (“Places to visit” + custom titled lists) | Observed | impl — unscheduled tray groups by named list; create/delete in the tray, assign in the place sheet |
@@ -67,13 +67,13 @@ guessed.
 
 | Capability | Wanderlog | Wanderer |
 | --- | --- | --- |
-| Collapsible days with per-day menu | Observed | partial — day chips + sheet, no collapse |
+| Collapsible days with per-day menu | Observed | partial — day strip (weekday, date, fullness dots, springing selection) + per-day menu; opens on today while the trip is underway; no collapse |
 | Insert day after / delete day | Observed | impl — day-chip context menu, shifts later days and the trip end date |
 | Day subheading | Observed | todo |
 | Day color | Observed | todo |
 | Expand all days | Observed | n/a (single selected day) |
 | Numbered pins synced to itinerary rows | Observed | impl (`PlannerMapView`, `PlannerView`) |
-| Numbered-day route line and distance/time | Observed (`< 1 min, 0 ft`) | impl (routed day line + connectors) |
+| Numbered-day route line and distance/time | Observed (`< 1 min, 0 ft`) | impl — the list threads stops on a continuous route line with numbered beads, matching the map line, with walk time beside it |
 | Auto-fill day (free) | Observed | todo — this is an AI/paid-data feature |
 | Optimize route | Gated PRO | impl (nearest-neighbour reorder, free) |
 | Start/end time per place, 30-minute steps | Observed | impl (`start_time` / `end_time`) |
@@ -90,7 +90,7 @@ guessed.
 | Reservation types: flight, lodging, rental car, train, attachment, other | Observed | impl (flight, lodging, car, restaurant, train, other) |
 | Reservation detail panel with Book / Reviews / Photos tabs | Observed | partial — place detail has photos + rating; no booking tab |
 | “Need a place to stay?” lodging prompt + hotel booking | Observed (affiliate) | partial — Booking.com deep-link stay search |
-| Budget total, set budget, breakdown | Gated (add expense) for guest; screen visible | impl (budget, total, category breakdown) |
+| Budget total, set budget, breakdown | Gated (add expense) for guest; screen visible | impl, tested — total, budget bar, distinct category colours, plus a spend-by-day chart against the daily budget (prepaid costs as a separate bar); not observed in Wanderlog |
 | Group balances / split expenses | Gated for guest; entry point observed | impl (equal/exact/percent/shares, settle-up, fewest-payments suggestion) |
 | Trip members / invite tripmates | Observed (create form) | impl (invites table + Resend edge function, Mail fallback) |
 | Multi-currency | Observed (`$0.00`, currency in expense form) | impl (trip currency + FX conversion) |
@@ -113,9 +113,28 @@ guessed.
 | Export to PDF / Google Maps / calendar | Gated PRO | PDF impl — native UIGraphicsPDFRenderer, shared with the system sheet; Maps/calendar still todo |
 | Trip journal (route + visited places on a map) | Observed (menu item) | impl — per-trip map and visited timeline from mark-as-visited |
 | Undo / redo | Observed | todo |
-| Offline editing | Not observed | todo |
+| Offline access | Gated PRO ("offline access" upsell, observed) | impl, tested — signed in: last-loaded trips readable offline from a per-account cache cleared on sign-out (`OfflineReadCache`); guest: full offline editing. Signed-in offline *editing* still todo |
 | Push notifications | Not observed | todo |
 | Native mobile apps | iOS/Android exist (marketing claim) | iOS native SwiftUI (this repo) |
+
+## UI redo (2026-11-10)
+
+Native SwiftUI, own identity ("Atlas": map paper, deep-sea ink, marigold route),
+no Wanderlog branding, assets or copy. Each slice was captured light and dark
+on the simulator; proof is on the `ade-proof` branch under
+`proof/2026-11-10/ui-redo/`.
+
+| Slice | Screens | Proof folder |
+| --- | --- | --- |
+| 1 | Tokens, Home postcard with route spine, countdowns, zoom into planner | `01-home` |
+| 2 | Guest trips fully plannable on device, carried over on sign-in | `02-guest-planning` |
+| 3 | Planner day strip, route line, legible dark-mode pins | `03-planner` |
+| 4 | Budget: spend by day, budget bar, grouped expenses; dark-mode controls | `04-budget` |
+| 5 | Guest profile, sign-in, onboarding titles | `05-profile-onboarding` |
+| 6 | Offline reading for signed-in trips | `06-offline` |
+
+Still to redo: Explore/guide detail, bookings list, attachments and share
+screens (functional and themed, not yet restyled), and an undo/redo stack.
 
 ## UX observations worth matching
 

@@ -175,6 +175,8 @@ final class AuthStore: ObservableObject {
         signedInUserID = nil
         signedInEmail = nil
         CloudSession.shared.token = nil
+        OfflineReadCache.shared.scope = nil
+        OfflineReadCache.shared.clear()
         awaitingCode = false
     }
 
@@ -198,6 +200,7 @@ final class AuthStore: ObservableObject {
 
     private func applyClerkUser(_ user: ClerkKit.User) {
         signedInUserID = user.id
+        OfflineReadCache.shared.scope = user.id
         signedInEmail = user.primaryEmailAddress?.emailAddress
     }
 
