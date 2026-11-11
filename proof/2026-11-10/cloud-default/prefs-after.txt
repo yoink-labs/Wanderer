@@ -1,0 +1,2 @@
+    "wanderer.legacyBackendCleanupDone" = 1;
+    "wanderer.selectedLanguage" = en;

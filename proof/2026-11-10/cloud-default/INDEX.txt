@@ -1,0 +1,13 @@
+Step 1 — Cloudflare/Clerk backend for everyone (main 7277e20)
+
+01-fresh-install-language.png          Fresh install: first screen is the language picker.
+02-fresh-install-signin-light.png      Fresh install after language: Clerk email-only sign-in (no Google/Apple/Facebook).
+03-upgrade-from-supabase-signin-light.png  Simulated upgrade from a Supabase build (backendMode=supabase,
+                                       hasSupabaseAccount=true): app launches, lands on Clerk email sign-in.
+04-upgrade-from-supabase-signin-dark.png   Same screen in dark mode.
+prefs-before.txt                       App prefs before launch: legacy Supabase backend keys present.
+prefs-after.txt                        App prefs after launch: legacy keys removed, cleanup flag set.
+health.txt                             GET https://api.yoinklabs.dev/health -> {"ok":true}
+
+Tests at 7277e20: Swift 27 passed (incl. 3 new LegacyBackendCleanupTests), Worker 51 passed, Worker typecheck clean.
+Not simulated: a real Supabase Keychain session (the Supabase SDK is no longer linked, so nothing reads it).
