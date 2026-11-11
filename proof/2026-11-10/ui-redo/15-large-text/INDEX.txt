@@ -11,4 +11,5 @@ after/planner-{light,dark}      Panel opens tall; header, day chips and section 
 after/expenses-{light,dark}     Tools header capped at AX1; "Set a budget" wraps instead of truncating
 after/checklist-{light,dark}    Ticks scale with the text and line up with the first line
 after/files-{light,dark}        One column at AX sizes; full file names; badge size capped
-Already fine at AX5, unchanged: Share, Notes, Settings, Language.
+Already fine at AX5, unchanged: Share, Notes, Settings.
+Not checked: the language picker. before/language.png shows sign-in, because the sheet did not open from a launch route.
