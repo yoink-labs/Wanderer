@@ -1,0 +1,15 @@
+UI redo slice 13: sharing (main dd48a51). Worker changes NOT deployed yet.
+
+00-before-share-light.png   Before: a guest opening Share got "Couldn't load the people on this trip", and the
+                            link shown was wanderer.app/trip/... (wanderer.app is a parked domain for sale).
+01-share-guest-light.png    After, guest, light: "Plan this trip together" + Create a free account; PDF hint.
+02-share-guest-dark.png     After, guest, dark.
+03-public-trip-page.png     Public read-only page /s/<token> from a LOCAL Worker seeded via the API (fictional
+                            .invalid emails). Route-line itinerary; notes, emails and names absent (checked: 0 hits).
+                            Shown in dark because this Mac is in dark mode; the page follows the system setting.
+04-invite-page.png          /invite/<token> landing page (local Worker); invited email not shown.
+05-tool-tabs-ax-large.png   Accessibility Large: Trip tools tabs scroll at full width instead of truncating.
+
+Not captured: the signed-in share card (needs a Clerk session on the simulator).
+Tests: Swift 59 passed; Worker 59 passed (8 new: page privacy, escaping, 404s, link reset, owner-only,
+invite claim incl. casing/idempotency/strangers, expired invites, email refresh). Typecheck clean.
