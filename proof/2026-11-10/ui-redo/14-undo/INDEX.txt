@@ -1,0 +1,13 @@
+UI redo slice 14: undo / redo (main, see git log)
+Guest mode, Kyoto demo trip on the device. The removal is triggered by the DEBUG launch flag
+-uiAction removeStop because simulator taps don't reach the app on this device.
+
+00-before-remove-light.png  Day 3 before: Arashiyama Bamboo Grove and Okochi Sanso on the route.
+01-undo-toast-light.png     After removing Okochi Sanso: route redraws to one stop; "Removed Okochi Sanso" toast
+                            with Undo above the list.
+02-undo-toast-dark.png      Same toast in dark.
+
+Tests: Swift 65 passed (6 new PlannerUndoTests, run against an isolated on-device server: removal restored
+in place with notes; reorder undo/redo; move between days; visited; id alias after re-create; new edit
+clears redo; stack bounded at 30). Tapping Undo itself was not exercised on the simulator (taps don't
+register here); the tests call the same store method the button calls.
