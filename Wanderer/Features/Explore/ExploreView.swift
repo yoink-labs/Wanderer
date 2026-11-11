@@ -79,7 +79,7 @@ struct ExploreView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Explore")
-                .font(.ligga(.largeTitle, weight: .bold))
+                .font(.display(.largeTitle))
                 .foregroundStyle(WandererTheme.ink)
                 .accessibilityAddTraits(.isHeader)
             Text("Guides to remix into your own itinerary.")
@@ -149,10 +149,10 @@ struct ExploreView: View {
         Button(action: action) {
             Text(title)
                 .font(.ligga(.subheadline, weight: .semibold))
-                .foregroundStyle(isSelected ? .white : WandererTheme.ink)
+                .foregroundStyle(isSelected ? WandererTheme.onPrimary : WandererTheme.ink)
                 .padding(.horizontal, 16)
                 .frame(minHeight: 44)
-                .background(isSelected ? WandererTheme.ink : WandererTheme.card, in: Capsule())
+                .background(isSelected ? WandererTheme.primaryFill : WandererTheme.card, in: Capsule())
                 .overlay(Capsule().stroke(isSelected ? .clear : WandererTheme.line, lineWidth: 1))
                 .contentShape(Capsule())
         }
@@ -275,10 +275,10 @@ struct ExploreView: View {
             } label: {
                 Text("Clear filters")
                     .font(.ligga(.subheadline, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WandererTheme.onPrimary)
                     .padding(.horizontal, 20)
                     .frame(minHeight: 44)
-                    .background(WandererTheme.ink, in: Capsule())
+                    .background(WandererTheme.primaryFill, in: Capsule())
             }
             .buttonStyle(.plain)
             .padding(.top, 4)
@@ -307,11 +307,11 @@ struct ExploreView: View {
         VStack(spacing: 14) {
             stateBadge(systemImage: "safari.fill")
 
-            Text("No guides yet")
+            Text("No guides published yet")
                 .font(.ligga(.title3, weight: .bold))
                 .foregroundStyle(WandererTheme.ink)
 
-            Text("Curated routes from fellow travellers will appear here. Check back soon.")
+            Text("Curated routes will show up here. Pull down to check again, or plan your own trip from the Trips tab.")
                 .font(.ligga(.subheadline))
                 .foregroundStyle(WandererTheme.muted)
                 .multilineTextAlignment(.center)
@@ -388,10 +388,10 @@ struct ExploreView: View {
                 Text("Try again")
             }
             .font(.ligga(.subheadline, weight: .bold))
-            .foregroundStyle(.white)
+            .foregroundStyle(WandererTheme.onPrimary)
             .padding(.horizontal, 20)
             .frame(minHeight: 44)
-            .background(WandererTheme.ink, in: Capsule())
+            .background(WandererTheme.primaryFill, in: Capsule())
         }
         .buttonStyle(.plain)
     }
@@ -431,25 +431,32 @@ private struct FeaturedGuideCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            GuideCoverImage(guide: guide)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // A flexible clear base sets the size; the photo fills it without
+            // pushing its own (much wider) image size onto the layout.
+            Color.clear
+                .overlay { GuideCoverImage(guide: guide) }
+                .clipped()
 
             LinearGradient(
                 stops: [
                     .init(color: .clear, location: 0.25),
-                    .init(color: WandererTheme.charcoal.opacity(0.82), location: 1)
+                    .init(color: WandererTheme.charcoal.opacity(0.92), location: 1)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
             VStack(alignment: .leading, spacing: 7) {
-                Text("FEATURED GUIDE")
-                    .font(.ligga(.caption, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.85))
+                Text("Featured guide")
+                    .font(.ligga(.footnote, weight: .bold))
+                    .foregroundStyle(Color(hex: 0x10283A))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color(hex: 0xF2A922), in: Capsule())
+                    .padding(.bottom, 4)
 
                 Text(guide.title)
-                    .font(.ligga(.title2, weight: .bold))
+                    .font(.display(.title2))
                     .foregroundStyle(.white)
                     .lineLimit(2)
 
@@ -470,9 +477,9 @@ private struct FeaturedGuideCard: View {
             }
             .padding(20)
         }
-        .frame(height: 250)
-        .clipShape(RoundedRectangle(cornerRadius: WandererTheme.cardRadius, style: .continuous))
-        .shadow(color: WandererTheme.shadow, radius: 14, x: 0, y: 6)
+        .frame(maxWidth: .infinity)
+        .frame(height: 300)
+        .clipShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Featured guide: \(guide.title), \(guide.destination ?? "curated route")")
         .accessibilityAddTraits(.isButton)

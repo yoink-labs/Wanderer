@@ -246,7 +246,7 @@ struct GuideDetailView: View {
                 }
 
                 Text(guide.title)
-                    .font(.ligga(.title, weight: .bold))
+                    .font(.display(.title))
                     .foregroundStyle(.white)
                     .lineLimit(3)
                     .minimumScaleFactor(0.8)
@@ -320,10 +320,10 @@ struct GuideDetailView: View {
             } label: {
                 Text("Try again")
                     .font(.ligga(.subheadline, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WandererTheme.onPrimary)
                     .padding(.horizontal, 20)
                     .frame(minHeight: 44)
-                    .background(WandererTheme.ink, in: Capsule())
+                    .background(WandererTheme.primaryFill, in: Capsule())
             }
             .buttonStyle(.plain)
         }
@@ -373,9 +373,9 @@ private struct GuidePlaceCard: View {
             HStack(alignment: .top, spacing: 12) {
                 Text("\(index + 1)")
                     .font(.system(.footnote, design: .rounded).weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(WandererTheme.onAccent)
                     .frame(width: 28, height: 28)
-                    .background(WandererTheme.coral, in: Circle())
+                    .background(WandererTheme.route, in: Circle())
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(place.name)
