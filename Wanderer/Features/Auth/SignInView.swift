@@ -178,8 +178,12 @@ struct SignInView: View {
                 Task { await auth.signInWithGoogle() }
             } label: {
                 HStack(spacing: 10) {
-                    GoogleMark()
-                        .frame(width: 18, height: 18)
+                    // Official Google "G" (see GoogleG.imageset/SOURCE.md).
+                    Image("GoogleG")
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 20, height: 20)
+                        .accessibilityHidden(true)
                     Text("Continue with Google")
                         .font(.system(size: 19, weight: .medium))
                 }
@@ -400,37 +404,4 @@ private struct LanguageSheet: View {
 #Preview {
     SignInView()
         .environmentObject(AuthStore())
-}
-
-/// Google's four-colour "G", drawn as arcs so no raster asset is bundled.
-/// Angles run clockwise from three o'clock; the gap sits top-right.
-private struct GoogleMark: View {
-    private static let segments: [(Double, Double, UInt32)] = [
-        (0, 45, 0x4285F4),    // blue, lower right
-        (45, 135, 0x34A853),  // green, bottom
-        (135, 200, 0xFBBC05), // yellow, lower left
-        (200, 315, 0xEA4335)  // red, top
-    ]
-
-    var body: some View {
-        GeometryReader { proxy in
-            let size = min(proxy.size.width, proxy.size.height)
-            let line = size * 0.2
-            ZStack {
-                ForEach(0..<Self.segments.count, id: \.self) { index in
-                    let segment = Self.segments[index]
-                    Circle()
-                        .trim(from: segment.0 / 360, to: segment.1 / 360)
-                        .stroke(Color(hex: segment.2), style: StrokeStyle(lineWidth: line, lineCap: .butt))
-                        .padding(line / 2)
-                }
-                Rectangle()
-                    .fill(Color(hex: 0x4285F4))
-                    .frame(width: size * 0.5 - line / 2, height: line)
-                    .offset(x: size * 0.25 - line / 4)
-            }
-            .frame(width: size, height: size)
-        }
-        .accessibilityHidden(true)
-    }
 }
