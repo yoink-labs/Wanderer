@@ -4,161 +4,128 @@ A trip planner for iOS. Build a day-by-day itinerary, pin every stop on the
 map, keep flights, stays, notes and files together, split the costs, and share
 the plan.
 
-AI features are intentionally out of scope for now.
+AI features are intentionally out of scope.
 
 ## Stack
 
 | Layer | Choice | Cost |
 | --- | --- | --- |
 | App | SwiftUI, iOS 18+, XcodeGen | free |
-| Backend | Supabase today; Cloudflare Worker + D1 + R2 as the migration target | free tiers |
+| Backend | Cloudflare Worker + D1 + R2 (`worker/`) | free tier |
+| Auth | Clerk production (same Yoink Labs account as yoinklabs.dev), email codes | free tier |
 | Maps & place search | MapKit / MKLocalSearch | free |
 | Weather | Open-Meteo | free, no key |
 | FX rates | Frankfurter | free, no key |
-| Photos | Unsplash CDN + user uploads | free |
-| Auth | Clerk production (same Yoink account as the website), email codes | free tier |
+| Photos | Curated CDN + user uploads | free |
+| Email | Resend (invites) | free tier |
+
+The backend lives at `https://api.yoinklabs.dev` on the Yoink Labs Cloudflare
+account.
 
 ## What is built
 
+- **Auth** — Clerk, email-only: a six-digit emailed code signs in. Account
+  creation uses Clerk's required password. Google/Apple are removed for now.
 - **Onboarding** — language picker, persisted locale.
-- **Auth** — Clerk (same Yoink Labs instance as yoinklabs.dev), email-only:
-  a six-digit emailed code signs in, guest mode, session restore, sign out.
-  Social sign-in is intentionally removed for this round.
 - **Home** — smart ordering (in progress / recently opened / up next), combined
-  trip-and-guide search, photo covers, guide carousel, Booking.com stay search,
+  trip-and-guide search, covers, guide carousel, Booking.com stay search,
   travel stats, loading skeletons and a recoverable load error.
 - **Planner** — day-scoped MapKit map with numbered pins and a routed day line,
-  a draggable three-position sheet, day chips, place rows, booking strips,
-  editable day notes, add-place search, place detail with photos/rating/price,
-  manual arrange, route optimize, pin↔row selection sync, travel connectors,
-  pin spreading and a fit-day control.
+  a draggable sheet, day chips, place rows, booking strips, editable day notes,
+  add-place search, place detail, manual arrange, route optimize, pin↔row
+  selection sync, travel connectors, pin spreading and a fit-day control.
+- **Named lists** — unscheduled places group by list; create/delete in the tray
+  and assign from the place sheet.
+- **Day management** — insert a day after another or delete one; later days and
+  dates shift and the trip end date follows. Deleting a day unschedules its
+  places.
+- **Visited & cost** — mark a stop visited (swipe or context menu) and record
+  what it cost; the row shows both.
+- **Trip journal** — a per-trip map and date-grouped timeline of visited stops.
+- **Export** — native PDF of the itinerary, bookings and spend, shared with the
+  system sheet.
 - **Bookings** — flights, lodging, rental cars, trains and other reservations
-  with times, confirmation codes, costs and notes. Times render in the trip's
-  own timezone.
+  with times, confirmation codes, costs and notes, rendered in the trip's
+  timezone.
 - **Money** — Splitwise-style balances with equal / exact / percentage / share
-  splits, per-person "gets back / owes", settle-up payments, suggested
-  fewest-payments settlement, per-trip budget, trip total, per-person total,
-  category breakdown and currency conversion.
+  splits, settle-up payments, fewest-payments suggestion, budget, per-trip and
+  per-person totals, category breakdown and currency conversion.
 - **Checklist** — packing/task list with progress and toggles.
-- **Share** — app/web links, copy, share sheet, trip invites stored in
-  Postgres, and an optional Resend-backed invite email through a Supabase Edge
-  Function. If no provider is configured, the app offers a Mail-app fallback.
-- **Nearby ideas** — MapKit local search around the selected day, filtered
-  against places already in the trip.
-- **Cover image** — replace a trip cover from the photo library; stored in the
-  `trip-covers` bucket and rendered from `cover_url`.
-- **Trip notes** — one editable long-form note per trip.
-- **Attachments** — private Storage bucket; add PDFs/images/text files and open
-  or share them.
-- **Trip settings** — rename, destination, dates, delete trip.
-- **Explore** — searchable/filterable published guides, guide details and a
-  one-tap "Copy to my trips" that creates a trip and imports every guide stop.
-- **Profile** — avatar upload, trip/country/city stats, language, currency,
-  units, visited countries/cities, add/remove visited places, sign out.
-- **Time zones** — every trip has a timezone, so reservation times render in
-  the trip's local time instead of the device's timezone.
+- **Share** — links, copy, share sheet, invites stored in D1 and emailed with
+  Resend, with a Mail fallback when email is unconfigured.
+- **Nearby ideas** — MapKit local search around the selected day.
+- **Files** — private R2 attachments with short-lived signed links.
+- **Guides** — searchable public guides and one-tap copy into a trip.
+- **Profile** — avatar, stats, language, currency, units, appearance
+  (System/Light/Dark), visited countries/cities, sign out, delete account.
+- **Guest trips** — created before sign-in, persisted on device, copied into the
+  account once and then cleared.
+- **Accessibility** — Dynamic Type (including AX sizes), dark mode, VoiceOver
+  labels and 44pt targets on the main flows.
 
-## What is deliberately not built
+## Deliberately not built
 
-- AI features (trip generation, autofill, chat assistant) — excluded by scope.
-- Live flight status / live hotel availability — paid APIs; deep links and
-  manual records instead.
-- Google Maps / Google Places — MapKit is free and does the job.
-- Push notifications, offline mode, Apple/Google auth, and App Store submission
-  — next milestones. (Invite email delivery is built, but a Resend account
-  needs a verified sender domain before it can reach arbitrary recipients.)
+- AI features (trip generation, chat assistant) — out of scope.
+- Live flight status / live hotel availability — paid APIs; deep links only.
+- Google Maps / Google Places — MapKit is free and sufficient.
+- Push notifications, offline editing, OAuth sign-in and App Store submission.
 
 ## Repo layout
 
 ```
-Wanderer/                     SwiftUI app
+Wanderer/                     SwiftUI app (Cloudflare + Clerk only)
   App/                        entry point, root flow, tabs
-  Core/Design/                theme + reusable components
+  Core/Design/                theme, components, haptics
   Core/Models/                Trip, records, language options
-  Core/Stores/                Supabase-backed stores
-  Core/Services/              MapKit search, weather, FX, image catalog
-  Features/Onboarding/        language picker
-  Features/Auth/              sign-in + email sheet
-  Features/Trips/             home, plan sheet, trips store
-  Features/Planner/           map, day panel, place search/detail, store
-  Features/TripTools/         reservations, expenses, checklist, share
-  Features/TripSettings/      settings, notes, attachments
-  Features/Explore/           guides + guide detail
-  Features/Profile/           profile + visited places
+  Core/Cloud/                 API client, Clerk session bridge, trip backing
+  Core/Stores/                API-backed stores
+  Core/Services/              MapKit search, weather, FX, PDF export
+  Features/…                  Onboarding, Auth, Trips, Planner, TripTools,
+                              TripSettings, Explore, Profile
   Resources/                  asset catalog, app icon
-supabase/
-  config.toml                 local Supabase config
-  migrations/                 SQL schema, RLS, storage, timezone
-  seed.sql                    public Explore guides
-Config/                       Supabase build settings
+worker/                       Cloudflare Worker + D1 migrations + tests
+supabase/                     legacy schema and edge function (reference only)
+Archive/Supabase/             frozen pre-migration Swift stores (not compiled)
+Config/                       App.xcconfig (public API/Clerk values)
 project.yml                   XcodeGen source of truth
 ```
 
-## Local setup
+Supabase is **not** linked or used at runtime. Its schema, the edge function
+and frozen store copies are kept for reference; the hosted project was left
+untouched. The one-off importer remains at `worker/scripts/import-supabase.ts`
+and is not part of the app.
 
-Node 20 is pinned in `.tool-versions` (asdf). The Supabase CLI is installed as
-a **project dev dependency**, not globally:
+## Local setup
 
 ```bash
 asdf install
-npm install
-npx supabase --version   # 3.x
-```
-
-Generate and open the Xcode project:
-
-```bash
 xcodegen generate
 open Wanderer.xcodeproj
 ```
 
-Run the tests:
+`Config/App.xcconfig` already points at the production Worker and the Clerk
+publishable key. Copy `Config/App.local.example.xcconfig` to
+`Config/App.local.xcconfig` only to target a different backend.
+
+Run tests:
 
 ```bash
 xcodebuild test -project Wanderer.xcodeproj -scheme Wanderer \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+
+cd worker && npm test
 ```
 
-The `WandererTests` target covers split and settle-up math, Home search/order
-and planner geometry.
+`WandererTests` covers split/settle-up math, Home search and ordering, planner
+geometry, API client shaping/decoding, PDF export and guest-trip persistence.
 
-## Cloud backend
+## Backend
 
-`worker/` is the Cloudflare Worker + D1 + R2 backend. It is deployed at
-`https://api.yoinklabs.dev` and the app defaults to it.
-Supabase remains as a compile-time fallback and is not retired.
+See `worker/README.md` for routes, local development, deployment and secrets.
+Schema changes go in `worker/migrations/` and are applied with:
 
 ```bash
 cd worker
-npm install
-npx wrangler d1 migrations apply wanderer --local
-npm test
+npx wrangler d1 migrations apply wanderer --remote
+npx wrangler deploy
 ```
-
-To point a build at the Worker, copy `Config/Cloud.local.example.xcconfig` to
-`Config/Cloud.local.xcconfig`, fill in the Worker URL and Clerk Frontend API,
-then switch Backend in Profile. See `worker/README.md` and
-`docs/migration-plan.md`.
-
-## Supabase
-
-Wanderer needs your own Supabase project. A fresh clone builds without one, but
-sign-in and trips won't work until it is configured.
-
-```bash
-cp Config/Supabase.local.example.xcconfig Config/Supabase.local.xcconfig
-```
-
-Fill in your project URL and publishable key, then apply the schema:
-
-```bash
-npx supabase link --project-ref <your-project-ref>
-npx supabase db push
-```
-
-`Config/Supabase.local.xcconfig` is gitignored. Only the project URL and
-publishable key belong there; never put the database password or service-role
-key in the app.
-
-Invite email is optional. To enable it, deploy `supabase/functions/send-trip-invite`
-and set `RESEND_API_KEY` and `INVITE_FROM_EMAIL` as function secrets.

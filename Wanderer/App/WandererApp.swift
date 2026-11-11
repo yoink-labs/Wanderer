@@ -12,6 +12,7 @@ struct WandererApp: App {
     }
 
     init() {
+        LegacyBackendCleanup.run()
         if let key = CloudConfiguration.clerkPublishableKey, !key.isEmpty {
             Clerk.configure(publishableKey: key)
         }

@@ -1,29 +1,15 @@
 import ClerkKit
 import Foundation
-import Supabase
-
-enum WandererSupabase {
-    static let client = SupabaseClient(
-        supabaseURL: SupabaseConfig.url,
-        supabaseKey: SupabaseConfig.publishableKey
-    )
-}
 
 enum AuthMode {
     case signIn
     case signUp
 }
 
-/// Authentication for both backends.
-///
-/// - **Clerk** (default): the same Yoink Labs production instance as
-///   yoinklabs.dev. Sign-in is email + verification code; the Clerk iOS SDK
-///   owns the session, refresh and secure storage.
-/// - **Supabase** (legacy): the previous email/password session, kept only
-///   while the cloud backend is unavailable so the app still builds and runs.
+/// Authentication. Clerk is the only identity provider: the same Yoink Labs
+/// production instance the website uses. Sign-in is email + a six-digit code.
 @MainActor
 final class AuthStore: ObservableObject {
-    @Published private(set) var session: Supabase.Session?
     @Published private(set) var isRestoring = true
     @Published private(set) var isWorking = false
     @Published var errorMessage: String?
@@ -36,60 +22,29 @@ final class AuthStore: ObservableObject {
     private var signedInUserID: String?
     private var signedInEmail: String?
 
-    private let client: SupabaseClient
-
-    init(client: SupabaseClient = WandererSupabase.client) {
-        self.client = client
+    init() {
         CloudSession.shared.setProvider { [weak self] in
             await self?.validCloudToken()
         }
     }
 
-    var usesClerk: Bool { BackendMode.isCloudAvailable }
+    var isAuthenticated: Bool { signedInUserID != nil }
 
-    var isAuthenticated: Bool {
-        if usesClerk { return signedInUserID != nil }
-        return session != nil
-    }
+    var userID: String? { signedInUserID }
 
-    var userID: String? {
-        if usesClerk { return signedInUserID }
-        return session?.user.id.uuidString
-    }
-
-    var userEmail: String {
-        if usesClerk { return signedInEmail ?? "" }
-        return session?.user.email ?? ""
-    }
+    var userEmail: String { signedInEmail ?? "" }
 
     // MARK: - Lifecycle
 
     func restore() async {
         defer { isRestoring = false }
-
-        if usesClerk {
-            await waitForClerk()
-            if let user = Clerk.shared.user, Clerk.shared.session != nil {
-                applyClerkUser(user)
-                CloudSession.shared.token = try? await Clerk.shared.auth.getToken()
-            } else {
-                resumePendingVerificationIfTesting()
-            }
-            return
+        await waitForClerk()
+        if let user = Clerk.shared.user, Clerk.shared.session != nil {
+            applyClerkUser(user)
+            CloudSession.shared.token = try? await Clerk.shared.auth.getToken()
+        } else {
+            resumePendingVerificationIfTesting()
         }
-
-        do {
-            session = try await client.auth.session
-            if session != nil { markSupabaseHistory() }
-        } catch {
-            session = nil
-        }
-    }
-
-    /// Records that this device has Supabase data, so the backend default does
-    /// not move those trips to the cloud before the import runs.
-    private func markSupabaseHistory() {
-        UserDefaults.standard.set(true, forKey: BackendMode.supabaseHistoryKey)
     }
 
     /// Debug builds only: if a verification attempt survived a relaunch, show
@@ -121,11 +76,6 @@ final class AuthStore: ObservableObject {
         guard beginWork() else { return false }
         defer { isWorking = false }
 
-        if !usesClerk {
-            errorMessage = "Cloud sign-in is not configured for this build."
-            return false
-        }
-
         do {
             _ = try await Clerk.shared.auth.signInWithEmailCode(emailAddress: email)
             pendingEmail = email
@@ -145,11 +95,6 @@ final class AuthStore: ObservableObject {
         guard beginWork() else { return false }
         defer { isWorking = false }
 
-        if !usesClerk {
-            errorMessage = "Cloud sign-in is not configured for this build."
-            return false
-        }
-
         do {
             let signUp = try await Clerk.shared.auth.signUp(emailAddress: email, password: password)
             _ = try await signUp.sendEmailCode()
@@ -167,8 +112,6 @@ final class AuthStore: ObservableObject {
     func verifyCode(_ code: String) async -> Bool {
         guard beginWork() else { return false }
         defer { isWorking = false }
-
-        guard usesClerk else { return false }
 
         do {
             let sessionID: String?
@@ -228,18 +171,10 @@ final class AuthStore: ObservableObject {
     // MARK: - Sign out
 
     func signOut() async {
-        if usesClerk {
-            try? await Clerk.shared.auth.signOut()
-            signedInUserID = nil
-            signedInEmail = nil
-            CloudSession.shared.token = nil
-        }
-        do {
-            try await client.auth.signOut()
-        } catch {
-            // A failed network sign-out should still clear the local session.
-        }
-        session = nil
+        try? await Clerk.shared.auth.signOut()
+        signedInUserID = nil
+        signedInEmail = nil
+        CloudSession.shared.token = nil
         awaitingCode = false
     }
 
@@ -248,7 +183,7 @@ final class AuthStore: ObservableObject {
     /// Returns a Clerk session JWT, refreshing it when the SDK's cache is
     /// stale. The API client calls this through `CloudSession`.
     func validCloudToken() async -> String? {
-        guard usesClerk, signedInUserID != nil else { return nil }
+        guard signedInUserID != nil else { return nil }
         return try? await Clerk.shared.auth.getToken()
     }
 
@@ -290,10 +225,6 @@ final class AuthStore: ObservableObject {
         if let clientError = error as? ClerkClientError {
             return clientError.localizedDescription
         }
-        let message = error.localizedDescription
-        if message.localizedCaseInsensitiveContains("invalid login credentials") {
-            return "That email and password don't match. Try again or sign up."
-        }
-        return message
+        return error.localizedDescription
     }
 }

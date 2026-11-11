@@ -1,0 +1,8 @@
+// Wanderer API and Clerk. These values are public and safe to commit:
+// the Worker enforces access and the Clerk key is a publishable key.
+CLOUD_API_URL = https:/$()/api.yoinklabs.dev
+CLERK_FRONTEND_API = https:/$()/clerk.yoinklabs.dev
+CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsueW9pbmtsYWJzLmRldiQ
+
+// Optional local overrides (gitignored).
+#include? "App.local.xcconfig"

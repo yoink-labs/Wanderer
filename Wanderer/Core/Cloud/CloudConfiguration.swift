@@ -2,7 +2,7 @@ import Foundation
 
 /// Build-time configuration for the Cloudflare Worker backend and Clerk.
 ///
-/// Values come from `Config/Cloud.local.xcconfig` (gitignored) through
+/// Values come from `Config/App.local.xcconfig` (gitignored) through
 /// Info.plist. Nothing here is a secret: the Clerk publishable key and the
 /// Worker URL are both safe to ship, and the Worker enforces access.
 enum CloudConfiguration {
@@ -31,43 +31,6 @@ enum CloudConfiguration {
     }
 }
 
-/// Which storage the app talks to. Supabase stays the default until the Worker
-/// is deployed and Clerk sign-in is verified end to end; the switch lives in
-/// one place so a cutover is a config change, not a code change.
-enum BackendMode: String {
-    case supabase
-    case cloud
-
-    static let defaultsKey = "wanderer.backendMode"
-    /// Set once this device has held a Supabase session. Those people keep
-    /// using Supabase until their trips are imported into D1.
-    static let supabaseHistoryKey = "wanderer.hasSupabaseAccount"
-
-    static var current: BackendMode {
-        get {
-            if let raw = UserDefaults.standard.string(forKey: defaultsKey),
-               let mode = BackendMode(rawValue: raw) {
-                return mode
-            }
-            // New installs and new sign-ups start on the cloud backend.
-            // Anyone who already has Supabase data stays there until the
-            // import lands, so no existing trips disappear.
-            if UserDefaults.standard.bool(forKey: supabaseHistoryKey) {
-                return .supabase
-            }
-            return .cloud
-        }
-        set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: defaultsKey)
-        }
-    }
-
-    /// Cloud mode needs both the API URL and a signed-in cloud session.
-    static var isCloudAvailable: Bool {
-        CloudConfiguration.isAPIConfigured && CloudConfiguration.isClerkConfigured
-    }
-}
-
 /// Supplies the Clerk session JWT to the API client. Kept as a closure so the
 /// client stays testable and has no dependency on the auth store.
 struct APIAuth: Sendable {
@@ -77,5 +40,27 @@ struct APIAuth: Sendable {
 
     static func bearer(_ provider: @escaping @Sendable () async -> String?) -> APIAuth {
         APIAuth(token: provider)
+    }
+}
+
+/// One-time cleanup for devices upgraded from the Supabase build. Those
+/// installs may still hold a backend switch and a "has Supabase account" flag;
+/// neither means anything now. Removing them is idempotent, and the stale
+/// Supabase Keychain session is simply never read again, so such a device
+/// lands on the Clerk email sign-in like any signed-out install.
+enum LegacyBackendCleanup {
+    static let legacyKeys = ["wanderer.backendMode", "wanderer.hasSupabaseAccount"]
+    static let doneKey = "wanderer.legacyBackendCleanupDone"
+
+    @discardableResult
+    static func run(defaults: UserDefaults = .standard) -> Bool {
+        guard !defaults.bool(forKey: doneKey) else { return false }
+        var removed = false
+        for key in legacyKeys where defaults.object(forKey: key) != nil {
+            defaults.removeObject(forKey: key)
+            removed = true
+        }
+        defaults.set(true, forKey: doneKey)
+        return removed
     }
 }

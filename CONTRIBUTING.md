@@ -30,8 +30,9 @@ open Wanderer.xcodeproj
 ```
 
 A fresh clone builds and runs without any accounts: use **Explore as a guest**
-to plan trips locally. Signing in needs a backend; the README explains the
-Cloudflare Worker in `worker/` and the Supabase fallback.
+to plan trips locally. Signing in uses the shared Yoink Labs Clerk account
+against the Cloudflare Worker in `worker/` (see the README). Supabase is no
+longer used at runtime; its old code is archived under `Archive/Supabase/`.
 
 ## Run the tests
 

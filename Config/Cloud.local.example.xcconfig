@@ -1,5 +1,0 @@
-// Copy to Cloud.local.xcconfig and fill in. None of these are secrets.
-// The "$()" stops xcconfig from reading the "//" in a URL as a comment.
-CLOUD_API_URL = https:/$()/wanderer-api.<your-subdomain>.workers.dev
-CLERK_FRONTEND_API = https:/$()/<your-instance>.clerk.accounts.dev
-CLERK_PUBLISHABLE_KEY = pk_live_YOUR_PUBLISHABLE_KEY

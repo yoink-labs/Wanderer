@@ -204,7 +204,7 @@ struct TripToolsView: View {
         case .checklist:
             ChecklistView(store: store)
         case .share:
-            ShareTripView(trip: trip, profiles: store.members)
+            ShareTripView(trip: trip, profiles: store.members, currentUserId: store.currentUserId)
         }
     }
 

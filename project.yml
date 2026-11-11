@@ -13,9 +13,6 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "18.0"
 
 packages:
-  Supabase:
-    url: https://github.com/supabase/supabase-swift
-    from: "2.0.0"
   Clerk:
     url: https://github.com/clerk/clerk-ios
     from: "1.7.1"
@@ -27,13 +24,11 @@ targets:
     sources:
       - path: Wanderer
     dependencies:
-      - package: Supabase
-        product: Supabase
       - package: Clerk
         product: ClerkKit
     configFiles:
-      Debug: Config/Supabase.xcconfig
-      Release: Config/Supabase.xcconfig
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
     settings:
       base:
         INFOPLIST_FILE: Wanderer/Resources/Info.plist

@@ -75,8 +75,7 @@ extension URLSession: URLSessioning {}
 /// Typed client for the Wanderer Worker API.
 ///
 /// Every call carries the Clerk session JWT. Rows are decoded into the same
-/// models the Supabase stores already use, so migrating a store is a call-site
-/// change rather than a model change.
+/// models the app already uses, so screens did not change when the backend did.
 struct WandererAPI: Sendable {
     let baseURL: URL
     let auth: APIAuth

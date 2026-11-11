@@ -43,7 +43,7 @@ struct TripRecord: Codable, Identifiable, Hashable {
         coverColor = try container.decodeIfPresent(String.self, forKey: .coverColor)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         timezone = try container.decodeIfPresent(String.self, forKey: .timezone) ?? TimeZone.current.identifier
-        // The Worker returns the count inline; Supabase selects the row only.
+        // The Worker returns the count inline; older rows may omit it.
         placeCount = try container.decodeIfPresent(Int.self, forKey: .placeCount) ?? 0
     }
 

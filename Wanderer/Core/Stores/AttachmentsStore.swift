@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 
 @MainActor
 final class AttachmentsStore: ObservableObject {
@@ -8,43 +7,16 @@ final class AttachmentsStore: ObservableObject {
     @Published private(set) var isUploading = false
     @Published var errorMessage: String?
 
-    private let client: SupabaseClient
-    private let bucket = "trip-attachments"
-
-    init(client: SupabaseClient = WandererSupabase.client) {
-        self.client = client
-    }
-
-    private var cloud: WandererAPI? {
-        BackendMode.current == .cloud ? CloudSession.shared.api : nil
-    }
+    private var api: WandererAPI? { CloudSession.shared.api }
 
     func load(tripID: UUID) async {
-        if let cloud {
-            do {
-                attachments = try await cloud.attachments(tripID: tripID)
-                for attachment in attachments {
-                    if let url = try? await cloud.attachmentURL(tripID: tripID, attachmentID: attachment.id) {
-                        signedURLs[attachment.id] = url
-                    }
-                }
-            } catch {
-                errorMessage = "Couldn't load attachments: \(error.localizedDescription)"
-            }
-            return
-        }
-
-        guard WandererSupabase.client.auth.currentSession != nil else { return }
+        guard let api else { return }
         do {
-            attachments = try await client.from("attachments")
-                .select()
-                .eq("trip_id", value: tripID.uuidString)
-                .order("created_at", ascending: false)
-                .execute()
-                .value
-
+            attachments = try await api.attachments(tripID: tripID)
             for attachment in attachments {
-                await makeSignedURL(for: attachment)
+                if let url = try? await api.attachmentURL(tripID: tripID, attachmentID: attachment.id) {
+                    signedURLs[attachment.id] = url
+                }
             }
         } catch {
             errorMessage = "Couldn't load attachments: \(error.localizedDescription)"
@@ -52,44 +24,17 @@ final class AttachmentsStore: ObservableObject {
     }
 
     func upload(tripID: UUID, data: Data, fileName: String, mimeType: String) async {
+        guard let api else { return }
         isUploading = true
         defer { isUploading = false }
 
-        if let cloud {
-            do {
-                _ = try await cloud.uploadAttachment(
-                    tripID: tripID,
-                    data: data,
-                    fileName: fileName,
-                    mimeType: mimeType
-                )
-                await load(tripID: tripID)
-            } catch {
-                errorMessage = "Couldn't upload that file: \(error.localizedDescription)"
-            }
-            return
-        }
-
         do {
-            let session = try await client.auth.session
-            let safeName = fileName
-                .replacingOccurrences(of: "/", with: "-")
-                .replacingOccurrences(of: "\\", with: "-")
-            let path = "\(tripID.uuidString)/\(UUID().uuidString)-\(safeName)"
-
-            try await client.storage
-                .from(bucket)
-                .upload(path, data: data, options: FileOptions(contentType: mimeType))
-
-            let payload = NewAttachmentPayload(
-                tripId: tripID.uuidString,
-                name: fileName,
-                storagePath: path,
-                mimeType: mimeType,
-                sizeBytes: data.count,
-                createdBy: session.user.id.uuidString
+            _ = try await api.uploadAttachment(
+                tripID: tripID,
+                data: data,
+                fileName: fileName,
+                mimeType: mimeType
             )
-            try await client.from("attachments").insert(payload).execute()
             await load(tripID: tripID)
         } catch {
             errorMessage = "Couldn't upload that file: \(error.localizedDescription)"
@@ -97,56 +42,13 @@ final class AttachmentsStore: ObservableObject {
     }
 
     func delete(_ attachment: AttachmentRecord) async {
-        if let cloud {
-            do {
-                try await cloud.deleteAttachment(tripID: attachment.tripId, attachmentID: attachment.id)
-                attachments.removeAll { $0.id == attachment.id }
-                signedURLs[attachment.id] = nil
-            } catch {
-                errorMessage = "Couldn't remove that attachment: \(error.localizedDescription)"
-            }
-            return
-        }
-
+        guard let api else { return }
         do {
-            try await client.storage.from(bucket).remove(paths: [attachment.storagePath])
-            try await client.from("attachments")
-                .delete()
-                .eq("id", value: attachment.id.uuidString)
-                .execute()
+            try await api.deleteAttachment(tripID: attachment.tripId, attachmentID: attachment.id)
             attachments.removeAll { $0.id == attachment.id }
             signedURLs[attachment.id] = nil
         } catch {
             errorMessage = "Couldn't remove that attachment: \(error.localizedDescription)"
         }
-    }
-
-    private func makeSignedURL(for attachment: AttachmentRecord) async {
-        do {
-            let url = try await client.storage
-                .from(bucket)
-                .createSignedURL(path: attachment.storagePath, expiresIn: 3600)
-            signedURLs[attachment.id] = url
-        } catch {
-            // A missing URL only disables opening that row; the list still works.
-        }
-    }
-}
-
-private struct NewAttachmentPayload: Encodable {
-    let tripId: String
-    let name: String
-    let storagePath: String
-    let mimeType: String
-    let sizeBytes: Int
-    let createdBy: String
-
-    enum CodingKeys: String, CodingKey {
-        case tripId = "trip_id"
-        case name
-        case storagePath = "storage_path"
-        case mimeType = "mime_type"
-        case sizeBytes = "size_bytes"
-        case createdBy = "created_by"
     }
 }

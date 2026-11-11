@@ -1,0 +1,5 @@
+// Copy to App.local.xcconfig to point a build at another Worker or Clerk
+// instance. The "$()" stops xcconfig from reading "//" in a URL as a comment.
+CLOUD_API_URL = https:/$()/wanderer-api.example.workers.dev
+CLERK_FRONTEND_API = https:/$()/example.clerk.accounts.dev
+CLERK_PUBLISHABLE_KEY = pk_test_YOUR_PUBLISHABLE_KEY

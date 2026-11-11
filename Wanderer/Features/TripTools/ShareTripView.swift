@@ -6,6 +6,8 @@ struct ShareTripView: View {
     let trip: Trip
     /// Member profiles already loaded by the trip store; used for names.
     var profiles: [TripMemberProfile] = []
+    /// The signed-in member's internal profile id, for "you" in balances.
+    var currentUserId: UUID?
 
     @EnvironmentObject private var auth: AuthStore
     @Environment(\.openURL) private var openURL
@@ -29,10 +31,6 @@ struct ShareTripView: View {
     /// copied and shared.
     private var displayLink: String {
         "wanderer.app/trip/\(trip.id.uuidString.prefix(8).lowercased())…"
-    }
-
-    private var currentUserId: UUID? {
-        auth.session?.user.id
     }
 
     private var ownerDisplayName: String {

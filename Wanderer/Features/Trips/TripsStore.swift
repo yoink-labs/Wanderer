@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 
 @MainActor
 final class TripsStore: ObservableObject {
@@ -10,16 +9,7 @@ final class TripsStore: ObservableObject {
     private let backing: TripsBacking
 
     init(backing: TripsBacking? = nil) {
-        self.backing = backing ?? Self.defaultBacking
-    }
-
-    /// Cloud is only used once it is configured and the switch is on; the
-    /// Supabase path stays available so a half-configured build still works.
-    private static var defaultBacking: TripsBacking {
-        if BackendMode.current == .cloud, BackendMode.isCloudAvailable {
-            return CloudTripsBacking()
-        }
-        return SupabaseTripsBacking()
+        self.backing = backing ?? CloudTripsBacking()
     }
 
     func load() async {

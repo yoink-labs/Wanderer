@@ -9,13 +9,13 @@
 /* Begin PBXBuildFile section */
 		009BB7861F52D95FB68A5EF6 /* PlannerGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 429FC03BBEA9FC63A71A2B8C /* PlannerGeometry.swift */; };
 		0377ADC9CCC4A161D2461FBD /* GuestTripsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D14B76999A5A5C3277A8FC00 /* GuestTripsStore.swift */; };
-		06BDEFE0D151BF43CF0A18F8 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 658CB1B725233B2922568444 /* ClerkKit */; };
 		0DB4BFA726181DDDE2E2431B /* ReservationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D0680C192F6E732C0B2FA0D /* ReservationsView.swift */; };
 		0DF95B391AB997430DD57CEC /* TripRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C5347617248161E0B9A2FA /* TripRecord.swift */; };
 		113E3FC119255B89C45EEC73 /* HomeSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07BCF1FD5AB8A2D095611C80 /* HomeSkeleton.swift */; };
 		14BA710A98330E0A58E2A355 /* AttachmentsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 630EE577BBBD0201E79C64CB /* AttachmentsStore.swift */; };
 		1776B50BFBEB5BD645E7A2B2 /* SplitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5EBDF9094936E690FECE20 /* SplitMath.swift */; };
 		1FEA1A69C3376F1889916E3E /* ImageCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2889361D37EE394A9EEB81F0 /* ImageCatalog.swift */; };
+		253DF3311E5D88D3EA97F9EB /* LegacyBackendCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09159DF78F452ED84A8316FB /* LegacyBackendCleanupTests.swift */; };
 		27B60175A1ABBB5A11BA0F65 /* WandererApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F08DFC9293EDE1EB208DB540 /* WandererApp.swift */; };
 		2A86BCA769BE5C0C54B726B3 /* ExpensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485340E25E1BB38F5575799C /* ExpensesView.swift */; };
 		2FB62B6A59E19D6AEB320239 /* PlaceDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE938851E76A6594D1D2B6A9 /* PlaceDetailSheet.swift */; };
@@ -24,7 +24,6 @@
 		382AADA5D8DEEBB5A5F14CEA /* CloudAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63569DDAE2EC69C16A58C274 /* CloudAPITests.swift */; };
 		3C3026BE42C761CC1E8D9285 /* TripNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A83EEA0876887D4C66F8263 /* TripNotesView.swift */; };
 		4159F93037F5C4C5D9A372C3 /* VisitedPlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C75E3A80FA06040D0682622 /* VisitedPlacesView.swift */; };
-		4321DB01D990F55BB19A6C56 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB67F8DD303BC8D274D2EF6 /* SupabaseConfig.swift */; };
 		4EF3498A30F986350829261F /* TripPDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFE84B509D6A42620681B9B /* TripPDFExporter.swift */; };
 		50E82AF6D97C3F849ED23922 /* ShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586F12A2EE82142A5C8442BD /* ShareStore.swift */; };
 		50F378C215C4D290240AE1A6 /* TripToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391427890E0E1BEF9DE64DF1 /* TripToolsView.swift */; };
@@ -35,7 +34,7 @@
 		65DBC0E1655F43658865A88B /* HomeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9114EE1202D8858FA472D7C7 /* HomeModels.swift */; };
 		68F5D88D5ACCBC4BFDFA7E06 /* WandererSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB2D2377DBE4521775F583A3 /* WandererSkeleton.swift */; };
 		7040B5C635E6D135AB22A5B9 /* NearbyIdeasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540B4AAB58475E1CC20E0B65 /* NearbyIdeasView.swift */; };
-		7627CE1E22C676B9D6F64C58 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = DFFDE767AF597B788B69BEC7 /* Supabase */; };
+		7627CE1E22C676B9D6F64C58 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 658CB1B725233B2922568444 /* ClerkKit */; };
 		76A4637738B2EF6FB55D351C /* TravelStores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6529D84648694842189BCC07 /* TravelStores.swift */; };
 		77110250E360EE29082A074E /* TripJournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADAEACF98D0CB994446D48C /* TripJournalView.swift */; };
 		778A966077222E42507CFE8B /* PlannerMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 278E3C4A6A45BDE4413BEE5A /* PlannerMapView.swift */; };
@@ -62,6 +61,7 @@
 		CCD3CA48AC49C45FDAA22475 /* LanguagePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37DD9D79B1A57BE12E142567 /* LanguagePickerView.swift */; };
 		D139EFE2DA68DFA507F1DEB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47D71F678F3B4C1FC21ED47D /* Assets.xcassets */; };
 		D8805FDA4CCF1E217C817063 /* HomeModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B853FE45E4BB79432762A7 /* HomeModelsTests.swift */; };
+		D896FE4EFC486924A5208C18 /* DebugSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7826EBF72AA8AD4BAEE74BBB /* DebugSeed.swift */; };
 		DD92EE8858F0655BA93526D9 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D6D7CE9E8363D41E43AC72 /* ProfileView.swift */; };
 		DD9C9756F85F97355E89B763 /* Trip.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACE4703B1CEF2FC247DD6686 /* Trip.swift */; };
 		E72133353AE694349BA7B27B /* AuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE86CAB9DA8C6B2E2489A61 /* AuthStore.swift */; };
@@ -85,6 +85,8 @@
 
 /* Begin PBXFileReference section */
 		07BCF1FD5AB8A2D095611C80 /* HomeSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSkeleton.swift; sourceTree = "<group>"; };
+		09159DF78F452ED84A8316FB /* LegacyBackendCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBackendCleanupTests.swift; sourceTree = "<group>"; };
+		0B0D5B7BCC7CFFFF1A7D4205 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		0F821EEAC812B7309DAAB142 /* TripsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsHomeView.swift; sourceTree = "<group>"; };
 		0FFE84B509D6A42620681B9B /* TripPDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPDFExporter.swift; sourceTree = "<group>"; };
 		139E6CDC21F9B4DB1ECA89A7 /* TripsBacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsBacking.swift; sourceTree = "<group>"; };
@@ -97,7 +99,6 @@
 		2ADAEACF98D0CB994446D48C /* TripJournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripJournalView.swift; sourceTree = "<group>"; };
 		2D0680C192F6E732C0B2FA0D /* ReservationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationsView.swift; sourceTree = "<group>"; };
 		2F4CB288BEC919A49A9D78ED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		3651D6F12A167441A74C7EC1 /* Supabase.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Supabase.xcconfig; sourceTree = "<group>"; };
 		37DD9D79B1A57BE12E142567 /* LanguagePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerView.swift; sourceTree = "<group>"; };
 		391427890E0E1BEF9DE64DF1 /* TripToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripToolsView.swift; sourceTree = "<group>"; };
 		3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitMathTests.swift; sourceTree = "<group>"; };
@@ -120,6 +121,7 @@
 		71ADCE542CB24AB187F20814 /* ProfileAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatar.swift; sourceTree = "<group>"; };
 		767CE56211A97036FA75CA5F /* PlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerView.swift; sourceTree = "<group>"; };
 		78015B4F18A43D4BDB2DDA2D /* TravelModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModels.swift; sourceTree = "<group>"; };
+		7826EBF72AA8AD4BAEE74BBB /* DebugSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSeed.swift; sourceTree = "<group>"; };
 		7995E8A175F060E562A7EC70 /* WandererAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WandererAPI.swift; sourceTree = "<group>"; };
 		7C75E3A80FA06040D0682622 /* VisitedPlacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitedPlacesView.swift; sourceTree = "<group>"; };
 		85224A44E9AFA3B3A16611D5 /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
@@ -136,7 +138,6 @@
 		BB86F69472D5706EAFB68DBC /* TripAttachmentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripAttachmentsView.swift; sourceTree = "<group>"; };
 		BCC8BFA35C9D4C5BDBC16353 /* PlaceSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSearchView.swift; sourceTree = "<group>"; };
 		BD235FF44F0C42303F6104C0 /* WandererHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WandererHaptics.swift; sourceTree = "<group>"; };
-		BEB67F8DD303BC8D274D2EF6 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		BF5EAB8C11E2276702845360 /* Wanderer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wanderer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB5EBDF9094936E690FECE20 /* SplitMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitMath.swift; sourceTree = "<group>"; };
 		D14B76999A5A5C3277A8FC00 /* GuestTripsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestTripsStore.swift; sourceTree = "<group>"; };
@@ -157,8 +158,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7627CE1E22C676B9D6F64C58 /* Supabase in Frameworks */,
-				06BDEFE0D151BF43CF0A18F8 /* ClerkKit in Frameworks */,
+				7627CE1E22C676B9D6F64C58 /* ClerkKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -171,6 +171,7 @@
 				63569DDAE2EC69C16A58C274 /* CloudAPITests.swift */,
 				B4C34BC83E9744B200BA4157 /* ExportAndGuestTests.swift */,
 				29B853FE45E4BB79432762A7 /* HomeModelsTests.swift */,
+				09159DF78F452ED84A8316FB /* LegacyBackendCleanupTests.swift */,
 				4593CAD5D6124451B87A0F0A /* PlannerGeometryTests.swift */,
 				3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */,
 			);
@@ -181,7 +182,6 @@
 			isa = PBXGroup;
 			children = (
 				9BE86CAB9DA8C6B2E2489A61 /* AuthStore.swift */,
-				BEB67F8DD303BC8D274D2EF6 /* SupabaseConfig.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -276,7 +276,7 @@
 		7B88100EF22FC21F91A3ED02 /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				3651D6F12A167441A74C7EC1 /* Supabase.xcconfig */,
+				0B0D5B7BCC7CFFFF1A7D4205 /* App.xcconfig */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -415,6 +415,7 @@
 			isa = PBXGroup;
 			children = (
 				6DCC795CE658B7BD1697781E /* CloudConfiguration.swift */,
+				7826EBF72AA8AD4BAEE74BBB /* DebugSeed.swift */,
 				139E6CDC21F9B4DB1ECA89A7 /* TripsBacking.swift */,
 				7995E8A175F060E562A7EC70 /* WandererAPI.swift */,
 			);
@@ -456,7 +457,6 @@
 			);
 			name = Wanderer;
 			packageProductDependencies = (
-				DFFDE767AF597B788B69BEC7 /* Supabase */,
 				658CB1B725233B2922568444 /* ClerkKit */,
 			);
 			productName = Wanderer;
@@ -489,7 +489,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				63EEB895EDC195AC7983B103 /* XCRemoteSwiftPackageReference "clerk-ios" */,
-				2DC722ED78649C21EF72F5A4 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
@@ -522,6 +521,7 @@
 				FF829B31E0D33300563B4C1C /* ChecklistView.swift in Sources */,
 				C286E481FCCD60AF37B29298 /* CloudConfiguration.swift in Sources */,
 				A25790F6B03B6C0401C229DC /* DayNoteView.swift in Sources */,
+				D896FE4EFC486924A5208C18 /* DebugSeed.swift in Sources */,
 				CC66BEAE5BE8C7927890CCD7 /* EmailAuthSheet.swift in Sources */,
 				2A86BCA769BE5C0C54B726B3 /* ExpensesView.swift in Sources */,
 				9FA8AA633269ED1A2C8C05FF /* ExploreView.swift in Sources */,
@@ -549,7 +549,6 @@
 				CC1C73CDCED3D441BDC4C21F /* ShareTripView.swift in Sources */,
 				87DDF899F5217E0D06AF4B5C /* SignInView.swift in Sources */,
 				1776B50BFBEB5BD645E7A2B2 /* SplitMath.swift in Sources */,
-				4321DB01D990F55BB19A6C56 /* SupabaseConfig.swift in Sources */,
 				9997556D50DD551813AFBB77 /* TravelModels.swift in Sources */,
 				32602904C461C6BE9CAEBB3C /* TravelServices.swift in Sources */,
 				76A4637738B2EF6FB55D351C /* TravelStores.swift in Sources */,
@@ -583,6 +582,7 @@
 				382AADA5D8DEEBB5A5F14CEA /* CloudAPITests.swift in Sources */,
 				E9416E5AB7685077F2F1A406 /* ExportAndGuestTests.swift in Sources */,
 				D8805FDA4CCF1E217C817063 /* HomeModelsTests.swift in Sources */,
+				253DF3311E5D88D3EA97F9EB /* LegacyBackendCleanupTests.swift in Sources */,
 				303F91AB18439B7B865469EE /* PlannerGeometryTests.swift in Sources */,
 				8B56FE752B7C4B17E1189299 /* SplitMathTests.swift in Sources */,
 			);
@@ -702,7 +702,7 @@
 		};
 		820CDEAB7ED97FBA681D1E6F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3651D6F12A167441A74C7EC1 /* Supabase.xcconfig */;
+			baseConfigurationReference = 0B0D5B7BCC7CFFFF1A7D4205 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -732,7 +732,7 @@
 		};
 		A02BF675E6A616DD73D4968A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3651D6F12A167441A74C7EC1 /* Supabase.xcconfig */;
+			baseConfigurationReference = 0B0D5B7BCC7CFFFF1A7D4205 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -849,14 +849,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		2DC722ED78649C21EF72F5A4 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/supabase/supabase-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
-			};
-		};
 		63EEB895EDC195AC7983B103 /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/clerk/clerk-ios";
@@ -872,11 +864,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 63EEB895EDC195AC7983B103 /* XCRemoteSwiftPackageReference "clerk-ios" */;
 			productName = ClerkKit;
-		};
-		DFFDE767AF597B788B69BEC7 /* Supabase */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 2DC722ED78649C21EF72F5A4 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

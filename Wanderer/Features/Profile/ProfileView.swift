@@ -12,7 +12,6 @@ struct ProfileView: View {
     @AppStorage("wanderer.units") private var units = "Metric"
     @AppStorage("wanderer.appearance") private var appearanceRaw = WandererAppearance.system.rawValue
 
-    @State private var backendMode = BackendMode.current
     @State private var showDeleteAccountConfirm = false
     @State private var isDeletingAccount = false
     @State private var didApplyRemoteSettings = false
@@ -344,40 +343,8 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
 
-            if BackendMode.isCloudAvailable {
-                cardDivider
-
-                Menu {
-                    Button {
-                        switchBackend(to: .supabase)
-                    } label: {
-                        Label("Supabase (current)", systemImage: "cylinder.split.1x2")
-                    }
-                    Button {
-                        switchBackend(to: .cloud)
-                    } label: {
-                        Label("Cloudflare + Clerk", systemImage: "cloud")
-                    }
-                } label: {
-                    settingsRow(
-                        title: "Backend",
-                        value: backendMode == .cloud ? "Cloudflare" : "Supabase",
-                        icon: "server.rack"
-                    )
-                }
-                .buttonStyle(.plain)
-            }
         }
         .liggaCard()
-    }
-
-    /// Switching backends also changes identity providers, so the safest reset
-    /// is to sign out and let the root flow ask again.
-    private func switchBackend(to mode: BackendMode) {
-        guard mode != backendMode else { return }
-        BackendMode.current = mode
-        backendMode = mode
-        Task { await auth.signOut() }
     }
 
     @ViewBuilder
@@ -509,12 +476,10 @@ struct ProfileView: View {
     }
 
     private var canDeleteAccount: Bool {
-        !isGuest && auth.isAuthenticated && BackendMode.current == .cloud
+        !isGuest && auth.isAuthenticated
     }
 
-    /// Only offered on the cloud backend: the Worker has a delete endpoint and
-    /// can remove the account's trips and media. The Supabase path has no
-    /// equivalent, so it is not shown there.
+    /// The Worker's delete endpoint removes the account's trips and media.
     private var deleteAccountButton: some View {
         Button(role: .destructive) {
             showDeleteAccountConfirm = true

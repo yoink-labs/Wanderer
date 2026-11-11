@@ -13,8 +13,10 @@ build/
 xcuserdata/
 
 # Local configuration
+Config/App.local.xcconfig
 Config/Supabase.local.xcconfig
 Config/Cloud.local.xcconfig
+.wrangler/
 
 # ADE local state
 
