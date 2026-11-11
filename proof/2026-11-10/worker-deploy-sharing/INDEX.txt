@@ -1,0 +1,10 @@
+Worker deploy: slice 13 sharing changes on api.yoinklabs.dev
+Deployed version: 54d161a8-98b1-460e-bfd5-1c55857cdb4e (previous: 1c5f73a6-fe2f-4977-8569-688cc463aba0)
+Worker code: main (sharing from dd48a51). Worker tests 59/59, typecheck clean, before deploy.
+D1 migrations: none pending. share_token and trip_invites come from 0001_init.sql, already applied
+(applied list: 0001_init.sql, 0002_place_enrichment.sql, 0003_trip_lists.sql).
+
+01-shared-trip-page-phone.png   GET /s/<token> for a test trip made through the real API: 200, read-only, 3 days, 5 stops
+02-invalid-token-page-phone.png GET /s/<unknown token>: 404 with the friendly "This link isn't available" page
+Captured in ADE's browser at iPhone 17 Pro size; the browser was in dark mode.
+No names, emails or tokens other than the public share link appear.
