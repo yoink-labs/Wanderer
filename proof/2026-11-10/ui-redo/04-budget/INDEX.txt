@@ -1,0 +1,10 @@
+UI redo slice 4: budget and checklist (main, see git log)
+Guest mode, Kyoto demo trip on the device, $1,500 demo budget.
+
+00-before-budget-light.png  Before: card per expense, similar beige/charcoal category colours, no daily view.
+01-budget-light.png         After (light): display total, marigold budget bar, Spend by day chart with
+                            "Before" bar for prepaid costs and the dashed daily budget line.
+02-budget-dark.png          After (dark): same; adaptive primary button.
+03-checklist-dark.png       Checklist in dark: marigold progress, legible ticks and add button.
+
+Tests: Swift 43 passed (2 new DailySpend tests: grouping by trip day, before/after buckets sum to total).
