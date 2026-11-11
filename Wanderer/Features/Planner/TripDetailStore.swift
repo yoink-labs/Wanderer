@@ -24,7 +24,11 @@ final class TripDetailStore: ObservableObject {
         self.trip = trip
     }
 
-    private var cloud: WandererAPI? { CloudSession.shared.api }
+    /// Guest trips live on the device and go through the local server; signed
+    /// in, the same calls go to the Worker.
+    private var cloud: WandererAPI? {
+        LocalTrips.isActive ? LocalTripServer.api() : CloudSession.shared.api
+    }
 
     var totalExpenses: Double {
         expenses.reduce(0) { $0 + $1.amount }

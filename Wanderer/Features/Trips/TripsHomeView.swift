@@ -128,6 +128,9 @@ struct TripsHomeView: View {
         }
         .task {
             // Debug launch route: open the featured trip without a tap.
+            #if DEBUG
+            await DemoTripSeed.runIfRequested()
+            #endif
             guard DebugLaunch.opensFirstTrip, !didApplyDebugRoute else { return }
             didApplyDebugRoute = true
             try? await Task.sleep(for: .milliseconds(600))
@@ -541,6 +544,11 @@ struct TripsHomeView: View {
         for trip in pending.reversed() {
             await store.create(trip.guestDraft)
             if store.errorMessage != nil { return }
+            // Carry over what was planned on the device, not just the trip.
+            if let created = store.trips.first, let cloud = CloudSession.shared.api {
+                let payer = try? await cloud.profile().id
+                _ = try? await GuestTripImporter.copy(localTripID: trip.id, into: created.id, to: cloud, payer: payer)
+            }
         }
         guestTrips = []
         GuestTripsStore.clear()
