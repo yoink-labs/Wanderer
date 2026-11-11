@@ -90,9 +90,9 @@ struct HomeTripOrdering {
         case .upNext(let days):
             guard let days else { return "Up next" }
             switch days {
-            case ..<1: return "Up next · starts today"
-            case 1: return "Up next · tomorrow"
-            default: return "Up next · in \(days) days"
+            case ..<1: return "Starts today"
+            case 1: return "Starts tomorrow"
+            default: return "Starts in \(days) days"
             }
         case .latest:
             return featured?.phase == .past ? "Latest trip" : "Up next"
@@ -176,5 +176,48 @@ extension Int {
     /// "1 day", "3 days".
     func liggaCounted(_ singular: String, _ plural: String? = nil) -> String {
         "\(self) \(self == 1 ? singular : (plural ?? singular + "s"))"
+    }
+}
+
+/// Where today sits on a trip's run of days, for the route spine on the
+/// featured postcard. `current` is nil before the trip starts and after it
+/// ends; `completed` counts days already behind you.
+struct TripRouteProgress: Equatable {
+    let dayCount: Int
+    let completed: Int
+    let current: Int?
+
+    /// Spines longer than this are drawn as a continuous bar instead of beads.
+    static let beadLimit = 14
+
+    init(trip: Trip, now: Date = Date(), calendar: Calendar = .current) {
+        let count = max(1, trip.days)
+        dayCount = count
+        guard let start = TripDayRecord.date(from: trip.startDate) else {
+            completed = 0
+            current = nil
+            return
+        }
+        let today = calendar.startOfDay(for: now)
+        let offset = calendar.dateComponents([.day], from: calendar.startOfDay(for: start), to: today).day ?? 0
+        if offset < 0 {
+            completed = 0
+            current = nil
+        } else if offset >= count {
+            completed = count
+            current = nil
+        } else {
+            completed = offset
+            current = offset
+        }
+    }
+
+    var showsBeads: Bool { dayCount <= Self.beadLimit }
+
+    /// "Day 3 of 5", "5 days" or "Done".
+    var label: String {
+        if let current { return "Day \(current + 1) of \(dayCount)" }
+        if completed >= dayCount { return "\(dayCount) days, done" }
+        return dayCount == 1 ? "1 day" : "\(dayCount) days"
     }
 }

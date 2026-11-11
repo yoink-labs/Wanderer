@@ -201,8 +201,6 @@ struct ChecklistView: View {
             HStack {
                 Text("Done")
                     .font(.ligga(.footnote, weight: .semibold))
-                    .textCase(.uppercase)
-                    .tracking(0.4)
                 Text("\(done.count)")
                     .font(.ligga(.footnote))
                     .monospacedDigit()

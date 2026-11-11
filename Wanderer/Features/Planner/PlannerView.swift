@@ -447,7 +447,6 @@ struct PlannerView: View {
             VStack(spacing: 0) {
                 Text(labels.0)
                     .font(.ligga(.caption2, weight: .semibold))
-                    .tracking(0.5)
                     .foregroundStyle(isSelected ? WandererTheme.onPrimary.opacity(0.75) : WandererTheme.muted)
                 Text(labels.1)
                     .font(.ligga(.subheadline, weight: .semibold))
@@ -509,7 +508,6 @@ struct PlannerView: View {
             VStack(spacing: 0) {
                 Text("NO DAY")
                     .font(.ligga(.caption2, weight: .bold))
-                    .tracking(0.6)
                     .foregroundStyle(isSelected ? .white.opacity(0.75) : WandererTheme.muted)
                 Text("\(count)")
                     .font(.ligga(.subheadline, weight: .bold))
@@ -1012,7 +1010,6 @@ struct PlannerView: View {
     private func listHeader(_ text: String) -> some View {
         Text(text.uppercased())
             .font(.ligga(.caption, weight: .semibold))
-            .tracking(0.8)
             .foregroundStyle(WandererTheme.muted)
             .lineLimit(1)
             .textCase(nil)
@@ -1036,7 +1033,6 @@ struct PlannerView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(bookingStage(reservation))
                     .font(.ligga(.caption2, weight: .semibold))
-                    .tracking(0.6)
                     .foregroundStyle(WandererTheme.muted)
                 Text(reservation.title)
                     .font(.ligga(.subheadline, weight: .semibold))

@@ -146,7 +146,6 @@ struct VisitedPlacesView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("YOUR WORLD SO FAR")
                 .font(.ligga(.caption, weight: .semibold))
-                .tracking(0.8)
                 .foregroundStyle(.white.opacity(0.75))
 
             HStack(alignment: .firstTextBaseline, spacing: 24) {

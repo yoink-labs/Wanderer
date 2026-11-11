@@ -214,8 +214,6 @@ struct ShareTripView: View {
 
             Text(person.badge)
                 .font(.ligga(.caption2, weight: .semibold))
-                .textCase(.uppercase)
-                .tracking(0.4)
                 .foregroundStyle(WandererTheme.muted)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)

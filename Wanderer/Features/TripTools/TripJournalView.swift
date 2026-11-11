@@ -124,7 +124,6 @@ struct TripJournalView: View {
             Text(group.label)
                 .font(.ligga(.subheadline, weight: .semibold))
                 .foregroundStyle(WandererTheme.muted)
-                .textCase(.uppercase)
 
             VStack(spacing: 0) {
                 ForEach(Array(group.places.enumerated()), id: \.element.id) { index, place in

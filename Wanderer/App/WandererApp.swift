@@ -33,8 +33,8 @@ struct WandererApp: App {
     private static func configureBars() {
         let navigation = UINavigationBarAppearance()
         navigation.configureWithOpaqueBackground()
-        navigation.backgroundColor = .adaptive(light: 0xEFF1F3, dark: 0x0E1417)
-        let title = UIColor.adaptive(light: 0x223843, dark: 0xECF1F3)
+        navigation.backgroundColor = .adaptive(light: 0xEEF2F3, dark: 0x0B151C)
+        let title = UIColor.adaptive(light: 0x10283A, dark: 0xE8EEF1)
         navigation.titleTextAttributes = [.foregroundColor: title]
         navigation.largeTitleTextAttributes = [.foregroundColor: title]
         let bar = UINavigationBar.appearance()
@@ -44,7 +44,7 @@ struct WandererApp: App {
 
         let tab = UITabBarAppearance()
         tab.configureWithOpaqueBackground()
-        tab.backgroundColor = .adaptive(light: 0xEFF1F3, dark: 0x0E1417)
+        tab.backgroundColor = .adaptive(light: 0xEEF2F3, dark: 0x0B151C)
         UITabBar.appearance().standardAppearance = tab
         UITabBar.appearance().scrollEdgeAppearance = tab
     }

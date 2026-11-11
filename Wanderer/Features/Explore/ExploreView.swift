@@ -446,7 +446,6 @@ private struct FeaturedGuideCard: View {
             VStack(alignment: .leading, spacing: 7) {
                 Text("FEATURED GUIDE")
                     .font(.ligga(.caption, weight: .semibold))
-                    .tracking(0.8)
                     .foregroundStyle(.white.opacity(0.85))
 
                 Text(guide.title)

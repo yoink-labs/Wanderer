@@ -11,6 +11,7 @@
 		0377ADC9CCC4A161D2461FBD /* GuestTripsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D14B76999A5A5C3277A8FC00 /* GuestTripsStore.swift */; };
 		0DB4BFA726181DDDE2E2431B /* ReservationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D0680C192F6E732C0B2FA0D /* ReservationsView.swift */; };
 		0DF95B391AB997430DD57CEC /* TripRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C5347617248161E0B9A2FA /* TripRecord.swift */; };
+		102E86D023630C26519FDCBC /* DebugLaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65635783A92321DA9B83473F /* DebugLaunch.swift */; };
 		113E3FC119255B89C45EEC73 /* HomeSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07BCF1FD5AB8A2D095611C80 /* HomeSkeleton.swift */; };
 		14BA710A98330E0A58E2A355 /* AttachmentsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 630EE577BBBD0201E79C64CB /* AttachmentsStore.swift */; };
 		1776B50BFBEB5BD645E7A2B2 /* SplitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5EBDF9094936E690FECE20 /* SplitMath.swift */; };
@@ -116,6 +117,7 @@
 		630EE577BBBD0201E79C64CB /* AttachmentsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentsStore.swift; sourceTree = "<group>"; };
 		63569DDAE2EC69C16A58C274 /* CloudAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAPITests.swift; sourceTree = "<group>"; };
 		6529D84648694842189BCC07 /* TravelStores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelStores.swift; sourceTree = "<group>"; };
+		65635783A92321DA9B83473F /* DebugLaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLaunch.swift; sourceTree = "<group>"; };
 		6DCC795CE658B7BD1697781E /* CloudConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudConfiguration.swift; sourceTree = "<group>"; };
 		6E0DBA9C09B5F697577A3EF3 /* TripSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSettingsView.swift; sourceTree = "<group>"; };
 		71ADCE542CB24AB187F20814 /* ProfileAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatar.swift; sourceTree = "<group>"; };
@@ -317,6 +319,7 @@
 		8F4A6B164A731ACB503BA319 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				65635783A92321DA9B83473F /* DebugLaunch.swift */,
 				E40CBC266203E6DEA3EBCBA8 /* MainTabView.swift */,
 				E171BD7ADC742A374405A144 /* RootView.swift */,
 				F08DFC9293EDE1EB208DB540 /* WandererApp.swift */,
@@ -521,6 +524,7 @@
 				FF829B31E0D33300563B4C1C /* ChecklistView.swift in Sources */,
 				C286E481FCCD60AF37B29298 /* CloudConfiguration.swift in Sources */,
 				A25790F6B03B6C0401C229DC /* DayNoteView.swift in Sources */,
+				102E86D023630C26519FDCBC /* DebugLaunch.swift in Sources */,
 				D896FE4EFC486924A5208C18 /* DebugSeed.swift in Sources */,
 				CC66BEAE5BE8C7927890CCD7 /* EmailAuthSheet.swift in Sources */,
 				2A86BCA769BE5C0C54B726B3 /* ExpensesView.swift in Sources */,

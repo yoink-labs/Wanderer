@@ -67,3 +67,45 @@ final class HomeModelsTests: XCTestCase {
         XCTAssertEqual(ordering.others.map(\.id), [upcoming.id])
     }
 }
+
+final class TripRouteProgressTests: XCTestCase {
+    private var calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }()
+
+    private func trip(start: String, days: Int) -> Trip {
+        Trip(title: "T", destination: "D", dateRange: "", days: days, places: 0,
+             members: [], palette: .lisbon, symbol: "airplane", startDate: start)
+    }
+
+    private func date(_ value: String) -> Date {
+        TripDayRecord.date(from: value)!
+    }
+
+    func testBeforeStartHasNoCurrentDay() {
+        let progress = TripRouteProgress(trip: trip(start: "2026-12-01", days: 5), now: date("2026-11-20"), calendar: calendar)
+        XCTAssertNil(progress.current)
+        XCTAssertEqual(progress.completed, 0)
+        XCTAssertEqual(progress.label, "5 days")
+    }
+
+    func testMidTripMarksToday() {
+        let progress = TripRouteProgress(trip: trip(start: "2026-12-01", days: 5), now: date("2026-12-03"), calendar: calendar)
+        XCTAssertEqual(progress.current, 2)
+        XCTAssertEqual(progress.completed, 2)
+        XCTAssertEqual(progress.label, "Day 3 of 5")
+    }
+
+    func testAfterEndIsDone() {
+        let progress = TripRouteProgress(trip: trip(start: "2026-12-01", days: 5), now: date("2026-12-10"), calendar: calendar)
+        XCTAssertNil(progress.current)
+        XCTAssertEqual(progress.completed, 5)
+    }
+
+    func testLongTripsDropBeads() {
+        let progress = TripRouteProgress(trip: trip(start: "2026-12-01", days: 21), now: date("2026-11-01"), calendar: calendar)
+        XCTAssertFalse(progress.showsBeads)
+    }
+}

@@ -5,7 +5,13 @@ struct MainTabView: View {
         case trips, explore, profile
     }
 
-    @State private var selection: AppTab = .trips
+    @State private var selection: AppTab = {
+        switch DebugLaunch.tab {
+        case "explore": return .explore
+        case "profile": return .profile
+        default: return .trips
+        }
+    }()
 
     var body: some View {
         TabView(selection: $selection) {
@@ -27,7 +33,7 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.profile)
         }
-        .tint(WandererTheme.coral)
+        .tint(WandererTheme.controlTint)
         .sensoryFeedback(.selection, trigger: selection)
     }
 

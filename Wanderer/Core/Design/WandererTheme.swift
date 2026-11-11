@@ -1,55 +1,78 @@
 import SwiftUI
 
+/// "Atlas": cool map paper, deep-sea ink and a marigold route line. The route
+/// colour is the one loud thing in the app; everything else stays quiet so the
+/// itinerary line and map pins carry the identity.
 enum WandererTheme {
-    // Brand palette. These stay fixed: they are the Wanderer identity, used in
-    // the mark, gradients and map pins, not as UI surfaces.
-    static let charcoal = Color(hex: 0x223843)
-    /// Neutral surfaces double as the screen background, so they follow the
-    /// system appearance. `charcoal` stays fixed for the mark and map pins.
-    static let platinum = Color(light: 0xEFF1F3, dark: 0x0E1417)
-    static let dust = Color(light: 0xDBD3D8, dark: 0x2B373D)
-    static let desert = Color(hex: 0xD8B4A0)
-    static let peach = Color(hex: 0xD77A61)
-    static let salmon = Color(hex: 0xDF9581)
+    // MARK: Atlas palette (fixed identity colours)
 
-    // Semantic colours. Every one of these adapts to the system appearance, so
-    // screens never hard-code a light surface.
-    static let sand = Color(light: 0xEFF1F3, dark: 0x0E1417)
-    static let sandDeep = Color(light: 0xDBD3D8, dark: 0x182126)
-    static let card = Color(light: 0xFFFFFF, dark: 0x192328)
-    static let cardElevated = Color(light: 0xFFFFFF, dark: 0x202C32)
-    static let ink = Color(light: 0x223843, dark: 0xECF1F3)
-    static let muted = Color(light: 0x5E6C72, dark: 0x9CACB4)
-    static let line = Color(light: 0xDBD3D8, dark: 0x2B373D)
-    static let shadow = Color(light: 0x000000, dark: 0x000000)
+    /// Deep-sea ink. Fixed: used for the mark, map pins and photo scrims.
+    static let charcoal = Color(hex: 0x10283A)
+    /// Marigold route. Fixed hue for pins and the itinerary line.
+    static let route = Color(light: 0xF2A922, dark: 0xFFC14D)
+    static let routeSoft = Color(light: 0xFCEBC8, dark: 0x3A2E14)
+    static let sea = Color(light: 0x2C6E8F, dark: 0x7FC0DF)
+    static let lagoon = Color(light: 0x1E8A6E, dark: 0x5FD0AE)
+    static let signal = Color(light: 0xC8402F, dark: 0xFF8A78)
 
-    static let coral = Color(light: 0xD77A61, dark: 0xE99077)
-    static let coralDeep = Color(light: 0xB65E48, dark: 0xF3AA92)
-    static let accentText = Color(light: 0xA9533D, dark: 0xF3AA92)
-    static let coralSoft = Color(light: 0xF4DCD4, dark: 0x3A2621)
-    static let mint = Color(light: 0x4C8C7A, dark: 0x74BFA6)
-    static let sky = Color(light: 0x3C5A66, dark: 0x8FB6C4)
-    static let plum = Color(light: 0x223843, dark: 0xC9D4D9)
+    // MARK: Surfaces (follow the system appearance)
+
+    static let platinum = Color(light: 0xEEF2F3, dark: 0x0B151C)
+    static let dust = Color(light: 0xD3DBD8, dark: 0x22323C)
+    static let sand = platinum
+    static let sandDeep = Color(light: 0xDDE4E3, dark: 0x13212A)
+    static let card = Color(light: 0xFFFFFF, dark: 0x13212A)
+    static let cardElevated = Color(light: 0xFFFFFF, dark: 0x1A2B36)
+    static let ink = Color(light: 0x10283A, dark: 0xE8EEF1)
+    static let muted = Color(light: 0x56697A, dark: 0x93A6B3)
+    static let line = Color(light: 0xD3DBD8, dark: 0x22323C)
+    static let shadow = Color.black
+
+    // MARK: Semantic aliases kept for existing screens
+
+    /// Accent fill (chips, pins, highlights).
+    static let coral = route
+    /// Accent used for icons and text on light surfaces; dark enough to read.
+    static let coralDeep = Color(light: 0x8A5300, dark: 0xFFC966)
+    static let accentText = coralDeep
+    static let coralSoft = routeSoft
+    static let peach = route
+    static let salmon = Color(light: 0xF6C566, dark: 0xFFD27F)
+    static let desert = Color(light: 0xE7D3A8, dark: 0x5A4A27)
+    static let mint = lagoon
+    static let sky = sea
+    static let plum = ink
 
     /// Quiet fill for skeletons, segmented tracks and input wells.
-    static let fillMuted = Color(light: 0xE3E6E8, dark: 0x253137)
-    /// Primary action fill: charcoal in light, coral in dark so the button does
-    /// not disappear into the dark background.
-    static let primaryFill = Color(light: 0x223843, dark: 0xD77A61)
-    /// Tint for system controls (pickers, segmented controls, form fields).
-    static let controlTint = Color(light: 0x223843, dark: 0xE99077)
-    static let onPrimary = Color(light: 0xFFFFFF, dark: 0x1B2428)
-    static let onAccent = Color(light: 0xFFFFFF, dark: 0x1B2428)
+    static let fillMuted = Color(light: 0xE2E8E8, dark: 0x1D2D38)
+    /// Primary action: ink on paper in light, marigold in dark.
+    static let primaryFill = Color(light: 0x10283A, dark: 0xFFC14D)
+    static let controlTint = Color(light: 0x10283A, dark: 0xFFC14D)
+    static let onPrimary = Color(light: 0xFFFFFF, dark: 0x0B151C)
+    static let onAccent = Color(hex: 0x10283A)
 
-    static let cardRadius: CGFloat = 16
+    /// Radii by hierarchy, not one radius everywhere: photo postcards are the
+    /// roundest, grouped lists sit in between, controls are tighter.
+    static let postcardRadius: CGFloat = 26
+    static let cardRadius: CGFloat = 18
+    static let controlRadius: CGFloat = 12
     /// Horizontal gutter shared by every top-level screen.
-    static let gutter: CGFloat = 16
+    static let gutter: CGFloat = 20
     static let screenPadding: CGFloat = gutter
 
-    /// Card radius and shadow soften at accessibility sizes where the card is
-    /// mostly text.
     static func cardShadow(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.black.opacity(0.45) : Color.black.opacity(0.06)
+        scheme == .dark ? Color.clear : Color(hex: 0x10283A, opacity: 0.07)
+    }
+}
+
+/// Spring presets. Every call site goes through `WandererMotion.animation` so
+/// Reduce Motion collapses them to a short cross-fade.
+enum WandererMotion {
+    static let snappy = Animation.spring(response: 0.32, dampingFraction: 0.82)
+    static let gentle = Animation.spring(response: 0.5, dampingFraction: 0.86)
+
+    static func animation(_ base: Animation, reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeInOut(duration: 0.15) : base
     }
 }
 
@@ -132,6 +155,11 @@ extension Font {
     static func ligga(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
         .system(style, design: .default).weight(weight)
     }
+
+    /// Display face: SF Pro Expanded, heavy. Trip names and screen titles only.
+    static func display(_ style: Font.TextStyle, weight: Font.Weight = .heavy) -> Font {
+        .system(style, design: .default).weight(weight).width(.expanded)
+    }
 }
 
 extension View {
@@ -145,11 +173,9 @@ extension View {
         modifier(LiggaCardModifier(radius: radius))
     }
 
-    /// Small uppercase label that sits above a section or hero.
+    /// Small sentence-case label that sits above a section or hero.
     func liggaOverline() -> some View {
-        font(.ligga(.caption, weight: .semibold))
-            .tracking(0.6)
-            .textCase(.uppercase)
+        font(.ligga(.footnote, weight: .semibold))
             .foregroundStyle(WandererTheme.muted)
     }
 }
@@ -161,11 +187,18 @@ private struct LiggaCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay {
+                // Dark mode drops the shadow; a hairline keeps cards separate.
+                if scheme == .dark {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(WandererTheme.line, lineWidth: 1)
+                }
+            }
             .shadow(
                 color: WandererTheme.cardShadow(scheme),
-                radius: scheme == .dark ? 0 : 10,
+                radius: scheme == .dark ? 0 : 14,
                 x: 0,
-                y: scheme == .dark ? 0 : 4
+                y: scheme == .dark ? 0 : 6
             )
     }
 }

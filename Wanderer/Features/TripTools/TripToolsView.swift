@@ -318,8 +318,6 @@ struct TripToolGroupLabel: View {
             Text(title)
                 .font(.ligga(.footnote, weight: .semibold))
                 .foregroundStyle(WandererTheme.muted)
-                .textCase(.uppercase)
-                .tracking(0.4)
             Spacer(minLength: 8)
             if let trailing {
                 Text(trailing)

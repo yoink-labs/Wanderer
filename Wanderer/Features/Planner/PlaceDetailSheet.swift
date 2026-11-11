@@ -226,7 +226,6 @@ struct PlaceDetailSheet: View {
             Text("Category")
                 .font(.ligga(.caption, weight: .bold))
                 .foregroundStyle(WandererTheme.muted)
-                .textCase(.uppercase)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {

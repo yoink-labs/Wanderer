@@ -48,48 +48,53 @@ struct Trip: Identifiable, Hashable, Codable {
         self.timezone = timezone
     }
 
-    static let samples: [Trip] = [
-        Trip(
-            title: "Kyoto in autumn",
-            destination: "Kyoto, Japan",
-            dateRange: "Nov 12 – 17",
-            days: 5,
-            places: 14,
-            members: ["AR", "MK"],
-            palette: .kyoto,
-            symbol: "leaf.fill"
-        ),
-        Trip(
-            title: "Barcelona long weekend",
-            destination: "Barcelona, Spain",
-            dateRange: "Dec 4 – 8",
-            days: 4,
-            places: 11,
-            members: ["AR", "JL", "SK"],
-            palette: .barcelona,
-            symbol: "sun.max.fill"
-        ),
-        Trip(
-            title: "Lisbon with friends",
-            destination: "Lisbon, Portugal",
-            dateRange: "Mar 14 – 20",
-            days: 6,
-            places: 18,
-            members: ["AR", "JL"],
-            palette: .lisbon,
-            symbol: "tram.fill"
-        ),
-        Trip(
-            title: "Reykjavík road trip",
-            destination: "Reykjavík, Iceland",
-            dateRange: "Jun 2 – 9",
-            days: 7,
-            places: 22,
-            members: ["AR", "MK", "SK"],
-            palette: .reykjavik,
-            symbol: "mountain.2.fill"
+    /// First-run guest samples, dated relative to today so Home always shows
+    /// one trip underway and the rest coming up.
+    static var samples: [Trip] {
+        [
+            sample("Kyoto in autumn", "Kyoto, Japan", startOffset: -2, days: 5, places: 14,
+                   members: ["AR", "MK"], palette: .kyoto, symbol: "leaf.fill", timezone: "Asia/Tokyo"),
+            sample("Barcelona long weekend", "Barcelona, Spain", startOffset: 24, days: 4, places: 11,
+                   members: ["AR", "JL", "SK"], palette: .barcelona, symbol: "sun.max.fill", timezone: "Europe/Madrid"),
+            sample("Lisbon with friends", "Lisbon, Portugal", startOffset: 61, days: 6, places: 18,
+                   members: ["AR", "JL"], palette: .lisbon, symbol: "tram.fill", timezone: "Europe/Lisbon"),
+            sample("Reykjavík road trip", "Reykjavík, Iceland", startOffset: 140, days: 7, places: 22,
+                   members: ["AR", "MK", "SK"], palette: .reykjavik, symbol: "mountain.2.fill", timezone: "Atlantic/Reykjavik")
+        ]
+    }
+
+    static func sample(
+        _ title: String, _ destination: String, startOffset: Int, days: Int, places: Int,
+        members: [String], palette: TripPalette, symbol: String, timezone: String, now: Date = Date()
+    ) -> Trip {
+        let calendar = Calendar.current
+        let start = calendar.date(byAdding: .day, value: startOffset, to: calendar.startOfDay(for: now)) ?? now
+        let end = calendar.date(byAdding: .day, value: days - 1, to: start) ?? start
+        // Stable ids keep "recently opened" working across launches.
+        // (`hashValue` is seeded per launch, so use a fixed FNV-1a hash.)
+        let hash = title.unicodeScalars.reduce(UInt64(0xcbf29ce484222325)) { ($0 ^ UInt64($1.value)) &* 0x100000001b3 }
+        let id = UUID(uuidString: String(format: "00000000-0000-4000-8000-%012llx", hash & 0xFFFFFFFFFFFF)) ?? UUID()
+        return Trip(
+            id: id, title: title, destination: destination,
+            dateRange: Self.rangeLabel(start, end), days: days, places: places,
+            members: members, palette: palette, symbol: symbol,
+            startDate: Self.isoDay(start), endDate: Self.isoDay(end), timezone: timezone
         )
-    ]
+    }
+
+    static func isoDay(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    static func rangeLabel(_ start: Date, _ end: Date) -> String {
+        let sameMonth = Calendar.current.isDate(start, equalTo: end, toGranularity: .month)
+        let startText = start.formatted(.dateTime.month(.abbreviated).day())
+        let endText = sameMonth ? end.formatted(.dateTime.day()) : end.formatted(.dateTime.month(.abbreviated).day())
+        return "\(startText) – \(endText)"
+    }
 }
 
 enum TripPhase {

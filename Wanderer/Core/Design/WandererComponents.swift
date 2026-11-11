@@ -6,10 +6,10 @@ struct WandererMark: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-                .fill(WandererTheme.peach)
+                .fill(WandererTheme.route)
             Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
                 .font(.system(size: size * 0.46, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(WandererTheme.onAccent)
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
@@ -151,7 +151,7 @@ struct AvatarStack: View {
     var size: CGFloat = 26
 
     var body: some View {
-        HStack(spacing: -size * 0.32) {
+        HStack(spacing: -size * 0.22) {
             ForEach(initials.indices, id: \.self) { index in
                 ZStack {
                     Circle()

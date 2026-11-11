@@ -24,6 +24,10 @@ struct TripsHomeView: View {
     @State private var tripLoadError: String?
 
     @FocusState private var searchFocused: Bool
+    @Namespace private var tripTransition
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var path = NavigationPath()
+    @State private var didApplyDebugRoute = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var memberInitials: [String] {
@@ -62,7 +66,7 @@ struct TripsHomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: LiggaSpace.l) {
                     VStack(alignment: .leading, spacing: LiggaSpace.m) {
@@ -90,6 +94,7 @@ struct TripsHomeView: View {
             .navigationDestination(for: Trip.self) { trip in
                 PlannerView(trip: trip)
                     .onAppear { recordOpened(trip) }
+                    .modifier(TripZoomTransition(id: trip.id, namespace: tripTransition, enabled: !reduceMotion))
             }
             .navigationDestination(for: GuideRecord.self) { guide in
                 GuideDetailView(guide: guide, store: exploreStore)
@@ -121,6 +126,15 @@ struct TripsHomeView: View {
                 await exploreStore.load()
             }
         }
+        .task {
+            // Debug launch route: open the featured trip without a tap.
+            guard DebugLaunch.opensFirstTrip, !didApplyDebugRoute else { return }
+            didApplyDebugRoute = true
+            try? await Task.sleep(for: .milliseconds(600))
+            if let trip = ordering.featured ?? allTrips.first {
+                path.append(trip)
+            }
+        }
         .onChange(of: store.errorMessage) { _, message in
             // Load failures are shown inline with Retry; only surface other
             // failures (create, update) as an alert.
@@ -147,9 +161,9 @@ struct TripsHomeView: View {
     // MARK: - Header and search
 
     private var header: some View {
-        HStack(alignment: .center, spacing: LiggaSpace.s) {
+        HStack(alignment: .firstTextBaseline, spacing: LiggaSpace.s) {
             Text("Trips")
-                .font(.ligga(.largeTitle, weight: .bold))
+                .font(.display(.largeTitle))
                 .foregroundStyle(WandererTheme.ink)
                 .accessibilityAddTraits(.isHeader)
 
@@ -159,34 +173,16 @@ struct TripsHomeView: View {
                 LiggaHaptics.tap()
                 showPlanner = true
             } label: {
-                ViewThatFits(in: .horizontal) {
-                    Label("New trip", systemImage: "plus")
-                        .labelStyle(.titleAndIcon)
-                    Image(systemName: "plus")
-                        .accessibilityLabel("Plan a trip")
-                }
-                .font(.ligga(.subheadline, weight: .semibold))
-                .lineLimit(1)
-                .foregroundStyle(WandererTheme.onPrimary)
-                .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? LiggaSpace.s : LiggaSpace.m)
-                .frame(minHeight: 36)
-                .background(WandererTheme.primaryFill, in: Capsule())
-                .frame(minHeight: 44)
-                .contentShape(Capsule())
+                Image(systemName: "plus")
+                    .font(.ligga(.title3, weight: .bold))
+                    .foregroundStyle(WandererTheme.onAccent)
+                    .frame(width: 44, height: 44)
+                    .background(WandererTheme.route, in: Circle())
+                    .contentShape(Circle())
             }
             .buttonStyle(.liggaPressable)
             .accessibilityLabel("Plan a trip")
             .accessibilityIdentifier("home-plan-trip")
-
-            Text(memberInitials.first ?? "LG")
-                .font(.ligga(.footnote, weight: .bold))
-                .foregroundStyle(WandererTheme.ink)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-                .frame(width: 36, height: 36)
-                .background(WandererTheme.dust, in: Circle())
-                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-                .accessibilityHidden(true)
         }
     }
 
@@ -283,10 +279,7 @@ struct TripsHomeView: View {
     private func tripsSection(_ ordering: HomeTripOrdering) -> some View {
         if let featured = ordering.featured {
             VStack(alignment: .leading, spacing: LiggaSpace.xs) {
-                Text(ordering.overline)
-                    .liggaOverline()
-                    .accessibilityAddTraits(.isHeader)
-                HomeFeaturedTripCard(trip: featured)
+                HomeFeaturedTripCard(trip: featured, overline: ordering.overline, transitionNamespace: tripTransition)
             }
         }
 
@@ -300,6 +293,7 @@ struct TripsHomeView: View {
                 HomeGroupedCard(items: ordering.others) { trip in
                     NavigationLink(value: trip) {
                         HomeTripRow(trip: trip)
+                            .modifier(TripTransitionSource(id: trip.id, namespace: tripTransition))
                     }
                     .buttonStyle(.plain)
                 }
@@ -592,4 +586,20 @@ struct TripsHomeView: View {
 #Preview {
     TripsHomeView()
         .environmentObject(AuthStore())
+}
+
+/// Zooms the planner out of the card it was opened from. Off with Reduce
+/// Motion, where the standard push is used.
+private struct TripZoomTransition: ViewModifier {
+    let id: UUID
+    let namespace: Namespace.ID
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.navigationTransition(.zoom(sourceID: id, in: namespace))
+        } else {
+            content
+        }
+    }
 }

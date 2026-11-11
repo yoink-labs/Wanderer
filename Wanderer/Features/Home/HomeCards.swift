@@ -37,22 +37,18 @@ struct HomeTripCover: View {
     }
 }
 
-/// The one hero on Home: a photo card for the featured trip.
+/// The one hero on Home: a photo postcard for the featured trip, with the
+/// route spine along the bottom showing where today sits in the trip.
 struct HomeFeaturedTripCard: View {
     let trip: Trip
+    var overline: String = ""
+    var transitionNamespace: Namespace.ID?
 
-    @ScaledMetric(relativeTo: .title2) private var scaledHeight: CGFloat = 200
+    @ScaledMetric(relativeTo: .title2) private var scaledHeight: CGFloat = 300
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var height: CGFloat { min(max(scaledHeight, 200), 380) }
-
-    private var metaLine: String {
-        var parts = [trip.dateRange, trip.days.liggaCounted("day")]
-        if trip.places > 0 {
-            parts.append(trip.places.liggaCounted("place"))
-        }
-        return parts.joined(separator: " · ")
-    }
+    private var height: CGFloat { min(max(scaledHeight, 300), 440) }
+    private var progress: TripRouteProgress { TripRouteProgress(trip: trip) }
 
     var body: some View {
         NavigationLink(value: trip) {
@@ -61,46 +57,148 @@ struct HomeFeaturedTripCard: View {
 
                 LinearGradient(
                     stops: [
-                        .init(color: .clear, location: 0.2),
-                        .init(color: WandererTheme.charcoal.opacity(0.85), location: 1)
+                        .init(color: WandererTheme.charcoal.opacity(0.35), location: 0),
+                        .init(color: .clear, location: 0.3),
+                        .init(color: WandererTheme.charcoal.opacity(0.92), location: 1)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
 
-                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
-                    if trip.phase == .inProgress {
-                        LiggaStatusChip(title: "In progress", tone: .strong)
-                            .padding(.bottom, LiggaSpace.xxs)
+                VStack(alignment: .leading, spacing: 0) {
+                    if !overline.isEmpty {
+                        Text(overline)
+                            .font(.ligga(.footnote, weight: .bold))
+                            .foregroundStyle(WandererTheme.onAccent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color(hex: 0xF2A922), in: Capsule())
                     }
+
+                    Spacer(minLength: LiggaSpace.l)
+
                     Text(trip.title)
-                        .font(.ligga(.title2, weight: .bold))
+                        .font(.display(.title, weight: .heavy))
                         .foregroundStyle(.white)
-                        .lineLimit(2)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
+                        .minimumScaleFactor(0.8)
                         .multilineTextAlignment(.leading)
                     Text(trip.destination)
                         .font(.ligga(.subheadline, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.92))
-                        .lineLimit(1)
-                    Text(metaLine)
-                        .font(.ligga(.footnote, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
-                        .minimumScaleFactor(0.85)
+                        .lineLimit(1)
+                        .padding(.top, 2)
+
+                    TripRouteSpine(progress: progress)
+                        .padding(.top, LiggaSpace.m)
+
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            Text(trip.dateRange)
+                            Spacer(minLength: LiggaSpace.xs)
+                            Text(progress.label)
+                            if trip.places > 0 {
+                                Text(trip.places.liggaCounted("place"))
+                                    .padding(.leading, LiggaSpace.xs)
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(trip.dateRange)
+                            Text(progress.label)
+                            if trip.places > 0 {
+                                Text(trip.places.liggaCounted("place"))
+                            }
+                        }
+                    }
+                    .font(.ligga(.footnote, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(1)
+                    .padding(.top, LiggaSpace.xs)
                 }
-                .padding(LiggaSpace.m)
+                .padding(LiggaSpace.l - 4)
+                .frame(maxHeight: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity)
             .frame(height: height)
-            .clipShape(RoundedRectangle(cornerRadius: WandererTheme.cardRadius, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: WandererTheme.cardRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
+            .modifier(TripTransitionSource(id: trip.id, namespace: transitionNamespace))
         }
         .buttonStyle(.liggaPressable)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(trip.title), \(trip.destination), \(metaLine)")
+        .accessibilityLabel("\(overline.isEmpty ? "" : overline + ", ")\(trip.title), \(trip.destination), \(trip.dateRange), \(progress.label)")
         .accessibilityHint("Opens the planner")
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("home-featured-trip")
+    }
+}
+
+/// The signature element: a marigold route with one bead per day. Days behind
+/// you are filled, today is a larger ringed bead, days ahead are hollow.
+/// Long trips draw a continuous progress bar instead of beads.
+struct TripRouteSpine: View {
+    let progress: TripRouteProgress
+    var lineColor: Color = Color(hex: 0xF2A922)
+    var restColor: Color = .white.opacity(0.35)
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let count = progress.dayCount
+            let fraction = count <= 1
+                ? (progress.completed > 0 ? 1 : 0)
+                : CGFloat(progress.current ?? (progress.completed >= count ? count - 1 : 0)) / CGFloat(count - 1)
+            ZStack(alignment: .leading) {
+                Capsule().fill(restColor).frame(height: 3)
+                Capsule().fill(lineColor)
+                    .frame(width: max(0, width * (progress.completed == 0 && progress.current == nil ? 0 : fraction)), height: 3)
+
+                if progress.showsBeads {
+                    ForEach(0..<count, id: \.self) { index in
+                        bead(index)
+                            .position(
+                                x: count <= 1 ? 6 : 6 + (width - 12) * CGFloat(index) / CGFloat(count - 1),
+                                y: proxy.size.height / 2
+                            )
+                    }
+                }
+            }
+            .frame(height: proxy.size.height)
+        }
+        .frame(height: 16)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func bead(_ index: Int) -> some View {
+        if index == progress.current {
+            Circle()
+                .fill(lineColor)
+                .frame(width: 14, height: 14)
+                .overlay(Circle().strokeBorder(.white, lineWidth: 2.5))
+        } else if index < progress.completed {
+            Circle().fill(lineColor).frame(width: 8, height: 8)
+        } else {
+            Circle()
+                .strokeBorder(.white.opacity(0.75), lineWidth: 2)
+                .background(Circle().fill(WandererTheme.charcoal.opacity(0.6)))
+                .frame(width: 9, height: 9)
+        }
+    }
+}
+
+/// Marks a trip card as the source of the zoom transition into the planner.
+struct TripTransitionSource: ViewModifier {
+    let id: UUID
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedTransitionSource(id: id, in: namespace)
+        } else {
+            content
+        }
     }
 }
 
@@ -144,14 +242,13 @@ struct HomeTripRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if trip.members.count > 1, !dynamicTypeSize.isAccessibilitySize {
-                AvatarStack(initials: Array(trip.members.prefix(3)), size: 24)
-                    .accessibilityHidden(true)
-            }
 
-            Image(systemName: "chevron.right")
-                .font(.ligga(.footnote, weight: .semibold))
-                .foregroundStyle(WandererTheme.muted.opacity(0.6))
+            Text(countdown)
+                .font(.ligga(.footnote, weight: .bold))
+                .monospacedDigit()
+                .foregroundStyle(trip.phase == .past ? WandererTheme.muted : WandererTheme.accentText)
+                .lineLimit(1)
+                .fixedSize()
                 .accessibilityHidden(true)
         }
         .padding(.horizontal, LiggaSpace.m)
@@ -160,6 +257,22 @@ struct HomeTripRow: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
         .accessibilityAddTraits(.isButton)
+    }
+
+    /// Short trailing cue: how far away the trip is, or where you are in it.
+    private var countdown: String {
+        switch trip.phase {
+        case .inProgress:
+            return TripRouteProgress(trip: trip).label
+        case .past:
+            return "Past"
+        case .upcoming:
+            guard let start = TripDayRecord.date(from: trip.startDate) else { return "" }
+            let days = Calendar.current.dateComponents(
+                [.day], from: Calendar.current.startOfDay(for: Date()), to: start
+            ).day ?? 0
+            return days <= 1 ? (days <= 0 ? "Today" : "Tomorrow") : "In \(days) d"
+        }
     }
 
     private var dateText: some View {
