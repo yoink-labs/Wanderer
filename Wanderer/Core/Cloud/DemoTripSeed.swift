@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 #if DEBUG
 /// Debug-only: fills the Kyoto sample guest trip with real places, bookings,
@@ -84,6 +85,27 @@ enum DemoTripSeed {
             }
         }
         _ = try? await api.addList(tripID: trip.id, title: "Maybe", position: 0)
+
+        // Two demo files so the Files grid shows real thumbnails.
+        let pdf = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792)).pdfData { context in
+            context.beginPage()
+            let title: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 30, weight: .heavy)]
+            let body: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 16)]
+            "Machiya near Gion".draw(at: CGPoint(x: 48, y: 60), withAttributes: title)
+            "Booking confirmation (demo)\nCheck in 3:00 PM, check out 11:00 AM\n4 nights, 2 guests"
+                .draw(in: CGRect(x: 48, y: 110, width: 516, height: 120), withAttributes: body)
+        }
+        _ = try? await api.uploadAttachment(tripID: trip.id, data: pdf, fileName: "Machiya booking.pdf", mimeType: "application/pdf")
+        let ticket = UIGraphicsImageRenderer(size: CGSize(width: 600, height: 400)).pngData { context in
+            UIColor(red: 0.95, green: 0.66, blue: 0.13, alpha: 1).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 600, height: 400))
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 64, weight: .heavy),
+                .foregroundColor: UIColor(red: 0.06, green: 0.16, blue: 0.23, alpha: 1)
+            ]
+            "NRT → ITM".draw(at: CGPoint(x: 48, y: 150), withAttributes: attributes)
+        }
+        _ = try? await api.uploadAttachment(tripID: trip.id, data: ticket, fileName: "Boarding pass.png", mimeType: "image/png")
     }
 }
 #endif

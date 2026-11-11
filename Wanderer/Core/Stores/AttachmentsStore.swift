@@ -7,7 +7,10 @@ final class AttachmentsStore: ObservableObject {
     @Published private(set) var isUploading = false
     @Published var errorMessage: String?
 
-    private var api: WandererAPI? { CloudSession.shared.api }
+    /// Guest trips keep files on the device; signed in, files go to R2.
+    private var api: WandererAPI? {
+        LocalTrips.isActive ? LocalTripServer.api() : CloudSession.shared.api
+    }
 
     func load(tripID: UUID) async {
         guard let api else { return }

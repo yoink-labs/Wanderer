@@ -64,10 +64,38 @@ final class LocalTripServerTests: XCTestCase {
         XCTAssertFalse(items[0].isChecked)
     }
 
+    func testFilesAreStoredOnTheDeviceAndRemoved() async throws {
+        let data = Data("boarding pass".utf8)
+        let file = try await api.uploadAttachment(tripID: tripID, data: data, fileName: "../pass.pdf", mimeType: "application/pdf")
+        XCTAssertEqual(file.name, "../pass.pdf")
+        XCTAssertFalse(file.storagePath.contains(".."), "Stored path must not escape the files folder")
+        XCTAssertEqual(file.sizeBytes, data.count)
+
+        let url = try await api.attachmentURL(tripID: tripID, attachmentID: file.id)
+        XCTAssertTrue(url.isFileURL)
+        XCTAssertEqual(try Data(contentsOf: url), data)
+
+        try await api.deleteAttachment(tripID: tripID, attachmentID: file.id)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        let remaining = try await api.attachments(tripID: tripID)
+        XCTAssertTrue(remaining.isEmpty)
+    }
+
+    func testOversizedFilesAreRefused() async {
+        do {
+            _ = try await api.uploadAttachment(tripID: tripID, data: Data(count: LocalTripStore.uploadLimitBytes + 1), fileName: "big.mov", mimeType: "video/quicktime")
+            XCTFail("Over-limit files must be refused")
+        } catch let error as APIError {
+            XCTAssertEqual(error.code, "file_too_large")
+        } catch {
+            XCTFail("Unexpected \(error)")
+        }
+    }
+
     func testUnsupportedRoutesExplainThemselves() async {
         do {
-            _ = try await api.attachments(tripID: tripID)
-            XCTFail("Attachments are not available offline")
+            _ = try await api.invites(tripID: tripID)
+            XCTFail("Invites are not available offline")
         } catch let error as APIError {
             XCTAssertEqual(error.code, "not_available_offline")
         } catch {
@@ -81,7 +109,8 @@ final class GuestTripImporterTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         // Two independent local servers stand in for the device and the account.
-        let local = LocalTripServer.api(LocalTripServer(store: LocalTripStore(directory: root.appendingPathComponent("a"))))
+        let localStore = LocalTripStore(directory: root.appendingPathComponent("a"))
+        let local = LocalTripServer.api(LocalTripServer(store: localStore))
         let remote = LocalTripServer.api(LocalTripServer(store: LocalTripStore(directory: root.appendingPathComponent("b"))))
         let guestTrip = UUID(), accountTrip = UUID(), payer = UUID()
 
@@ -96,8 +125,14 @@ final class GuestTripImporterTests: XCTestCase {
         ])
         _ = try await local.addChecklistItem(tripID: guestTrip, title: "Passport", position: 0)
 
-        let summary = try await GuestTripImporter.copy(localTripID: guestTrip, into: accountTrip, from: local, to: remote, payer: payer)
-        XCTAssertEqual(summary, .init(places: 1, reservations: 0, expenses: 1, checklist: 1))
+        _ = try await local.uploadAttachment(tripID: guestTrip, data: Data("pdf".utf8), fileName: "pass.pdf", mimeType: "application/pdf")
+
+        let summary = try await GuestTripImporter.copy(
+            localTripID: guestTrip, into: accountTrip, from: local, to: remote, payer: payer, localStore: localStore
+        )
+        XCTAssertEqual(summary, .init(places: 1, reservations: 0, expenses: 1, checklist: 1, files: 1))
+        let copiedFiles = try await remote.attachments(tripID: accountTrip)
+        XCTAssertEqual(copiedFiles.map(\.name), ["pass.pdf"])
 
         let remoteDay2 = try await remote.days(tripID: accountTrip)[1]
         let copied = try await remote.places(tripID: accountTrip)

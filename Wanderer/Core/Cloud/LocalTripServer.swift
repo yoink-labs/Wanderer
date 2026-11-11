@@ -26,7 +26,18 @@ struct LocalTripServer: URLSessioning {
         if let data = request.httpBody, !data.isEmpty {
             body = try? JSONSerialization.jsonObject(with: data)
         }
-        let (status, payload) = await store.handle(method: method, parts: parts, body: body)
+        let (status, payload): (Int, Any)
+        if parts.count >= 4, parts[3] == "attachments" {
+            (status, payload) = await store.handleAttachment(
+                method: method,
+                parts: parts,
+                data: request.httpBody ?? Data(),
+                fileName: request.value(forHTTPHeaderField: "x-file-name"),
+                mimeType: request.value(forHTTPHeaderField: "content-type")
+            )
+        } else {
+            (status, payload) = await store.handle(method: method, parts: parts, body: body)
+        }
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.fragmentsAllowed])
         let response = HTTPURLResponse(
             url: request.url ?? Self.baseURL,
@@ -106,6 +117,86 @@ actor LocalTripStore {
         default:
             return notFound()
         }
+    }
+
+    // MARK: Files
+
+    /// Same limit as the Worker, so a guest file always fits after sign-in.
+    static let uploadLimitBytes = 10_000_000
+
+    private var filesDirectory: URL { directory.appendingPathComponent("files", isDirectory: true) }
+
+    /// Guest trip files live on the device. `storage_path` is relative to the
+    /// files folder, and `/url` returns a file URL that Quick Look can open.
+    func handleAttachment(method: String, parts: [String], data: Data, fileName: String?, mimeType: String?) -> (Int, Any) {
+        let tripID = parts[2].lowercased()
+        switch (method, parts.count) {
+        case ("GET", 4):
+            let rows = (document(tripID)["attachments"] ?? [])
+                .sorted { ($0["created_at"] as? String ?? "") > ($1["created_at"] as? String ?? "") }
+            return (200, rows)
+        case ("POST", 4):
+            guard !data.isEmpty else {
+                return (400, ["error": ["code": "empty_file", "message": "That file is empty."]])
+            }
+            guard data.count <= Self.uploadLimitBytes else {
+                return (413, ["error": ["code": "file_too_large", "message": "Files can be up to 10 MB."]])
+            }
+            let id = UUID().uuidString.lowercased()
+            let name = Self.safeFileName(fileName ?? "file")
+            let relative = "\(tripID)/\(id)-\(name)"
+            let url = filesDirectory.appendingPathComponent(relative)
+            do {
+                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            } catch {
+                return (500, ["error": ["code": "write_failed", "message": "Couldn't save that file on this phone."]])
+            }
+            let row: Row = [
+                "id": id, "trip_id": tripID, "reservation_id": NSNull(), "place_id": NSNull(),
+                "name": fileName ?? name, "storage_path": relative,
+                "mime_type": mimeType ?? "application/octet-stream", "size_bytes": data.count,
+                "created_by": Self.localUserID, "created_at": Self.now()
+            ]
+            var doc = document(tripID)
+            doc["attachments", default: []].append(row)
+            save(tripID, doc)
+            return (201, row)
+        case ("GET", 6) where parts[5] == "url":
+            guard let row = attachmentRow(tripID, id: parts[4]), let path = row["storage_path"] as? String else {
+                return notFound()
+            }
+            return (200, ["url": filesDirectory.appendingPathComponent(path).absoluteString])
+        case ("DELETE", 5):
+            if let row = attachmentRow(tripID, id: parts[4]), let path = row["storage_path"] as? String {
+                try? FileManager.default.removeItem(at: filesDirectory.appendingPathComponent(path))
+            }
+            var doc = document(tripID)
+            doc["attachments"]?.removeAll { ($0["id"] as? String)?.lowercased() == parts[4].lowercased() }
+            save(tripID, doc)
+            return (200, ["ok": true])
+        default:
+            return notFound()
+        }
+    }
+
+    /// Raw bytes of a stored guest file, for copying into an account.
+    func fileData(storagePath: String) -> Data? {
+        try? Data(contentsOf: filesDirectory.appendingPathComponent(storagePath))
+    }
+
+    private func attachmentRow(_ tripID: String, id: String) -> Row? {
+        document(tripID)["attachments"]?.first { ($0["id"] as? String)?.lowercased() == id.lowercased() }
+    }
+
+    /// Keeps a file name readable but path-safe.
+    static func safeFileName(_ name: String) -> String {
+        let cleaned = name
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: "\\", with: "-")
+            .replacingOccurrences(of: "..", with: ".")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "file" : String(cleaned.prefix(120))
     }
 
     // MARK: Rows

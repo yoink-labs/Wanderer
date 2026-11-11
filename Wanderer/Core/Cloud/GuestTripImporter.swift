@@ -10,6 +10,7 @@ enum GuestTripImporter {
         var reservations = 0
         var expenses = 0
         var checklist = 0
+        var files = 0
     }
 
     static func copy(
@@ -17,7 +18,8 @@ enum GuestTripImporter {
         into tripID: UUID,
         from local: WandererAPI = LocalTripServer.api(),
         to cloud: WandererAPI,
-        payer: UUID?
+        payer: UUID?,
+        localStore: LocalTripStore = LocalTripServer.shared.store
     ) async throws -> Summary {
         var summary = Summary()
         let localDays = try await local.days(tripID: localTripID)
@@ -100,6 +102,17 @@ enum GuestTripImporter {
                 _ = try await cloud.updateChecklistItem(tripID: tripID, itemID: created.id, isChecked: true)
             }
             summary.checklist += 1
+        }
+        // Files: read the stored bytes on the device and upload them.
+        for file in (try? await local.attachments(tripID: localTripID)) ?? [] {
+            guard let data = await localStore.fileData(storagePath: file.storagePath) else { continue }
+            _ = try await cloud.uploadAttachment(
+                tripID: tripID,
+                data: data,
+                fileName: file.name,
+                mimeType: file.mimeType ?? "application/octet-stream"
+            )
+            summary.files += 1
         }
         return summary
     }
