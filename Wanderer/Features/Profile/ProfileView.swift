@@ -85,21 +85,27 @@ struct ProfileView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
                     Text("Profile")
-                        .font(.ligga(.largeTitle, weight: .bold))
+                        .font(.display(.largeTitle))
                         .foregroundStyle(WandererTheme.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityAddTraits(.isHeader)
 
-                    profileCard
-                    statsCard
-                    visitedCard
+                    if isGuest {
+                        guestCard
+                    } else {
+                        profileCard
+                        statsCard
+                        visitedCard
+                    }
                     settingsCard
 
-                    if let message = profileStore.errorMessage ?? visitedStore.errorMessage {
+                    if !isGuest, let message = profileStore.errorMessage ?? visitedStore.errorMessage {
                         errorNote(message)
                     }
 
-                    signOutButton
+                    if !isGuest {
+                        signOutButton
+                    }
 
                 if canDeleteAccount {
                     deleteAccountButton
@@ -127,6 +133,8 @@ struct ProfileView: View {
     }
 
     private func loadAll() async {
+        // Guests have no account to load; their trips live on the device.
+        guard !isGuest, auth.isAuthenticated else { return }
         await profileStore.load()
         await visitedStore.load()
         await profileStore.loadTripCount()
@@ -145,6 +153,61 @@ struct ProfileView: View {
         } else {
             avatarFailedCount += 1
         }
+    }
+
+    // MARK: - Guest
+
+    /// Guests get one clear next step instead of empty account stats: their
+    /// trips are safe on this phone, and an account carries them everywhere.
+    private var guestCard: some View {
+        let tripCount = GuestTripsStore.load().count
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                WandererMark(size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Planning as a guest")
+                        .font(.display(.title3))
+                        .foregroundStyle(.white)
+                    Text(tripCount == 0
+                         ? "Trips you plan stay on this phone"
+                         : "\(tripCount.liggaCounted("trip")) saved on this phone")
+                        .font(.ligga(.subheadline))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
+
+            Text("Make a free Yoink Labs account to keep your trips on every device and plan with friends. Everything you've planned comes with you.")
+                .font(.ligga(.subheadline))
+                .foregroundStyle(.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                LiggaHaptics.tap()
+                withAnimation { isGuest = false }
+            } label: {
+                Text("Create a free account")
+                    .font(.ligga(.headline, weight: .bold))
+                    .foregroundStyle(Color(hex: 0x10283A))
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 50)
+                    .background(Color(hex: 0xF2A922), in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
+            }
+            .buttonStyle(.liggaPressable)
+            .accessibilityIdentifier("profile-guest-create-account")
+
+            Button("I already have an account") {
+                withAnimation { isGuest = false }
+            }
+            .font(.ligga(.subheadline, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .padding(20)
+        .background(Color(hex: 0x10283A), in: RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous)
+                .strokeBorder(.white.opacity(0.08), lineWidth: 1)
+        )
     }
 
     // MARK: - Header

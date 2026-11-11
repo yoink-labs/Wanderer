@@ -22,7 +22,7 @@ struct SignInView: View {
                 VStack(spacing: 0) {
                     hero(
                         topInset: proxy.safeAreaInsets.top,
-                        minHeight: max(300, proxy.size.height * 0.48) + proxy.safeAreaInsets.top
+                        minHeight: max(300, proxy.size.height * 0.56) + proxy.safeAreaInsets.top
                     )
 
                     authSheet
@@ -56,7 +56,7 @@ struct SignInView: View {
     private func hero(topInset: CGFloat, minHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: LiggaSpace.xs) {
             Text("Plan trips on a map,\nday by day.")
-                .font(.ligga(.largeTitle, weight: .bold))
+                .font(.display(.title))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -253,10 +253,10 @@ private struct SignInMapHero: View {
 
     private func pin(number: Int) -> some View {
         Text("\(number)")
-            .font(.system(size: 13, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
-            .frame(width: 28, height: 28)
-            .background(WandererTheme.charcoal, in: Circle())
+            .font(.system(size: 14, weight: .heavy, design: .rounded))
+            .foregroundStyle(Color(hex: 0x10283A))
+            .frame(width: 30, height: 30)
+            .background(Color(hex: 0xF2A922), in: Circle())
             .overlay(Circle().stroke(.white, lineWidth: 2))
             .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
     }
