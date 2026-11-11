@@ -27,6 +27,11 @@ struct PlannerView: View {
     @State private var addedCount = 0
     @State private var removedCount = 0
     @State private var detentIndex = 1
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The panel's fixed header area stops growing here so the stop list
+    /// still gets room; the list itself scales without a cap.
+    private static let chromeTypeCap = DynamicTypeSize.accessibility2
     @Namespace private var dayChipNamespace
 
     private static let detents: [CGFloat] = [0.16, 0.52, 0.9]
@@ -190,7 +195,8 @@ struct PlannerView: View {
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 10) {
                 plannerMenu
-                if selectedPlaces.contains(where: { $0.coordinate != nil }) {
+                // At the top detent the panel covers this spot and the map.
+                if panelFraction < 0.8, selectedPlaces.contains(where: { $0.coordinate != nil }) {
                     fitDayButton
                 }
             }
@@ -198,6 +204,13 @@ struct PlannerView: View {
             .padding(.top, 8)
         }
         .task { await bootstrap() }
+        .onAppear {
+            // Large text needs the room: open the panel at its tallest.
+            if dynamicTypeSize.isAccessibilitySize {
+                detentIndex = Self.detents.count - 1
+                panelFraction = Self.detents[detentIndex]
+            }
+        }
         .onChange(of: coordinateSignature) { _, _ in
             framePlaces()
         }
@@ -290,6 +303,7 @@ struct PlannerView: View {
                 panelGrabber
 
                 tripHeader
+                    .dynamicTypeSize(...Self.chromeTypeCap)
                     .padding(.horizontal, WandererTheme.screenPadding)
                     .padding(.top, 8)
             }
@@ -297,9 +311,11 @@ struct PlannerView: View {
             .gesture(panelDragGesture(height: height))
 
             dayChips
+                .dynamicTypeSize(...Self.chromeTypeCap)
                 .padding(.top, 10)
 
             sectionHeader
+                .dynamicTypeSize(...Self.chromeTypeCap)
                 .padding(.horizontal, WandererTheme.screenPadding)
                 .padding(.top, 10)
                 .padding(.bottom, 3)
@@ -384,24 +400,43 @@ struct PlannerView: View {
     }
 
     private var tripHeader: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(trip.title)
-                    .font(.display(.title2))
-                    .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-
-                Text("\(trip.dateRange), \(store.days.isEmpty ? trip.days : store.days.count) days, \(store.places.count.liggaCounted("place"))")
-                .font(.ligga(.footnote, weight: .medium))
-                .foregroundStyle(WandererTheme.muted)
-                .lineLimit(1)
-            }
-
-            Spacer(minLength: 6)
-
-            if let weather {
-                weatherCapsule(weather)
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let meta = "\(trip.dateRange), \(store.days.isEmpty ? trip.days : store.days.count) days, \(store.places.count.liggaCounted("place"))"
+        return Group {
+            if stacked {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trip.title)
+                        .font(.display(.title2))
+                        .foregroundStyle(WandererTheme.ink)
+                        .lineLimit(3)
+                    Text(meta)
+                        .font(.ligga(.footnote, weight: .medium))
+                        .foregroundStyle(WandererTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let weather {
+                        weatherCapsule(weather)
+                            .padding(.top, 2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(trip.title)
+                            .font(.display(.title2))
+                            .foregroundStyle(WandererTheme.ink)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+                        Text(meta)
+                            .font(.ligga(.footnote, weight: .medium))
+                            .foregroundStyle(WandererTheme.muted)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 6)
+                    if let weather {
+                        weatherCapsule(weather)
+                    }
+                }
             }
         }
     }
@@ -417,7 +452,7 @@ struct PlannerView: View {
                 .foregroundStyle(WandererTheme.ink)
         }
         .padding(.horizontal, 10)
-        .frame(height: 28)
+        .frame(minHeight: 28)
         .background(WandererTheme.card, in: Capsule())
         .overlay(Capsule().strokeBorder(WandererTheme.line, lineWidth: 1))
         .accessibilityElement(children: .combine)
@@ -551,6 +586,7 @@ struct PlannerView: View {
                     .monospacedDigit()
             }
             .foregroundStyle(isSelected ? Color(hex: 0x10283A) : WandererTheme.ink)
+            .padding(.horizontal, 8)
             .frame(minWidth: 60, minHeight: 56)
             .background {
                 if isSelected {
@@ -580,60 +616,77 @@ struct PlannerView: View {
     }
 
     private var sectionHeader: some View {
-        HStack(alignment: .center, spacing: 6) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(sectionTitle)
-                    .font(.ligga(.title3, weight: .bold))
-                    .foregroundStyle(WandererTheme.ink)
-                Text(sectionSubtitle)
-                    .font(.ligga(.footnote))
-                    .foregroundStyle(WandererTheme.muted)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 2)
-
-            Menu {
-                if selectedPlaces.count > 1 {
-                    Button {
-                        toggleEditMode()
-                    } label: {
-                        Label(
-                            editMode.isEditing ? "Done arranging" : "Arrange places",
-                            systemImage: "arrow.up.arrow.down"
-                        )
-                    }
-                }
-
-                if let currentDay {
-                    Button {
-                        activeSheet = .dayNote(currentDay)
-                    } label: {
-                        Label("Day note", systemImage: "note.text")
-                    }
-                }
-            } label: {
-                Text("Day options")
-                    .font(.ligga(.caption, weight: .semibold))
-                    .foregroundStyle(WandererTheme.ink)
-                    .padding(.horizontal, 8)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Day options")
-
-            Button {
-                activeSheet = .addPlace
-            } label: {
-                Label("Add", systemImage: "plus")
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(WandererTheme.accentText)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("planner-add-place")
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let titles = VStack(alignment: .leading, spacing: 1) {
+            Text(sectionTitle)
+                .font(.ligga(.title3, weight: .bold))
+                .foregroundStyle(WandererTheme.ink)
+            Text(sectionSubtitle)
+                .font(.ligga(.footnote))
+                .foregroundStyle(WandererTheme.muted)
+                .lineLimit(stacked ? 3 : 1)
         }
+        return Group {
+            if stacked {
+                VStack(alignment: .leading, spacing: 4) {
+                    titles
+                    HStack(spacing: 6) {
+                        sectionActions
+                        Spacer(minLength: 0)
+                    }
+                }
+            } else {
+                HStack(alignment: .center, spacing: 6) {
+                    titles
+                    Spacer(minLength: 2)
+                    sectionActions
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var sectionActions: some View {
+            Menu {
+            if selectedPlaces.count > 1 {
+                Button {
+                    toggleEditMode()
+                } label: {
+                    Label(
+                        editMode.isEditing ? "Done arranging" : "Arrange places",
+                        systemImage: "arrow.up.arrow.down"
+                    )
+                }
+            }
+
+            if let currentDay {
+                Button {
+                    activeSheet = .dayNote(currentDay)
+                } label: {
+                    Label("Day note", systemImage: "note.text")
+                }
+            }
+        } label: {
+            Text("Day options")
+                .font(.ligga(.caption, weight: .semibold))
+                .foregroundStyle(WandererTheme.ink)
+                .padding(.horizontal, 8)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Day options")
+
+        Button {
+            activeSheet = .addPlace
+        } label: {
+            Label("Add", systemImage: "plus")
+                .font(.ligga(.subheadline, weight: .semibold))
+                .foregroundStyle(WandererTheme.accentText)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("planner-add-place")
     }
 
     private var sectionTitle: String {
@@ -1452,6 +1505,7 @@ private struct PlannerPlaceRow: View {
     var rail: PlannerRail?
 
     @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -1467,12 +1521,12 @@ private struct PlannerPlaceRow: View {
                         .font(.ligga(.headline, weight: .semibold))
                         .foregroundStyle(WandererTheme.ink)
                         .strikethrough(false)
-                        .lineLimit(2)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
 
                     Text(subtitle)
                         .font(.ligga(.footnote))
                         .foregroundStyle(WandererTheme.muted)
-                        .lineLimit(1)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
 
                     if place.isVisited || costLabel != nil || timeLabel != nil {
                         HStack(spacing: 6) {
