@@ -18,6 +18,7 @@
 		1776B50BFBEB5BD645E7A2B2 /* SplitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5EBDF9094936E690FECE20 /* SplitMath.swift */; };
 		1FEA1A69C3376F1889916E3E /* ImageCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2889361D37EE394A9EEB81F0 /* ImageCatalog.swift */; };
 		253DF3311E5D88D3EA97F9EB /* LegacyBackendCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09159DF78F452ED84A8316FB /* LegacyBackendCleanupTests.swift */; };
+		27B161625542EF094A1C334C /* BookingTicketModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F82F121DA13D96DC84852E2 /* BookingTicketModelTests.swift */; };
 		27B60175A1ABBB5A11BA0F65 /* WandererApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F08DFC9293EDE1EB208DB540 /* WandererApp.swift */; };
 		2A86BCA769BE5C0C54B726B3 /* ExpensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485340E25E1BB38F5575799C /* ExpensesView.swift */; };
 		2FB62B6A59E19D6AEB320239 /* PlaceDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE938851E76A6594D1D2B6A9 /* PlaceDetailSheet.swift */; };
@@ -79,6 +80,7 @@
 		ECBB0056F8D12F587EC53FD3 /* WandererAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7995E8A175F060E562A7EC70 /* WandererAPI.swift */; };
 		EF37C8450DF59471988C3034 /* DailySpendTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ACDC46B84107502F7CA4821 /* DailySpendTests.swift */; };
 		F84CA46EB066CAE3A265D416 /* PlannerStartDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */; };
+		FA767ED6DD3A13B1D33783D7 /* BookingTicket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706F29C6FD72AEE60AA9F2F0 /* BookingTicket.swift */; };
 		FAC6BEA6C9FC2BA359C97A88 /* WandererTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEF6BD19C497B3ADFC73866 /* WandererTheme.swift */; };
 		FF054BEEBD037791D36312F1 /* TripDetailStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603331EBAB677D57E2040D95 /* TripDetailStore.swift */; };
 		FF829B31E0D33300563B4C1C /* ChecklistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D754558BD95A08B4947DA8B0 /* ChecklistView.swift */; };
@@ -113,6 +115,7 @@
 		2ADAEACF98D0CB994446D48C /* TripJournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripJournalView.swift; sourceTree = "<group>"; };
 		2D0680C192F6E732C0B2FA0D /* ReservationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationsView.swift; sourceTree = "<group>"; };
 		2F4CB288BEC919A49A9D78ED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2F82F121DA13D96DC84852E2 /* BookingTicketModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingTicketModelTests.swift; sourceTree = "<group>"; };
 		37DD9D79B1A57BE12E142567 /* LanguagePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerView.swift; sourceTree = "<group>"; };
 		391427890E0E1BEF9DE64DF1 /* TripToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripToolsView.swift; sourceTree = "<group>"; };
 		3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitMathTests.swift; sourceTree = "<group>"; };
@@ -135,6 +138,7 @@
 		65635783A92321DA9B83473F /* DebugLaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLaunch.swift; sourceTree = "<group>"; };
 		6DCC795CE658B7BD1697781E /* CloudConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudConfiguration.swift; sourceTree = "<group>"; };
 		6E0DBA9C09B5F697577A3EF3 /* TripSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSettingsView.swift; sourceTree = "<group>"; };
+		706F29C6FD72AEE60AA9F2F0 /* BookingTicket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingTicket.swift; sourceTree = "<group>"; };
 		71ADCE542CB24AB187F20814 /* ProfileAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatar.swift; sourceTree = "<group>"; };
 		767CE56211A97036FA75CA5F /* PlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerView.swift; sourceTree = "<group>"; };
 		78015B4F18A43D4BDB2DDA2D /* TravelModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModels.swift; sourceTree = "<group>"; };
@@ -191,6 +195,7 @@
 		09EFEBCCC1A3584D7F56F77E /* WandererTests */ = {
 			isa = PBXGroup;
 			children = (
+				2F82F121DA13D96DC84852E2 /* BookingTicketModelTests.swift */,
 				63569DDAE2EC69C16A58C274 /* CloudAPITests.swift */,
 				9ACDC46B84107502F7CA4821 /* DailySpendTests.swift */,
 				B4C34BC83E9744B200BA4157 /* ExportAndGuestTests.swift */,
@@ -421,6 +426,7 @@
 		EE47F3A0273234FEE276E16C /* TripTools */ = {
 			isa = PBXGroup;
 			children = (
+				706F29C6FD72AEE60AA9F2F0 /* BookingTicket.swift */,
 				D754558BD95A08B4947DA8B0 /* ChecklistView.swift */,
 				485340E25E1BB38F5575799C /* ExpensesView.swift */,
 				2D0680C192F6E732C0B2FA0D /* ReservationsView.swift */,
@@ -554,6 +560,7 @@
 			files = (
 				14BA710A98330E0A58E2A355 /* AttachmentsStore.swift in Sources */,
 				E72133353AE694349BA7B27B /* AuthStore.swift in Sources */,
+				FA767ED6DD3A13B1D33783D7 /* BookingTicket.swift in Sources */,
 				FF829B31E0D33300563B4C1C /* ChecklistView.swift in Sources */,
 				C286E481FCCD60AF37B29298 /* CloudConfiguration.swift in Sources */,
 				A25790F6B03B6C0401C229DC /* DayNoteView.swift in Sources */,
@@ -621,6 +628,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27B161625542EF094A1C334C /* BookingTicketModelTests.swift in Sources */,
 				382AADA5D8DEEBB5A5F14CEA /* CloudAPITests.swift in Sources */,
 				EF37C8450DF59471988C3034 /* DailySpendTests.swift in Sources */,
 				E9416E5AB7685077F2F1A406 /* ExportAndGuestTests.swift in Sources */,

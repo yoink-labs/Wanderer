@@ -203,73 +203,9 @@ struct ReservationsView: View {
     // MARK: - Rows
 
     private func row(for reservation: ReservationRecord) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: reservation.type.icon)
-                .font(.ligga(.body, weight: .semibold))
-                .foregroundStyle(WandererTheme.muted)
-                .frame(width: 24)
-                .padding(.top, 1)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(reservation.title)
-                        .font(.ligga(.headline, weight: .semibold))
-                        .foregroundStyle(WandererTheme.ink)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-
-                    Spacer(minLength: 6)
-
-                    if let cost = reservation.cost {
-                        Text(TripToolsFormat.money(cost, code: reservation.currency ?? defaultCurrency))
-                            .font(.ligga(.subheadline, weight: .semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(WandererTheme.ink)
-                    }
-                }
-
-                if let detail = detailLine(for: reservation) {
-                    Text(detail)
-                        .font(.ligga(.footnote))
-                        .foregroundStyle(WandererTheme.muted)
-                        .lineLimit(1)
-                }
-
-                if let time = timeLine(for: reservation) {
-                    Text(time)
-                        .font(.ligga(.callout, weight: .medium))
-                        .monospacedDigit()
-                        .foregroundStyle(WandererTheme.ink)
-                        .padding(.top, 2)
-                }
-
-                if let route = routeLine(for: reservation) {
-                    Text(route)
-                        .font(.ligga(.footnote))
-                        .foregroundStyle(WandererTheme.muted)
-                        .lineLimit(2)
-                }
-            }
-        }
-        .padding(14)
-        .padding(.leading, reservation.type == .lodging ? 4 : 0)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            if reservation.type == .lodging {
-                HStack(spacing: 0) {
-                    Rectangle()
-                        .fill(WandererTheme.desert)
-                        .frame(width: 4)
-                    Spacer(minLength: 0)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: WandererTheme.cardRadius, style: .continuous))
-            }
-        }
-        .liggaCard()
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel(for: reservation))
-        .tripToolListRow()
+        BookingTicket(reservation: reservation, timeZone: tripTimeZone, currency: defaultCurrency)
+            .accessibilityLabel(accessibilityLabel(for: reservation))
+            .tripToolListRow()
     }
 
     private func accessibilityLabel(for reservation: ReservationRecord) -> String {
