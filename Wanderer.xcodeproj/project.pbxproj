@@ -32,6 +32,7 @@
 		43F0E4D9B372A4F50382F3C6 /* GuestTripImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A938EDE5556DD46D58EA8B0 /* GuestTripImporter.swift */; };
 		45DE9336C856C18DE7ADEC47 /* OfflineReadCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53CE45DE2D1E4D3D8DA0E507 /* OfflineReadCache.swift */; };
 		4C81785AA566F238D3A642A2 /* LocalTripServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D802EE4CA804C7B6A8A7FD /* LocalTripServerTests.swift */; };
+		4DE7F6D17D21FE981D5FF0FA /* PlannerUndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CED402C874738F92140CF85 /* PlannerUndoTests.swift */; };
 		4EF3498A30F986350829261F /* TripPDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFE84B509D6A42620681B9B /* TripPDFExporter.swift */; };
 		50E82AF6D97C3F849ED23922 /* ShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586F12A2EE82142A5C8442BD /* ShareStore.swift */; };
 		50F378C215C4D290240AE1A6 /* TripToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391427890E0E1BEF9DE64DF1 /* TripToolsView.swift */; };
@@ -152,6 +153,7 @@
 		9ACDC46B84107502F7CA4821 /* DailySpendTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySpendTests.swift; sourceTree = "<group>"; };
 		9BE86CAB9DA8C6B2E2489A61 /* AuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStore.swift; sourceTree = "<group>"; };
 		9BEF6BD19C497B3ADFC73866 /* WandererTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WandererTheme.swift; sourceTree = "<group>"; };
+		9CED402C874738F92140CF85 /* PlannerUndoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerUndoTests.swift; sourceTree = "<group>"; };
 		A397EC5A5BBC91655CF501D2 /* ShareTripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTripView.swift; sourceTree = "<group>"; };
 		ACE4703B1CEF2FC247DD6686 /* Trip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trip.swift; sourceTree = "<group>"; };
 		AE27CCE1B726D127167825E0 /* EmailAuthSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailAuthSheet.swift; sourceTree = "<group>"; };
@@ -205,6 +207,7 @@
 				26C1F04A4BAA060C1D00E1F7 /* OfflineReadCacheTests.swift */,
 				4593CAD5D6124451B87A0F0A /* PlannerGeometryTests.swift */,
 				10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */,
+				9CED402C874738F92140CF85 /* PlannerUndoTests.swift */,
 				C0F809E329815D3277BA161D /* SocialSignInTests.swift */,
 				3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */,
 			);
@@ -638,6 +641,7 @@
 				3F3671A3F6C10B354E10E21D /* OfflineReadCacheTests.swift in Sources */,
 				303F91AB18439B7B865469EE /* PlannerGeometryTests.swift in Sources */,
 				F84CA46EB066CAE3A265D416 /* PlannerStartDayTests.swift in Sources */,
+				4DE7F6D17D21FE981D5FF0FA /* PlannerUndoTests.swift in Sources */,
 				32635A3B3E5C9663C4A39A49 /* SocialSignInTests.swift in Sources */,
 				8B56FE752B7C4B17E1189299 /* SplitMathTests.swift in Sources */,
 			);

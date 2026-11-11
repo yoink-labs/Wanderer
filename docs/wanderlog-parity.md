@@ -92,7 +92,7 @@ guessed.
 | “Need a place to stay?” lodging prompt + hotel booking | Observed (affiliate) | partial — Booking.com deep-link stay search |
 | Budget total, set budget, breakdown | Gated (add expense) for guest; screen visible | impl, tested — total, budget bar, distinct category colours, plus a spend-by-day chart against the daily budget (prepaid costs as a separate bar); not observed in Wanderlog |
 | Group balances / split expenses | Gated for guest; entry point observed | impl (equal/exact/percent/shares, settle-up, fewest-payments suggestion) |
-| Trip members / invite tripmates | Observed (create form) | impl (invites table + Resend edge function, Mail fallback) |
+| Trip members / invite tripmates | Observed (create form) | impl, tested — Resend email links to an invite page; invites are claimed on sign-in by matching email (needs the email claim in Clerk's session token) |
 | Multi-currency | Observed (`$0.00`, currency in expense form) | impl (trip currency + FX conversion) |
 
 ## Guides / Explore
@@ -109,10 +109,10 @@ guessed.
 
 | Capability | Wanderlog | Wanderer |
 | --- | --- | --- |
-| Share trip with link | Gated for guest; Share button observed | impl (app/web link, copy, share sheet) |
+| Share trip with link | Gated for guest; Share button observed | impl, tested — public read-only page at api.yoinklabs.dev/s/<token> (days and stops only; no people, notes, costs, files), "Make a new link" turns the old one off; guests see an account prompt. Worker deploy pending approval |
 | Export to PDF / Google Maps / calendar | Gated PRO | PDF impl — native UIGraphicsPDFRenderer, shared with the system sheet; Maps/calendar still todo |
 | Trip journal (route + visited places on a map) | Observed (menu item) | impl — per-trip map and visited timeline from mark-as-visited |
-| Undo / redo | Observed | todo |
+| Undo / redo | Observed | impl, tested — remove stop (restored in place with all details), reorder, move between days, visited, optimize route; Undo toast, trip-menu Undo/Redo, ⌘Z/⇧⌘Z; bounded to 30 steps |
 | Offline access | Gated PRO ("offline access" upsell, observed) | impl, tested — signed in: last-loaded trips readable offline from a per-account cache cleared on sign-out (`OfflineReadCache`); guest: full offline editing. Signed-in offline *editing* still todo |
 | Push notifications | Not observed | todo |
 | Native mobile apps | iOS/Android exist (marketing claim) | iOS native SwiftUI (this repo) |
@@ -132,9 +132,16 @@ on the simulator; proof is on the `ade-proof` branch under
 | 4 | Budget: spend by day, budget bar, grouped expenses; dark-mode controls | `04-budget` |
 | 5 | Guest profile, sign-in, onboarding titles | `05-profile-onboarding` |
 | 6 | Offline reading for signed-in trips | `06-offline` |
+| 7 | Explore and guide detail | `07-explore` |
+| 8 | Explore guides seeded in production | `08-prod-guides` |
+| 9 | Sign in with Apple and Google | `09-social-sign-in` |
+| 11 | Bookings as tickets | `11-bookings` |
+| 12 | Files grid with thumbnails; guest files on device | `12-files` |
+| 13 | Public share page, working invites, guest share state | `13-share` |
+| 14 | Undo / redo for planner edits | `14-undo` |
 
-Still to redo: Explore/guide detail, bookings list, attachments and share
-screens (functional and themed, not yet restyled), and an undo/redo stack.
+Not yet done: signed-in offline editing, and a check of every screen at
+accessibility text sizes (Home and bookings were checked).
 
 ## UX observations worth matching
 

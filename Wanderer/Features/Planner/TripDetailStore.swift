@@ -20,14 +20,124 @@ final class TripDetailStore: ObservableObject {
     @Published var selectedDayHint: UUID?
     @Published var errorMessage: String?
 
-    init(trip: Trip) {
+    /// Set only by tests, to run the store against an isolated local server.
+    private let apiOverride: WandererAPI?
+
+    init(trip: Trip, api: WandererAPI? = nil) {
         self.trip = trip
+        self.apiOverride = api
+    }
+
+    // MARK: - Undo / redo
+
+    /// One reversible planner edit.
+    struct PlannerChange {
+        let label: String
+        let undo: @MainActor () async -> Void
+        let redo: @MainActor () async -> Void
+    }
+
+    @Published private(set) var undoStack: [PlannerChange] = []
+    @Published private(set) var redoStack: [PlannerChange] = []
+    /// The latest change, for the "Undo" toast. Cleared when undone.
+    @Published private(set) var lastChange: PlannerChange?
+    @Published private(set) var changeCount = 0
+    private var isReplaying = false
+    /// A removed place comes back with a new id; older undo steps follow
+    /// this map so they still find it.
+    private var idAliases: [UUID: UUID] = [:]
+    static let undoLimit = 30
+
+    var canUndo: Bool { !undoStack.isEmpty }
+    var canRedo: Bool { !redoStack.isEmpty }
+
+    private func resolve(_ id: UUID) -> UUID {
+        var current = id
+        var hops = 0
+        while let next = idAliases[current], hops < 64 {
+            current = next
+            hops += 1
+        }
+        return current
+    }
+
+    private func record(_ change: PlannerChange) {
+        guard !isReplaying else { return }
+        undoStack.append(change)
+        if undoStack.count > Self.undoLimit { undoStack.removeFirst(undoStack.count - Self.undoLimit) }
+        redoStack.removeAll()
+        lastChange = change
+        changeCount += 1
+    }
+
+    func undo() async {
+        guard let change = undoStack.popLast() else { return }
+        isReplaying = true
+        await change.undo()
+        isReplaying = false
+        redoStack.append(change)
+        lastChange = nil
+        changeCount += 1
+    }
+
+    func redo() async {
+        guard let change = redoStack.popLast() else { return }
+        isReplaying = true
+        await change.redo()
+        isReplaying = false
+        undoStack.append(change)
+        lastChange = nil
+        changeCount += 1
+    }
+
+    func dismissLastChange() {
+        lastChange = nil
+    }
+
+    /// Puts the given places, in order, at positions 0... within their day.
+    private func applyOrder(_ ids: [UUID]) async {
+        guard let cloud else { return }
+        for (index, original) in ids.enumerated() {
+            let id = resolve(original)
+            _ = try? await cloud.updatePlace(tripID: trip.id, placeID: id, body: ["position": .integer(index)])
+        }
+        await reloadPlaces()
+    }
+
+    /// Re-creates a removed place with every field it had, and returns its new id.
+    private func recreate(_ place: PlaceRecord) async -> UUID? {
+        guard let cloud else { return nil }
+        let body: [String: JSONValue] = [
+            "day_id": .optional(place.dayId.map(resolve)),
+            "list_id": .optional(place.listId),
+            "name": .string(place.name),
+            "address": .optional(place.address),
+            "lat": .optional(place.lat),
+            "lng": .optional(place.lng),
+            "category": .string(place.category.rawValue),
+            "notes": .optional(place.notes),
+            "website": .optional(place.website),
+            "phone": .optional(place.phone),
+            "price_level": .optional(place.priceLevel),
+            "rating": .optional(place.rating),
+            "photo_url": .optional(place.photoUrl),
+            "start_time": .optional(place.startTime),
+            "end_time": .optional(place.endTime),
+            "position": .integer(place.position)
+        ]
+        guard let created = try? await cloud.addPlace(tripID: trip.id, body: body) else { return nil }
+        if let visitedAt = place.visitedAt {
+            _ = try? await cloud.setPlaceVisited(tripID: trip.id, placeID: created.id, visitedAt: visitedAt)
+        }
+        idAliases[resolve(place.id)] = created.id
+        return created.id
     }
 
     /// Guest trips live on the device and go through the local server; signed
     /// in, the same calls go to the Worker.
     private var cloud: WandererAPI? {
-        LocalTrips.isActive ? LocalTripServer.api() : CloudSession.shared.api
+        if let apiOverride { return apiOverride }
+        return LocalTrips.isActive ? LocalTripServer.api() : CloudSession.shared.api
     }
 
     var totalExpenses: Double {
@@ -201,6 +311,24 @@ final class TripDetailStore: ObservableObject {
         do {
             try await cloud.deletePlace(tripID: trip.id, placeID: place.id)
             places.removeAll { $0.id == place.id }
+            // Neighbours keep their order; the restored stop goes back to its slot.
+            let snapshot = place
+            let neighbours = places(for: place.dayId).map(\.id)
+            record(PlannerChange(
+                label: "Removed \(place.name)",
+                undo: { [weak self] in
+                    guard let self, let restored = await self.recreate(snapshot) else { return }
+                    var order = neighbours.map(self.resolve)
+                    order.insert(restored, at: min(max(0, snapshot.position), order.count))
+                    await self.applyOrder(order)
+                },
+                redo: { [weak self] in
+                    guard let self, let cloud = self.cloud else { return }
+                    let current = self.resolve(snapshot.id)
+                    try? await cloud.deletePlace(tripID: self.trip.id, placeID: current)
+                    await self.reloadPlaces()
+                }
+            ))
         } catch {
             errorMessage = "Couldn't remove that place: \(error.localizedDescription)"
         }
@@ -208,7 +336,16 @@ final class TripDetailStore: ObservableObject {
 
     func movePlaces(in dayID: UUID?, fromOffsets: IndexSet, toOffset: Int) async {
         var items = places(for: dayID)
+        let before = items.map(\.id)
         items.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        let after = items.map(\.id)
+        if before != after {
+            record(PlannerChange(
+                label: "Reordered stops",
+                undo: { [weak self] in await self?.applyOrder(before) },
+                redo: { [weak self] in await self?.applyOrder(after) }
+            ))
+        }
         places = places.filter { $0.dayId != dayID } + items
         guard let cloud else { return }
 
@@ -248,6 +385,15 @@ final class TripDetailStore: ObservableObject {
         }
 
         let finalOrder = ordered + items.filter { $0.coordinate == nil }
+        let before = items.map(\.id)
+        let after = finalOrder.map(\.id)
+        if before != after {
+            record(PlannerChange(
+                label: "Optimized the route",
+                undo: { [weak self] in await self?.applyOrder(before) },
+                redo: { [weak self] in await self?.applyOrder(after) }
+            ))
+        }
 
         do {
             for (index, place) in finalOrder.enumerated() {
@@ -281,11 +427,33 @@ final class TripDetailStore: ObservableObject {
         guard let cloud else { return }
         do {
             let position = (places(for: dayID).map(\.position).max() ?? -1) + 1
+            let originalDay = place.dayId
+            let originalOrder = places(for: originalDay).map(\.id)
             _ = try await cloud.updatePlace(tripID: trip.id, placeID: place.id, body: [
                 "day_id": .optional(dayID),
                 "position": .integer(position)
             ])
             await reloadPlaces()
+            let placeID = place.id
+            let dayName = dayID.flatMap { id in days.first { $0.id == id } }.map { "Day \($0.dayIndex + 1)" } ?? "Ideas"
+            record(PlannerChange(
+                label: "Moved \(place.name) to \(dayName)",
+                undo: { [weak self] in
+                    guard let self, let cloud = self.cloud else { return }
+                    _ = try? await cloud.updatePlace(tripID: self.trip.id, placeID: self.resolve(placeID), body: [
+                        "day_id": .optional(originalDay.map(self.resolve))
+                    ])
+                    await self.applyOrder(originalOrder)
+                },
+                redo: { [weak self] in
+                    guard let self, let cloud = self.cloud else { return }
+                    let end = (self.places(for: dayID).map(\.position).max() ?? -1) + 1
+                    _ = try? await cloud.updatePlace(tripID: self.trip.id, placeID: self.resolve(placeID), body: [
+                        "day_id": .optional(dayID), "position": .integer(end)
+                    ])
+                    await self.reloadPlaces()
+                }
+            ))
         } catch {
             errorMessage = "Couldn't move that place: \(error.localizedDescription)"
         }
@@ -297,6 +465,21 @@ final class TripDetailStore: ObservableObject {
         do {
             _ = try await cloud.setPlaceVisited(tripID: trip.id, placeID: place.id, visitedAt: stamp)
             await reloadPlaces()
+            let previous = place.visitedAt
+            let placeID = place.id
+            record(PlannerChange(
+                label: visited ? "Marked \(place.name) visited" : "Unmarked \(place.name)",
+                undo: { [weak self] in
+                    guard let self, let cloud = self.cloud else { return }
+                    _ = try? await cloud.setPlaceVisited(tripID: self.trip.id, placeID: self.resolve(placeID), visitedAt: previous)
+                    await self.reloadPlaces()
+                },
+                redo: { [weak self] in
+                    guard let self, let cloud = self.cloud else { return }
+                    _ = try? await cloud.setPlaceVisited(tripID: self.trip.id, placeID: self.resolve(placeID), visitedAt: stamp)
+                    await self.reloadPlaces()
+                }
+            ))
         } catch {
             errorMessage = "Couldn't update that place: \(error.localizedDescription)"
         }

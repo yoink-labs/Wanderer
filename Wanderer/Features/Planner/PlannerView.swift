@@ -242,6 +242,33 @@ struct PlannerView: View {
             Text(store.errorMessage ?? "")
         }
         .sensoryFeedback(.selection, trigger: selection)
+        .overlay(alignment: .bottom) {
+            if let change = store.lastChange {
+                UndoToast(label: change.label) {
+                    Task { await store.undo() }
+                } dismiss: {
+                    store.dismissLastChange()
+                }
+                .padding(.horizontal, WandererTheme.gutter)
+                .padding(.bottom, 12)
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                .id(store.changeCount)
+            }
+        }
+        .animation(reduceMotion ? .easeInOut(duration: 0.15) : WandererMotion.snappy, value: store.changeCount)
+        .background {
+            // Hardware keyboard: ⌘Z / ⇧⌘Z.
+            Group {
+                Button("Undo") { Task { await store.undo() } }
+                    .keyboardShortcut("z", modifiers: .command)
+                    .disabled(!store.canUndo)
+                Button("Redo") { Task { await store.redo() } }
+                    .keyboardShortcut("z", modifiers: [.command, .shift])
+                    .disabled(!store.canRedo)
+            }
+            .opacity(0)
+            .accessibilityHidden(true)
+        }
         .sensoryFeedback(.selection, trigger: focusedPlaceID)
         .sensoryFeedback(.success, trigger: addedCount)
         .sensoryFeedback(.warning, trigger: removedCount)
@@ -1073,10 +1100,27 @@ struct PlannerView: View {
 
     private var plannerMenu: some View {
         Menu {
+            if store.canUndo || store.canRedo {
+                Section {
+                    Button {
+                        Task { await store.undo() }
+                    } label: {
+                        Label(store.undoStack.last.map { "Undo: \($0.label)" } ?? "Undo", systemImage: "arrow.uturn.backward")
+                    }
+                    .disabled(!store.canUndo)
+                    Button {
+                        Task { await store.redo() }
+                    } label: {
+                        Label(store.redoStack.last.map { "Redo: \($0.label)" } ?? "Redo", systemImage: "arrow.uturn.forward")
+                    }
+                    .disabled(!store.canRedo)
+                }
+            }
+
             Button {
                 activeSheet = .reservations
             } label: {
-                Label("Reservations & expenses", systemImage: "ticket")
+                Label("Bookings & expenses", systemImage: "ticket")
             }
 
             Button {
@@ -1202,8 +1246,12 @@ struct PlannerView: View {
         await loadWeather()
     }
 
-    /// DEBUG launch route (`-uiSheet`); a no-op in release builds.
+    /// DEBUG launch route (`-uiSheet`, `-uiAction removeStop`); a no-op in
+    /// release builds.
     private func openDebugSheetIfRequested() {
+        if DebugLaunch.value("uiAction") == "removeStop", let place = selectedPlaces.dropFirst().first {
+            Task { await store.deletePlace(place) }
+        }
         switch DebugLaunch.sheet {
         case "expenses": activeSheet = .tools(.expenses)
         case "bookings": activeSheet = .tools(.reservations)
@@ -1574,5 +1622,54 @@ enum PlannerStartDay {
         let sorted = days.sorted { $0.dayIndex < $1.dayIndex }
         let planned = Set(places.compactMap(\.dayId))
         return (sorted.first { planned.contains($0.id) } ?? sorted.first)?.id
+    }
+}
+
+/// Bottom toast after a planner edit, with one tap to take it back. Stays
+/// longer when VoiceOver is running and announces itself.
+private struct UndoToast: View {
+    let label: String
+    let undo: () -> Void
+    let dismiss: () -> Void
+
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color(hex: 0x5FD0AE))
+                .accessibilityHidden(true)
+            Text(label)
+                .font(.ligga(.subheadline, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                LiggaHaptics.tap()
+                undo()
+            } label: {
+                Text("Undo")
+                    .font(.ligga(.subheadline, weight: .heavy))
+                    .foregroundStyle(Color(hex: 0x10283A))
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 34)
+                    .background(Color(hex: 0xF2A922), in: Capsule())
+                    .frame(minHeight: 44)
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.liggaPressable)
+            .accessibilityIdentifier("planner-undo")
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
+        .padding(.vertical, 6)
+        .background(Color(hex: 0x10283A), in: Capsule())
+        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
+        .accessibilityElement(children: .contain)
+        .task(id: label) {
+            AccessibilityNotification.Announcement("\(label). Undo available.").post()
+            try? await Task.sleep(for: .seconds(voiceOver ? 12 : 5))
+            dismiss()
+        }
     }
 }
