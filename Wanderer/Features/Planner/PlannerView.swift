@@ -27,6 +27,7 @@ struct PlannerView: View {
     @State private var addedCount = 0
     @State private var removedCount = 0
     @State private var detentIndex = 1
+    @Namespace private var dayChipNamespace
 
     private static let detents: [CGFloat] = [0.16, 0.52, 0.9]
     private static let detentNames = ["Collapsed", "Half", "Expanded"]
@@ -356,17 +357,12 @@ struct PlannerView: View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(trip.title)
-                    .font(.ligga(.title3, weight: .bold))
+                    .font(.display(.title2))
                     .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
 
-                HStack(spacing: 5) {
-                    Text(trip.dateRange)
-                    Text("·")
-                    Text("\(trip.days) days")
-                    Text("·")
-                    Text("\(store.places.count) places")
-                }
+                Text("\(trip.dateRange), \(store.days.isEmpty ? trip.days : store.days.count) days, \(store.places.count.liggaCounted("place"))")
                 .font(.ligga(.footnote, weight: .medium))
                 .foregroundStyle(WandererTheme.muted)
                 .lineLimit(1)
@@ -392,8 +388,8 @@ struct PlannerView: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 28)
-        .background(.white, in: Capsule())
-        .overlay(Capsule().stroke(WandererTheme.line, lineWidth: 1))
+        .background(WandererTheme.card, in: Capsule())
+        .overlay(Capsule().strokeBorder(WandererTheme.line, lineWidth: 1))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "Weather: \(Int(snapshot.temperature.rounded())) degrees, \(summary)"
@@ -438,36 +434,46 @@ struct PlannerView: View {
     private func dayChip(for day: TripDayRecord) -> some View {
         let isSelected = selection == .day(day.id)
         let labels = chipLabels(for: day)
+        let count = store.places(for: day.id).count
 
         return Button {
-            withAnimation(.easeOut(duration: 0.18)) {
+            withAnimation(WandererMotion.animation(WandererMotion.snappy, reduceMotion: reduceMotion)) {
                 selection = .day(day.id)
             }
         } label: {
-            VStack(spacing: 0) {
+            VStack(spacing: 1) {
                 Text(labels.0)
-                    .font(.ligga(.caption2, weight: .semibold))
-                    .foregroundStyle(isSelected ? WandererTheme.onPrimary.opacity(0.75) : WandererTheme.muted)
+                    .font(.ligga(.caption, weight: .semibold))
                 Text(labels.1)
-                    .font(.ligga(.subheadline, weight: .semibold))
+                    .font(.ligga(.headline, weight: .heavy))
                     .monospacedDigit()
-                    .foregroundStyle(isSelected ? WandererTheme.onPrimary : WandererTheme.ink)
+                // Dots under a day hint at how full it is (up to five).
+                HStack(spacing: 2) {
+                    ForEach(0..<min(count, 5), id: \.self) { _ in
+                        Circle().frame(width: 4, height: 4)
+                    }
+                }
+                .frame(height: 4)
+                .opacity(count == 0 ? 0 : 1)
             }
-            .frame(minWidth: 58, minHeight: 40)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? WandererTheme.primaryFill : WandererTheme.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isSelected ? .clear : WandererTheme.line, lineWidth: 1)
-            )
+            .foregroundStyle(isSelected ? Color(hex: 0x10283A) : WandererTheme.ink)
+            .frame(minWidth: 54, minHeight: 56)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(hex: 0xF2A922))
+                        .matchedGeometryEffect(id: "day-chip", in: dayChipNamespace)
+                } else {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(WandererTheme.line, lineWidth: 1)
+                }
+            }
             .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("planner-day-\(day.dayIndex)")
-        .accessibilityLabel("Day \(day.dayIndex + 1), \(labels.0) \(labels.1)")
+        .accessibilityLabel("Day \(day.dayIndex + 1), \(labels.0) \(labels.1), \(count.liggaCounted("stop"))")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .contextMenu {
             Button {
@@ -501,27 +507,31 @@ struct PlannerView: View {
         let count = store.unassignedPlaces.count
 
         return Button {
-            withAnimation(.easeOut(duration: 0.18)) {
+            withAnimation(WandererMotion.animation(WandererMotion.snappy, reduceMotion: reduceMotion)) {
                 selection = .unscheduled
             }
         } label: {
-            VStack(spacing: 0) {
-                Text("NO DAY")
-                    .font(.ligga(.caption2, weight: .bold))
-                    .foregroundStyle(isSelected ? .white.opacity(0.75) : WandererTheme.muted)
+            VStack(spacing: 1) {
+                Image(systemName: "lightbulb")
+                    .font(.ligga(.caption, weight: .semibold))
+                Text("Ideas")
+                    .font(.ligga(.subheadline, weight: .heavy))
                 Text("\(count)")
-                    .font(.ligga(.subheadline, weight: .bold))
-                    .foregroundStyle(isSelected ? .white : WandererTheme.ink)
+                    .font(.ligga(.caption2, weight: .bold))
+                    .monospacedDigit()
             }
-            .frame(minWidth: 62, minHeight: 40)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? WandererTheme.charcoal : WandererTheme.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isSelected ? .clear : WandererTheme.line, lineWidth: 1)
-            )
+            .foregroundStyle(isSelected ? Color(hex: 0x10283A) : WandererTheme.ink)
+            .frame(minWidth: 60, minHeight: 56)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(hex: 0xF2A922))
+                        .matchedGeometryEffect(id: "day-chip", in: dayChipNamespace)
+                } else {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(WandererTheme.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                }
+            }
             .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
@@ -533,9 +543,10 @@ struct PlannerView: View {
 
     private func chipLabels(for day: TripDayRecord) -> (String, String) {
         guard day.date != nil, TripDayRecord.date(from: day.date) != nil else {
-            return ("DAY", "\(day.dayIndex + 1)")
+            return ("Day", "\(day.dayIndex + 1)")
         }
-        return (day.weekdayLabel.uppercased(), day.shortDateLabel)
+        let date = TripDayRecord.date(from: day.date) ?? Date()
+        return (day.weekdayLabel, date.formatted(.dateTime.day()))
     }
 
     private var sectionHeader: some View {
@@ -861,12 +872,15 @@ struct PlannerView: View {
                 timeZoneIdentifier: trip.timezone,
                 isFocused: isFocused,
                 leg: editMode.isEditing ? nil : travelLegs[place.id],
-                costLabel: costLabel(for: place)
+                costLabel: costLabel(for: place),
+                rail: selection == .unscheduled || editMode.isEditing
+                    ? .none
+                    : PlannerRail(isFirst: number == 1, isLast: number == selectedPlaces.count)
             )
         }
         .buttonStyle(.plain)
         .id(place.id)
-        .listRowInsets(EdgeInsets(top: 2, leading: WandererTheme.screenPadding, bottom: 2, trailing: WandererTheme.screenPadding))
+        .listRowInsets(EdgeInsets(top: 0, leading: WandererTheme.screenPadding, bottom: 0, trailing: WandererTheme.screenPadding))
         .listRowBackground(isFocused ? WandererTheme.coralSoft.opacity(0.5) : WandererTheme.card)
         // On a day the travel connector separates stops; unscheduled keeps hairlines.
         .listRowSeparator(selection == .unscheduled ? .visible : .hidden)
@@ -1000,7 +1014,7 @@ struct PlannerView: View {
             parts.append(PlannerDistanceFormat.string(totalMeters))
         }
 
-        return listHeader(parts.joined(separator: " · "))
+        return listHeader(parts.joined(separator: ", "))
             .accessibilityLabel(
                 parts.joined(separator: ", ") + (totalMeters > 0 ? " in a straight line" : "")
             )
@@ -1008,8 +1022,8 @@ struct PlannerView: View {
     }
 
     private func listHeader(_ text: String) -> some View {
-        Text(text.uppercased())
-            .font(.ligga(.caption, weight: .semibold))
+        Text(text)
+            .font(.ligga(.footnote, weight: .semibold))
             .foregroundStyle(WandererTheme.muted)
             .lineLimit(1)
             .textCase(nil)
@@ -1172,11 +1186,9 @@ struct PlannerView: View {
     private func bootstrap() async {
         await store.load()
 
-        if case .unscheduled = selection, store.unassignedPlaces.isEmpty {
-            let firstDayWithPlaces = store.days.first { !store.places(for: $0.id).isEmpty }
-            if let day = firstDayWithPlaces ?? store.days.first {
-                selection = .day(day.id)
-            }
+        if case .unscheduled = selection,
+           let start = PlannerStartDay.choose(days: store.days, places: store.places) {
+            selection = .day(start)
         }
 
         framePlaces()
@@ -1349,6 +1361,16 @@ private struct PlannerViewport: Equatable {
 
 // MARK: - Place row
 
+/// Where a stop sits on the day's route line.
+struct PlannerRail: Equatable {
+    var isFirst: Bool
+    var isLast: Bool
+
+    static let none: PlannerRail? = nil
+}
+
+/// One stop on the day: a numbered bead threaded on the marigold route line
+/// (the same line the map draws), then the stop's details.
 private struct PlannerPlaceRow: View {
     let place: PlaceRecord
     let number: Int
@@ -1358,139 +1380,157 @@ private struct PlannerPlaceRow: View {
     var leg: PlannerTravelLeg?
     /// Recorded spend for this stop, when any.
     var costLabel: String?
+    /// Position on the route line; nil draws a plain bead (unscheduled ideas).
+    var rail: PlannerRail?
+
+    @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let leg {
-                PlannerLegConnector(leg: leg)
+                PlannerLegConnector(leg: leg, showsRail: rail != nil)
             }
 
-            HStack(spacing: 10) {
-                Text("\(number)")
-                    .font(.system(.caption, design: .default).weight(.bold))
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-                    .foregroundStyle(isFocused ? .white : WandererTheme.charcoal)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        isFocused ? WandererTheme.charcoal : WandererTheme.desert.opacity(0.65),
-                        in: Circle()
-                    )
+            HStack(alignment: .top, spacing: 12) {
+                beadColumn
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(place.name)
-                        .font(.ligga(.headline))
+                        .font(.ligga(.headline, weight: .semibold))
                         .foregroundStyle(WandererTheme.ink)
+                        .strikethrough(false)
+                        .lineLimit(2)
+
+                    Text(subtitle)
+                        .font(.ligga(.footnote))
+                        .foregroundStyle(WandererTheme.muted)
                         .lineLimit(1)
 
-                    HStack(spacing: 4) {
-                        Text(place.category.title)
-                        if let address = place.address, !address.isEmpty {
-                            Text("·")
-                            Text(address).lineLimit(1)
-                        }
-                    }
-                    .font(.ligga(.footnote))
-                    .foregroundStyle(WandererTheme.muted)
-
-                    if place.isVisited || costLabel != nil {
-                        HStack(spacing: 5) {
+                    if place.isVisited || costLabel != nil || timeLabel != nil {
+                        HStack(spacing: 6) {
+                            if let timeLabel {
+                                chip(timeLabel, icon: "clock", tint: WandererTheme.sea)
+                            }
                             if place.isVisited {
-                                chip("Visited", icon: "checkmark.circle.fill", tint: WandererTheme.mint)
+                                chip("Visited", icon: "checkmark", tint: WandererTheme.lagoon)
                             }
                             if let costLabel {
-                                chip(costLabel, icon: "banknote", tint: WandererTheme.coralDeep)
+                                chip(costLabel, icon: "banknote", tint: WandererTheme.accentText)
                             }
                         }
-                        .padding(.top, 1)
+                        .padding(.top, 2)
                     }
 
                     if let notes = place.notes, !notes.isEmpty {
                         Text(notes)
                             .font(.ligga(.footnote))
+                            .italic()
                             .foregroundStyle(WandererTheme.muted)
-                            .lineLimit(1)
+                            .lineLimit(2)
                     }
                 }
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer(minLength: 4)
-
-                if let time = place.timeLabel(in: timeZoneIdentifier) {
-                    Text(time)
-                        .font(.ligga(.caption2, weight: .semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(WandererTheme.coralDeep)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(WandererTheme.coralSoft, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-
-                if let photoUrl = place.photoUrl,
-                   let url = URL(string: photoUrl) {
+                if let photoUrl = place.photoUrl, let url = URL(string: photoUrl) {
                     AsyncImage(url: url) { phase in
                         if let image = phase.image {
                             image.resizable().scaledToFill()
                         } else {
-                            WandererTheme.dust.opacity(0.5)
+                            WandererTheme.fillMuted
                         }
                     }
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.vertical, 10)
                     .accessibilityHidden(true)
                 }
-
-                if isFocused {
-                    Image(systemName: "chevron.right")
-                        .font(.ligga(.footnote, weight: .semibold))
-                        .foregroundStyle(WandererTheme.muted)
-                        .accessibilityHidden(true)
-                }
             }
-            .padding(.vertical, 6)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .contentShape(Rectangle())
     }
 
+    private var timeLabel: String? { place.timeLabel(in: timeZoneIdentifier) }
+
+    private var subtitle: String {
+        if let address = place.address, !address.isEmpty {
+            return "\(place.category.title), \(address)"
+        }
+        return place.category.title
+    }
+
+    /// The bead, with rail segments above and below it so consecutive rows
+    /// join into one continuous line.
+    private var beadColumn: some View {
+        VStack(spacing: 0) {
+            railSegment(visible: rail.map { !$0.isFirst } ?? false)
+                .frame(height: 12)
+            bead
+            railSegment(visible: rail.map { !$0.isLast } ?? false)
+                .frame(maxHeight: .infinity)
+        }
+        .frame(width: max(beadSize, 28))
+    }
+
+    private func railSegment(visible: Bool) -> some View {
+        Rectangle()
+            .fill(visible ? WandererTheme.route : .clear)
+            .frame(width: 3)
+    }
+
+    private var bead: some View {
+        ZStack {
+            Circle()
+                .fill(isFocused ? WandererTheme.charcoal : WandererTheme.route)
+            if place.isVisited {
+                Image(systemName: "checkmark")
+                    .font(.system(size: beadSize * 0.42, weight: .heavy))
+            } else {
+                Text("\(number)")
+                    .font(.system(size: beadSize * 0.46, weight: .heavy, design: .rounded))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.6)
+            }
+        }
+        .foregroundStyle(isFocused ? Color(hex: 0xF2A922) : Color(hex: 0x10283A))
+        .frame(width: beadSize, height: beadSize)
+        .overlay(Circle().strokeBorder(isFocused ? Color(hex: 0xF2A922) : .clear, lineWidth: 2))
+        .accessibilityHidden(true)
+    }
+
     private func chip(_ text: String, icon: String, tint: Color) -> some View {
         Label(text, systemImage: icon)
-            .font(.ligga(.caption2, weight: .semibold))
+            .font(.ligga(.caption, weight: .semibold))
+            .monospacedDigit()
             .foregroundStyle(tint)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(tint.opacity(0.12), in: Capsule())
             .accessibilityLabel(text)
     }
 }
 
-/// "🚶 12 min walk · 0.9 km" between two stops, on a dotted rail that lines up
-/// with the number badges.
+/// Travel between two stops, written beside the route line.
 private struct PlannerLegConnector: View {
     let leg: PlannerTravelLeg
+    var showsRail = true
+    @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
 
     var body: some View {
-        HStack(spacing: 10) {
-            Path { path in
-                path.move(to: CGPoint(x: 1, y: 0))
-                path.addLine(to: CGPoint(x: 1, y: 18))
-            }
-            .stroke(
-                WandererTheme.dust,
-                style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [2, 4])
-            )
-            .frame(width: 2, height: 18)
-            .frame(width: 24)
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(showsRail ? WandererTheme.route : .clear)
+                .frame(width: 3)
+                .frame(width: max(beadSize, 28))
 
-            HStack(spacing: 5) {
-                Image(systemName: leg.mode.symbol)
-                    .font(.ligga(.caption, weight: .semibold))
-                Text(leg.summary)
-                    .font(.ligga(.footnote))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(WandererTheme.muted)
+            Label(leg.summary, systemImage: leg.mode.symbol)
+                .font(.ligga(.footnote, weight: .medium))
+                .foregroundStyle(WandererTheme.muted)
+                .lineLimit(1)
+                .padding(.vertical, 4)
         }
-        .padding(.top, 2)
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(leg.accessibilitySummary)
     }
@@ -1499,5 +1539,20 @@ private struct PlannerLegConnector: View {
 #Preview {
     NavigationStack {
         PlannerView(trip: Trip.samples[0])
+    }
+}
+
+/// Which day a trip opens on: today while the trip is on, otherwise the
+/// first day that has stops, otherwise day one. Nil only when there are no
+/// days, which leaves the planner on unscheduled ideas.
+enum PlannerStartDay {
+    static func choose(days: [TripDayRecord], places: [PlaceRecord], today: Date = Date()) -> UUID? {
+        let todayString = Trip.isoDay(today)
+        if let current = days.first(where: { $0.date == todayString }) {
+            return current.id
+        }
+        let sorted = days.sorted { $0.dayIndex < $1.dayIndex }
+        let planned = Set(places.compactMap(\.dayId))
+        return (sorted.first { planned.contains($0.id) } ?? sorted.first)?.id
     }
 }

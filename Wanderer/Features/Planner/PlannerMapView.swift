@@ -142,29 +142,32 @@ private struct PlannerPinItem: Identifiable {
     var id: UUID { place.id }
 }
 
+/// Map pin in fixed Atlas colours so it reads on light and dark maps alike:
+/// a marigold bead with an ink number, flipping to ink with a marigold ring
+/// when selected.
 private struct PlannerMapPin: View {
     let number: Int
     let isSelected: Bool
 
+    private static let marigold = Color(hex: 0xF2A922)
+    private static let ink = Color(hex: 0x10283A)
+
     var body: some View {
+        let size: CGFloat = isSelected ? 38 : 30
         ZStack {
             Circle()
-                .fill(isSelected ? WandererTheme.charcoal : WandererTheme.card)
-                .frame(width: isSelected ? 36 : 30, height: isSelected ? 36 : 30)
-                .shadow(color: WandererTheme.charcoal.opacity(0.28), radius: 6, x: 0, y: 3)
-
-            Circle()
-                .stroke(isSelected ? WandererTheme.peach : WandererTheme.peach.opacity(0.9), lineWidth: 2)
-                .frame(width: isSelected ? 36 : 30, height: isSelected ? 36 : 30)
-
+                .fill(isSelected ? Self.ink : Self.marigold)
+                .overlay(Circle().strokeBorder(isSelected ? Self.marigold : .white, lineWidth: isSelected ? 3 : 2))
+                .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 2)
             Text("\(number)")
-                .font(.system(.footnote, design: .default).weight(.bold))
+                .font(.system(size: isSelected ? 16 : 14, weight: .heavy, design: .rounded))
                 .monospacedDigit()
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.6)
                 .lineLimit(1)
-                .frame(width: 26)
-                .foregroundStyle(isSelected ? .white : WandererTheme.charcoal)
+                .foregroundStyle(isSelected ? Self.marigold : Self.ink)
+                .padding(.horizontal, 3)
         }
+        .frame(width: size, height: size)
         .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isSelected)
     }
 }

@@ -73,6 +73,7 @@
 		E9416E5AB7685077F2F1A406 /* ExportAndGuestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C34BC83E9744B200BA4157 /* ExportAndGuestTests.swift */; };
 		EB95BDC51723B2E51E0EED60 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40CBC266203E6DEA3EBCBA8 /* MainTabView.swift */; };
 		ECBB0056F8D12F587EC53FD3 /* WandererAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7995E8A175F060E562A7EC70 /* WandererAPI.swift */; };
+		F84CA46EB066CAE3A265D416 /* PlannerStartDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */; };
 		FAC6BEA6C9FC2BA359C97A88 /* WandererTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEF6BD19C497B3ADFC73866 /* WandererTheme.swift */; };
 		FF054BEEBD037791D36312F1 /* TripDetailStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603331EBAB677D57E2040D95 /* TripDetailStore.swift */; };
 		FF829B31E0D33300563B4C1C /* ChecklistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D754558BD95A08B4947DA8B0 /* ChecklistView.swift */; };
@@ -94,6 +95,7 @@
 		0B0D5B7BCC7CFFFF1A7D4205 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		0F821EEAC812B7309DAAB142 /* TripsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsHomeView.swift; sourceTree = "<group>"; };
 		0FFE84B509D6A42620681B9B /* TripPDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPDFExporter.swift; sourceTree = "<group>"; };
+		10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerStartDayTests.swift; sourceTree = "<group>"; };
 		139E6CDC21F9B4DB1ECA89A7 /* TripsBacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsBacking.swift; sourceTree = "<group>"; };
 		17CA550B1A652A690CE62511 /* DayNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayNoteView.swift; sourceTree = "<group>"; };
 		1D9EC1CE0737C4230CAF8780 /* WandererTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WandererTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -184,6 +186,7 @@
 				09159DF78F452ED84A8316FB /* LegacyBackendCleanupTests.swift */,
 				D7D802EE4CA804C7B6A8A7FD /* LocalTripServerTests.swift */,
 				4593CAD5D6124451B87A0F0A /* PlannerGeometryTests.swift */,
+				10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */,
 				3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */,
 			);
 			path = WandererTests;
@@ -604,6 +607,7 @@
 				253DF3311E5D88D3EA97F9EB /* LegacyBackendCleanupTests.swift in Sources */,
 				4C81785AA566F238D3A642A2 /* LocalTripServerTests.swift in Sources */,
 				303F91AB18439B7B865469EE /* PlannerGeometryTests.swift in Sources */,
+				F84CA46EB066CAE3A265D416 /* PlannerStartDayTests.swift in Sources */,
 				8B56FE752B7C4B17E1189299 /* SplitMathTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
