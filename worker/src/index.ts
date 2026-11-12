@@ -67,6 +67,10 @@ function errorResponse(error: unknown): Response {
   if (error instanceof AuthError) {
     return json({ error: { code: error.code, message: error.message } }, error.status);
   }
+  // A value the schema rejects is the client's mistake, not a server fault.
+  if (error instanceof Error && error.message.includes("CHECK constraint failed")) {
+    return json({ error: { code: "invalid_value", message: "One of the values isn't allowed." } }, 400);
+  }
   console.error("unhandled", error);
   return json({ error: { code: "internal_error", message: "Something went wrong." } }, 500);
 }
@@ -248,6 +252,8 @@ interface ResourceSpec {
   table: string;
   /** Columns a client may write. Everything else is server-owned. */
   writable: string[];
+  /** Columns limited to fixed values (mirrors the table's CHECK constraints). */
+  choices?: Record<string, readonly string[]>;
   required?: string[];
   orderBy: string;
   orderDir?: "asc" | "desc";
@@ -285,6 +291,13 @@ function pickWritable(
   }
   if (unknown.length > 0) {
     throw new ApiError(400, "unknown_fields", `Unknown field(s): ${unknown.join(", ")}`);
+  }
+  for (const [field, allowed] of Object.entries(spec.choices ?? {})) {
+    const value = values[field];
+    if (value === undefined) continue;
+    if (typeof value !== "string" || !allowed.includes(value)) {
+      throw new ApiError(400, "invalid_value", `"${field}" must be one of: ${allowed.join(", ")}.`);
+    }
   }
   if (mode === "create") {
     for (const field of spec.required ?? []) {
@@ -723,6 +736,7 @@ registerTripResource(routes, "days", {
 
 registerTripResource(routes, "places", {
   table: "places",
+  choices: { category: ["sight", "food", "lodging", "activity", "transport", "shopping", "note"] },
   writable: [
     "day_id",
     "name",
@@ -756,6 +770,7 @@ registerTripResource(routes, "lists", {
 
 registerTripResource(routes, "reservations", {
   table: "reservations",
+  choices: { type: ["flight", "lodging", "car", "restaurant", "train", "other"] },
   writable: [
     "type",
     "title",
@@ -799,6 +814,10 @@ registerTripResource(routes, "settlements", {
 // Expenses need their splits written in one request.
 registerTripResource(routes, "expenses", {
   table: "expenses",
+  choices: {
+    category: ["food", "lodging", "transport", "activities", "shopping", "other"],
+    split_mode: ["equal", "exact", "percent", "shares"],
+  },
   writable: [
     "title",
     "amount",
