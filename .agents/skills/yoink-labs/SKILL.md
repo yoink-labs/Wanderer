@@ -137,5 +137,7 @@ rather than editing another app's repo.
 | `yoink-labs/yoink-lab-web` (yoinklabs.dev) | Michael Scott |
 | `yoink-labs/Wanderer` (trip planner, `api.yoinklabs.dev`) | Wanderer Worker |
 | `yoink-labs/receipts` (group-chat party game) | Receipts |
+| `yoink-labs/clicker` (Clicker, universal TV remote iOS app) | Clicker |
+| `yoink-labs/sweep` (Sweep, phone storage cleaner iOS app) | Sweep |
 
 Humans: arul (owner, all accounts) and Harris (partner).
