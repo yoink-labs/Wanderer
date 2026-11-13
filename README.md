@@ -24,6 +24,28 @@ account.
 
 ## What is built
 
+- **iPhone Duo / iPad** — the same SwiftUI app adapts by available width: the
+  tab bar becomes a sidebar on a regular-width canvas, Home becomes a grid, and
+  the planner puts the itinerary and map side by side. Large accessibility text
+  falls back to the single-column map + sheet layout rather than squeezing two
+  columns. No device-specific branches.
+- **Live flight status** — AeroDataBox through RapidAPI, shared-cached per
+  flight and date with a monthly unit budget, attribution, gate/terminal/delay
+  chips on booking tickets, and local alerts when a tracked flight changes.
+- **Personal layer** — any member can hide a shared stop or booking, save their
+  own version of it, or add private stops and bookings that only they see. The
+  group plan is never changed. "Only you" in the trip tools lists and restores
+  everything.
+- **Exports** — native PDF, a calendar `.ics` of timed stops and bookings, and
+  per-day Google Maps route links.
+- **Fast-enough sync** — the planner re-reads the collaborative rows every 30
+  seconds and supports pull-to-refresh, so a tripmate's edit appears without
+  reopening the trip.
+- **Web app** — `web/`: the same product as a responsive three-pane workspace
+  (day rail, itinerary, map) with a single-column phone layout, guest plans,
+  offline read cache, private layer, live flight status, budgets, checklist,
+  notes, sharing, print, calendar and Google Maps export. Live at
+  `https://wanderer.yoinklabs.dev` (Cloudflare Workers static assets).
 - **Auth** — Clerk (same Yoink Labs account as yoinklabs.dev): native Sign in
   with Apple, Google (Clerk OAuth, returns to `com.wanderer.ios://callback`),
   or a six-digit emailed code. Team `64PUT29XZ8`, Sign in with Apple entitlement
@@ -68,9 +90,12 @@ account.
 ## Deliberately not built
 
 - AI features (trip generation, chat assistant) — out of scope.
-- Live flight status / live hotel availability — paid APIs; deep links only.
-- Google Maps / Google Places — MapKit is free and sufficient.
-- Push notifications, offline editing, OAuth sign-in and App Store submission.
+- Server push notifications — flight alerts are local notifications raised when
+  the app refreshes a tracked flight.
+- Hotel/flight price feeds — the AeroDataBox free plan has no commercial-use
+  licence; hotel search remains a Booking.com deep link.
+- Google Maps / Google Places — MapKit and OpenStreetMap are free; Google Maps
+  is used only as an outbound directions link.
 
 ## Repo layout
 
@@ -86,6 +111,7 @@ Wanderer/                     SwiftUI app (Cloudflare + Clerk only)
                               TripSettings, Explore, Profile
   Resources/                  asset catalog, app icon
 worker/                       Cloudflare Worker + D1 migrations + tests
+web/                          Vite + React web app (see web/README.md)
 supabase/                     legacy schema and edge function (reference only)
 Archive/Supabase/             frozen pre-migration Swift stores (not compiled)
 Config/                       App.xcconfig (public API/Clerk values)
@@ -119,7 +145,19 @@ cd worker && npm test
 ```
 
 `WandererTests` covers split/settle-up math, Home search and ordering, planner
-geometry, API client shaping/decoding, PDF export and guest-trip persistence.
+geometry, API client shaping/decoding, PDF and calendar export, and guest-trip
+persistence.
+
+The web app builds independently:
+
+```bash
+cd web
+npm install
+npm run build          # tsc --noEmit + vite build
+npm run dev            # http://localhost:5173
+```
+
+`web/README.md` covers the local Worker, test auth and production env.
 
 ## Backend
 

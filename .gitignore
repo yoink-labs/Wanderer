@@ -4,6 +4,7 @@ build/
 .DS_Store
 .env
 .env.*
+!web/.env.example
 *.log
 
 # Xcode
@@ -19,7 +20,7 @@ Config/Cloud.local.xcconfig
 .wrangler/
 
 # ADE local state
-
+.ade/
 # Worker local dev
 worker/.wrangler/
 worker/.dev.vars
