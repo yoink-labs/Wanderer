@@ -1,0 +1,31 @@
+{
+  "name": "wanderer-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@clerk/clerk-react": "^5.61.3",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.9",
+    "react-dom": "^19.2.9",
+    "react-router-dom": "^7.18.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.69.1",
+    "@types/leaflet": "^1.9.20",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.9.3",
+    "vite": "^6.4.6",
+    "wrangler": "^4.161.0"
+  }
+}
