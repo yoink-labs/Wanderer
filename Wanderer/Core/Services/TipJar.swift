@@ -220,7 +220,14 @@ final class TipJarStore: ObservableObject {
     }
 
     /// One store for the app, so an Ask to Buy approved later still lands.
-    static let shared = TipJarStore(client: StoreKitTipClient())
+    static let shared: TipJarStore = {
+        #if DEBUG
+        if let configClient = TipJarConfigClient.fromLaunchArguments() {
+            return TipJarStore(client: configClient)
+        }
+        #endif
+        return TipJarStore(client: StoreKitTipClient())
+    }()
 
     @Published private(set) var products: [TipProduct] = []
     @Published private(set) var loadState: LoadState = .idle

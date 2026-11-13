@@ -44,6 +44,7 @@
 		5FAEB6005A3BD8BEA33613BF /* PlaceSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC8BFA35C9D4C5BDBC16353 /* PlaceSearchView.swift */; };
 		61BC0B5ED248794DE51E7136 /* TripsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F69303B77F8AE8E3200113D0 /* TripsStore.swift */; };
 		62A1775E120BAE6997E021DD /* FlightAlerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35A0CAB64FC2D39649C5BD5 /* FlightAlerts.swift */; };
+		6521A24D1F7FED202B24A506 /* TipJarConfigClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EC58C21C4AE6CEE2BF0538E /* TipJarConfigClient.swift */; };
 		65DBC0E1655F43658865A88B /* HomeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9114EE1202D8858FA472D7C7 /* HomeModels.swift */; };
 		6736384E634711CC5D0DFAB7 /* SpendByDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01F040C1B9770F6A1F0255C /* SpendByDay.swift */; };
 		68F5D88D5ACCBC4BFDFA7E06 /* WandererSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB2D2377DBE4521775F583A3 /* WandererSkeleton.swift */; };
@@ -154,6 +155,7 @@
 		65635783A92321DA9B83473F /* DebugLaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLaunch.swift; sourceTree = "<group>"; };
 		6DCC795CE658B7BD1697781E /* CloudConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudConfiguration.swift; sourceTree = "<group>"; };
 		6E0DBA9C09B5F697577A3EF3 /* TripSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSettingsView.swift; sourceTree = "<group>"; };
+		6EC58C21C4AE6CEE2BF0538E /* TipJarConfigClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarConfigClient.swift; sourceTree = "<group>"; };
 		706F29C6FD72AEE60AA9F2F0 /* BookingTicket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingTicket.swift; sourceTree = "<group>"; };
 		71ADCE542CB24AB187F20814 /* ProfileAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatar.swift; sourceTree = "<group>"; };
 		74DB8F3BB5EF56DE4196EE29 /* TipJarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipJarView.swift; sourceTree = "<group>"; };
@@ -392,6 +394,7 @@
 				F35A0CAB64FC2D39649C5BD5 /* FlightAlerts.swift */,
 				2889361D37EE394A9EEB81F0 /* ImageCatalog.swift */,
 				AF6BC068E9A4809BF15C61E9 /* TipJar.swift */,
+				6EC58C21C4AE6CEE2BF0538E /* TipJarConfigClient.swift */,
 				E487B2AEC43681C24ABA3DDC /* TravelServices.swift */,
 				46E5D5651A1DD3D86ADC6AC5 /* TripExports.swift */,
 				0FFE84B509D6A42620681B9B /* TripPDFExporter.swift */,
@@ -645,6 +648,7 @@
 				6736384E634711CC5D0DFAB7 /* SpendByDay.swift in Sources */,
 				1776B50BFBEB5BD645E7A2B2 /* SplitMath.swift in Sources */,
 				37DE0170B1F37254D9F6D646 /* TipJar.swift in Sources */,
+				6521A24D1F7FED202B24A506 /* TipJarConfigClient.swift in Sources */,
 				73D8800E996629CA4F347F32 /* TipJarView.swift in Sources */,
 				9997556D50DD551813AFBB77 /* TravelModels.swift in Sources */,
 				32602904C461C6BE9CAEBB3C /* TravelServices.swift in Sources */,

@@ -10,6 +10,9 @@ import Foundation
 ///     -uiDemo YES                    seed a local demo trip for guests
 ///     -uiRoute tipJar                push Support Wanderer on Profile
 ///                                    (pair with -uiTab profile)
+///     -uiTipJar config               serve tips from Wanderer.storekit
+///                                    without StoreKit (see TipJarConfigClient)
+///     -uiTipOutcome thanks|pending|failed|cancel
 ///
 /// Appearance and guest mode use the standard UserDefaults argument domain:
 /// `-wanderer.appearance dark -wanderer.isGuest YES`.

@@ -186,6 +186,17 @@ final class TipJarStoreTests: XCTestCase {
         XCTAssertTrue((json["subscriptionGroups"] as? [Any])?.isEmpty ?? true, "Tips only: no subscriptions")
     }
 
+    func testDebugConfigClientReadsPricesFromTheStoreKitFile() async throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "Wanderer", withExtension: "storekit"))
+        let client = TipJarConfigClient(configURL: url)
+
+        let products = TipJarStore.ordered(try await client.products(for: TipTier.productIDs))
+
+        XCTAssertEqual(products.map(\.tier), [.small, .medium, .large])
+        XCTAssertTrue(products.allSatisfy { $0.price > 0 && $0.displayPrice.hasPrefix("$") })
+        XCTAssertTrue(products.allSatisfy { !$0.displayName.isEmpty })
+    }
+
     private func waitUntil(timeout: TimeInterval = 2, _ condition: @MainActor () -> Bool) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         while !condition() {

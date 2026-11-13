@@ -18,6 +18,7 @@ AI features are intentionally out of scope.
 | FX rates | Frankfurter | free, no key |
 | Photos | Curated CDN + user uploads | free |
 | Email | Resend (invites) | free tier |
+| Tips | StoreKit 2 consumables, no third-party SDK | Apple's commission only |
 
 The backend lives at `https://api.yoinklabs.dev` on the Yoink Labs Cloudflare
 account.
@@ -82,12 +83,21 @@ account.
 - **Guides** — searchable public guides and one-tap copy into a trip.
 - **Profile** — avatar, stats, language, currency, units, appearance
   (System/Light/Dark), visited countries/cities, sign out, delete account.
+- **Tip jar** — "Support Wanderer" on Profile (guests too): three optional
+  consumable tips through StoreKit 2. Prices are whatever the App Store
+  returns for the user's storefront. A thank-you card after a tip; cancel
+  returns quietly; Ask to Buy shows a pending note and thanks on approval;
+  failures show an inline message. Tips unlock nothing. See
+  [Tip jar](#tip-jar) for the App Store Connect setup.
 - **Guest trips** — created before sign-in, persisted on device, copied into the
   account once and then cleared.
 - **Accessibility** — Dynamic Type (including AX sizes), dark mode, VoiceOver
   labels and 44pt targets on the main flows.
 
 ## Deliberately not built
+
+- Paywalls, a Pro tier or subscriptions. Wanderer is free; the only
+  monetization is the optional tip jar.
 
 - AI features (trip generation, chat assistant) — out of scope.
 - Server push notifications — flight alerts are local notifications raised when
@@ -145,8 +155,8 @@ cd worker && npm test
 ```
 
 `WandererTests` covers split/settle-up math, Home search and ordering, planner
-geometry, API client shaping/decoding, PDF and calendar export, and guest-trip
-persistence.
+geometry, API client shaping/decoding, PDF and calendar export, guest-trip
+persistence, and the tip jar's purchase states and StoreKit configuration.
 
 The web app builds independently:
 
@@ -158,6 +168,35 @@ npm run dev            # http://localhost:5173
 ```
 
 `web/README.md` covers the local Worker, test auth and production env.
+
+## Tip jar
+
+`Wanderer/Core/Services/TipJar.swift` (StoreKit 2) and
+`Wanderer/Features/Profile/TipJarView.swift`. The product ids are
+placeholders:
+
+| Product id | Type |
+| --- | --- |
+| `dev.yoinklabs.wanderer.tip.small` | Consumable |
+| `dev.yoinklabs.wanderer.tip.medium` | Consumable |
+| `dev.yoinklabs.wanderer.tip.large` | Consumable |
+
+**A human must create these in App Store Connect** (In-App Purchases →
+Consumable), choose their prices there, add a display name, description and
+review screenshot, and attach them to the next app version for review. Until
+they exist, the screen says tips aren't available and the rest of the app is
+unaffected. If the ids change, update `TipTier.productID` and
+`Wanderer/Resources/Wanderer.storekit` together (a unit test checks they
+match).
+
+Local testing: the Wanderer scheme points at `Wanderer/Resources/Wanderer.storekit`,
+so **Run from Xcode** gives working tips in the simulator, with purchases
+listed under Debug → StoreKit → Manage Transactions. The prices in that file
+exist only for local testing. Launches outside Xcode (simctl, ADE) don't apply
+a StoreKit configuration; in Debug builds pass `-uiTipJar config` (and
+optionally `-uiTipOutcome thanks|pending|failed|cancel`) to serve the tips
+from that file instead, e.g. with `-uiTab profile -uiRoute tipJar` for
+screenshots. Release builds ignore these flags.
 
 ## Backend
 
