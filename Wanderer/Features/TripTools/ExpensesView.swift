@@ -192,7 +192,7 @@ struct ExpensesView: View {
                         .font(.ligga(.footnote, weight: .semibold))
                         .foregroundStyle(WandererTheme.muted)
                     Text(money(spent))
-                        .font(.display(.largeTitle))
+                        .font(.wanderer(.screen))
                         .monospacedDigit()
                         .foregroundStyle(WandererTheme.ink)
                         .lineLimit(1)
@@ -298,7 +298,7 @@ struct ExpensesView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 Text("Balances")
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.section)
                     .foregroundStyle(WandererTheme.ink)
                     .accessibilityAddTraits(.isHeader)
 
@@ -445,7 +445,7 @@ struct ExpensesView: View {
     private var breakdownCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("By category")
-                .font(.ligga(.headline, weight: .semibold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
                 .accessibilityAddTraits(.isHeader)
 

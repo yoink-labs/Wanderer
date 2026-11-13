@@ -115,13 +115,8 @@ struct PersonalItemsView: View {
     }
 
     private func sectionHeader(_ title: String, _ subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-            Text(subtitle)
-                .font(.ligga(.caption))
-                .foregroundStyle(WandererTheme.muted)
-        }
-        .textCase(nil)
+        SectionHeader(title: title, subtitle: subtitle)
+            .textCase(nil)
     }
 
     private func row(icon: String, title: String, subtitle: String) -> some View {

@@ -7,7 +7,7 @@ struct ExploreView: View {
     @State private var selectedRegion: String?
     @FocusState private var isSearchFocused: Bool
 
-    private let gutter: CGFloat = 16
+    private let gutter = WandererTheme.gutter
 
     private var trimmedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -37,7 +37,7 @@ struct ExploreView: View {
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: LiggaSpace.l) {
                     header
 
                     if !store.guides.isEmpty {
@@ -56,7 +56,7 @@ struct ExploreView: View {
                     content
                 }
                 .padding(.horizontal, gutter)
-                .padding(.top, 8)
+                .padding(.top, LiggaSpace.xs)
                 .padding(.bottom, 32)
                 // A guide row reads best as a column; don't stretch it across
                 // the whole inner display.
@@ -83,7 +83,7 @@ struct ExploreView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Explore")
-                .font(.display(.largeTitle))
+                .wandererHeading(.screen)
                 .foregroundStyle(WandererTheme.ink)
                 .accessibilityAddTraits(.isHeader)
             Text("Guides to remix into your own itinerary.")
@@ -186,7 +186,7 @@ struct ExploreView: View {
             if remainingGuides.isEmpty {
                 VStack(spacing: 6) {
                     Text("More guides are on the way")
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.section)
                         .foregroundStyle(WandererTheme.ink)
                     Text("Every published guide will show up here.")
                         .font(.ligga(.subheadline))
@@ -264,7 +264,7 @@ struct ExploreView: View {
             stateBadge(systemImage: "magnifyingglass")
 
             Text("No guides match")
-                .font(.ligga(.title3, weight: .bold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
 
             Text(noResultsMessage)
@@ -312,7 +312,7 @@ struct ExploreView: View {
             stateBadge(systemImage: "safari.fill")
 
             Text("No guides published yet")
-                .font(.ligga(.title3, weight: .bold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
 
             Text("Curated routes will show up here. Pull down to check again, or plan your own trip from the Trips tab.")
@@ -333,7 +333,7 @@ struct ExploreView: View {
             stateBadge(systemImage: "exclamationmark.triangle.fill")
 
             Text("Guides are out of reach")
-                .font(.ligga(.title3, weight: .bold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
 
             Text(message)
@@ -454,14 +454,14 @@ private struct FeaturedGuideCard: View {
             VStack(alignment: .leading, spacing: 7) {
                 Text("Featured guide")
                     .font(.ligga(.footnote, weight: .bold))
-                    .foregroundStyle(Color(hex: 0x10283A))
+                    .foregroundStyle(WandererTheme.charcoal)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color(hex: 0xF2A922), in: Capsule())
+                    .background(WandererTheme.route, in: Capsule())
                     .padding(.bottom, 4)
 
                 Text(guide.title)
-                    .font(.display(.title2))
+                    .wandererHeading(.title)
                     .foregroundStyle(.white)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
 
@@ -503,7 +503,7 @@ private struct GuideRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(guide.title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(2)
 

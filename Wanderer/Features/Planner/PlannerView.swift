@@ -528,9 +528,9 @@ struct PlannerView: View {
             if stacked {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(trip.title)
-                        .font(.display(.title2))
+                        .wandererHeading(.title)
                         .foregroundStyle(WandererTheme.ink)
-                        .lineLimit(3)
+                        .lineLimit(nil)
                     Text(meta)
                         .font(.ligga(.footnote, weight: .medium))
                         .foregroundStyle(WandererTheme.muted)
@@ -545,7 +545,7 @@ struct PlannerView: View {
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(trip.title)
-                            .font(.display(.title2))
+                            .wandererHeading(.title)
                             .foregroundStyle(WandererTheme.ink)
                             .lineLimit(2)
                             .minimumScaleFactor(0.8)
@@ -739,9 +739,9 @@ struct PlannerView: View {
 
     private var sectionHeader: some View {
         let stacked = dynamicTypeSize.isAccessibilitySize
-        let titles = VStack(alignment: .leading, spacing: 1) {
+        let titles = VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
             Text(sectionTitle)
-                .font(.ligga(.title3, weight: .bold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
             Text(sectionSubtitle)
                 .font(.ligga(.footnote))
@@ -1165,7 +1165,7 @@ struct PlannerView: View {
     private func listGroupHeader(_ list: TripListRecord?, count: Int) -> some View {
         HStack(alignment: .center, spacing: LiggaSpace.xs) {
             Text(list?.title ?? "No list")
-                .font(.ligga(.subheadline, weight: .semibold))
+                .wandererHeading(.group)
                 .foregroundStyle(WandererTheme.ink)
                 .textCase(nil)
             Text("\(count)")
@@ -1183,7 +1183,7 @@ struct PlannerView: View {
                     Image(systemName: "ellipsis")
                         .font(.ligga(.footnote, weight: .bold))
                         .foregroundStyle(WandererTheme.muted)
-                        .frame(width: 44, height: 32)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Options for \(list.title)")
@@ -1682,7 +1682,7 @@ private struct PlannerPlaceRow: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(place.name)
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.card)
                         .foregroundStyle(WandererTheme.ink)
                         .strikethrough(false)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)

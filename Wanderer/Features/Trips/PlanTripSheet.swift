@@ -31,7 +31,7 @@ struct PlanTripSheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Where to?")
-                            .font(.ligga(.title2, weight: .bold))
+                            .wandererHeading(.title)
                             .foregroundStyle(WandererTheme.ink)
                         Text("Start with a destination. You can add days, places and reservations next.")
                             .font(.ligga(.subheadline))

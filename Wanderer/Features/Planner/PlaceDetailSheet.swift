@@ -90,7 +90,7 @@ struct PlaceDetailSheet: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 TextField("Place name", text: $name, axis: .vertical)
-                    .font(.ligga(.title3, weight: .bold))
+                    .font(.wanderer(.title))
                     .foregroundStyle(WandererTheme.ink)
                     .textInputAutocapitalization(.words)
                     .accessibilityIdentifier("place-name-field")

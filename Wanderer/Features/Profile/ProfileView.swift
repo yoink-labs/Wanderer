@@ -21,7 +21,7 @@ struct ProfileView: View {
     @State private var avatarSavedCount = 0
     @State private var avatarFailedCount = 0
 
-    private let gutter: CGFloat = 16
+    private let gutter = WandererTheme.gutter
 
     private let currencyCodes = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD"]
     private let unitOptions = ["Metric", "Imperial"]
@@ -85,9 +85,9 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
+                VStack(spacing: LiggaSpace.l) {
                     Text("Profile")
-                        .font(.display(.largeTitle))
+                        .wandererHeading(.screen)
                         .foregroundStyle(WandererTheme.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityAddTraits(.isHeader)
@@ -114,8 +114,8 @@ struct ProfileView: View {
                 }
                 }
                 .padding(.horizontal, gutter)
-                .padding(.top, 8)
-                .padding(.bottom, 30)
+                .padding(.top, LiggaSpace.xs)
+                .padding(.bottom, LiggaSpace.xl)
                 // Settings read as a column, not a stretched canvas.
                 .frame(maxWidth: 860)
                 .frame(maxWidth: .infinity)
@@ -174,9 +174,9 @@ struct ProfileView: View {
                 : AnyLayout(HStackLayout(spacing: 12))
             headerLayout {
                 WandererMark(size: 44)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                     Text("Planning as a guest")
-                        .font(.display(.title3))
+                        .wandererHeading(.section)
                         .foregroundStyle(.white)
                     Text(tripCount == 0
                          ? "Trips you plan stay on this phone"
@@ -197,10 +197,12 @@ struct ProfileView: View {
             } label: {
                 Text("Create a free account")
                     .font(.ligga(.headline, weight: .bold))
-                    .foregroundStyle(Color(hex: 0x10283A))
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 50)
-                    .background(Color(hex: 0xF2A922), in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
+                    .foregroundStyle(WandererTheme.charcoal)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
+                    .padding(LiggaSpace.s)
+                    .frame(maxWidth: .infinity, minHeight: WandererTheme.buttonHeight)
+                    .background(WandererTheme.route, in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
             }
             .buttonStyle(.liggaPressable)
             .accessibilityIdentifier("profile-guest-create-account")
@@ -213,7 +215,7 @@ struct ProfileView: View {
             .frame(maxWidth: .infinity, minHeight: 44)
         }
         .padding(20)
-        .background(Color(hex: 0x10283A), in: RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
+        .background(WandererTheme.charcoal, in: RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous)
                 .strokeBorder(.white.opacity(0.08), lineWidth: 1)
@@ -223,15 +225,17 @@ struct ProfileView: View {
     // MARK: - Header
 
     private var profileCard: some View {
-        HStack(spacing: 16) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+            : AnyLayout(HStackLayout(spacing: LiggaSpace.m))
+        return layout {
             avatarControl
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName)
-                    .font(.ligga(.title2, weight: .bold))
+                    .wandererHeading(.title)
                     .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
 
                 Text(emailLine)
                     .font(.ligga(.footnote))
@@ -346,7 +350,7 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Visited places")
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.card)
                         .foregroundStyle(WandererTheme.ink)
                     Spacer()
                     HStack(spacing: 4) {

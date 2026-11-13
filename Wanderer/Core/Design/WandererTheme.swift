@@ -65,6 +65,8 @@ enum WandererTheme {
     /// Horizontal gutter shared by every top-level screen.
     static let gutter: CGFloat = 20
     static let screenPadding: CGFloat = gutter
+    static let minimumTarget: CGFloat = 44
+    static let buttonHeight: CGFloat = 52
 
     static func cardShadow(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? Color.clear : Color(hex: 0x10283A, opacity: 0.07)
@@ -162,9 +164,57 @@ extension Font {
         .system(style, design: .default).weight(weight)
     }
 
-    /// Display face: SF Pro Expanded, heavy. Trip names and screen titles only.
-    static func display(_ style: Font.TextStyle, weight: Font.Weight = .heavy) -> Font {
-        .system(style, design: .default).weight(weight).width(.expanded)
+    static func wanderer(_ role: WandererType) -> Font {
+        .system(role.textStyle, design: .default).weight(role.weight)
+    }
+}
+
+/// A single hierarchy for titles. Native text styles retain optical sizing and
+/// Dynamic Type metrics, including all accessibility sizes.
+enum WandererType {
+    case screen, hero, title, section, card, group
+
+    var textStyle: Font.TextStyle {
+        switch self {
+        case .screen: return .largeTitle
+        case .hero: return .title
+        case .title: return .title2
+        case .section: return .title3
+        case .card: return .headline
+        case .group: return .subheadline
+        }
+    }
+
+    var weight: Font.Weight { self == .screen ? .bold : .semibold }
+    var tracking: CGFloat {
+        switch self {
+        case .screen: return -0.4
+        case .hero: return -0.2
+        default: return 0
+        }
+    }
+}
+
+private struct WandererHeadingModifier: ViewModifier {
+    let role: WandererType
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .headline) private var leading: CGFloat = 2
+
+    func body(content: Content) -> some View {
+        content
+            .font(.wanderer(role))
+            .tracking(dynamicTypeSize.isAccessibilitySize ? 0 : role.tracking)
+            .lineSpacing(leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+extension View {
+    /// Structural titles only. Values and controls use `Font.wanderer` without
+    /// header traits. Color stays with the surface (ink on cards, white on photos).
+    func wandererHeading(_ role: WandererType) -> some View {
+        modifier(WandererHeadingModifier(role: role))
     }
 }
 
@@ -177,13 +227,13 @@ struct WandererBackdrop: View {
         ZStack {
             WandererTheme.platinum
             RadialGradient(
-                colors: [WandererTheme.sea.opacity(scheme == .dark ? 0.30 : 0.10), .clear],
+                colors: [WandererTheme.sea.opacity(scheme == .dark ? 0.12 : 0.05), .clear],
                 center: .topTrailing,
                 startRadius: 20,
                 endRadius: 620
             )
             RadialGradient(
-                colors: [WandererTheme.route.opacity(scheme == .dark ? 0.16 : 0.10), .clear],
+                colors: [WandererTheme.route.opacity(scheme == .dark ? 0.06 : 0.04), .clear],
                 center: .topLeading,
                 startRadius: 10,
                 endRadius: 460
@@ -194,7 +244,7 @@ struct WandererBackdrop: View {
 }
 
 extension View {
-    /// The one card treatment: surface fill, 16pt continuous radius, a single
+    /// The one card treatment: surface fill, shared continuous radius, a single
     /// soft shadow and no stroke. Follows light and dark automatically.
     func liggaCard() -> some View {
         liggaCard(radius: WandererTheme.cardRadius)

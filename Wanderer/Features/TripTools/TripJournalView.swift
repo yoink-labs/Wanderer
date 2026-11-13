@@ -122,7 +122,7 @@ struct TripJournalView: View {
     private func daySection(_ group: (label: String, places: [PlaceRecord])) -> some View {
         VStack(alignment: .leading, spacing: LiggaSpace.xs) {
             Text(group.label)
-                .font(.ligga(.subheadline, weight: .semibold))
+                .wandererHeading(.group)
                 .foregroundStyle(WandererTheme.muted)
 
             VStack(spacing: 0) {
@@ -168,20 +168,11 @@ struct TripJournalView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: LiggaSpace.s) {
-            Image(systemName: "map.circle")
-                .font(.ligga(.largeTitle, weight: .semibold))
-                .foregroundStyle(WandererTheme.muted)
-            Text("No visited stops yet")
-                .font(.ligga(.headline, weight: .semibold))
-                .foregroundStyle(WandererTheme.ink)
-            Text("Swipe a stop in the planner and tap Visited. It will show up here, in order.")
-                .font(.ligga(.subheadline))
-                .foregroundStyle(WandererTheme.muted)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, LiggaSpace.xxl)
+        LiggaEmptyState(
+            icon: "map.circle",
+            title: "No visited stops yet",
+            message: "Swipe a stop in the planner and tap Visited. It will show up here, in order."
+        )
     }
 
     private func fitMap() {

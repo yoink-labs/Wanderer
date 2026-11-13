@@ -164,7 +164,7 @@ struct ChecklistView: View {
     private var suggestionsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Nothing on the list yet")
-                .font(.ligga(.headline, weight: .semibold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
             Text("Type above, or start with a common one:")
                 .font(.ligga(.subheadline))

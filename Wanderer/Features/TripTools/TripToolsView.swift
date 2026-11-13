@@ -64,7 +64,7 @@ struct TripToolsView: View {
                 header
                     .padding(.horizontal, TripToolsLayout.gutter)
                     .padding(.top, 8)
-                    .padding(.bottom, 6)
+                    .padding(.bottom, LiggaSpace.xs)
 
                 tabBar
                     .padding(.horizontal, TripToolsLayout.gutter)
@@ -110,73 +110,74 @@ struct TripToolsView: View {
     }
 
     private var header: some View {
-        HStack {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.xxs))
+            : AnyLayout(HStackLayout(spacing: LiggaSpace.xs))
+        return layout {
             Text("Trip tools")
-                .font(.ligga(.headline, weight: .semibold))
+                .wandererHeading(.title)
                 .foregroundStyle(WandererTheme.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .layoutPriority(1)
                 .accessibilityAddTraits(.isHeader)
-            Spacer()
-            Button {
-                showJournal = true
-            } label: {
-                Image(systemName: "map")
-                    .font(.ligga(.body, weight: .semibold))
-                    .foregroundStyle(WandererTheme.ink)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Trip journal")
+            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: LiggaSpace.xs) }
+            HStack(spacing: LiggaSpace.xs) {
+                Button {
+                    showJournal = true
+                } label: {
+                    Image(systemName: "map")
+                        .font(.ligga(.body, weight: .semibold))
+                        .foregroundStyle(WandererTheme.ink)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Trip journal")
 
-            Menu {
-                Button {
-                    exportPDF()
-                } label: {
-                    Label("PDF itinerary", systemImage: "doc.richtext")
-                }
-                Button {
-                    exportCalendar()
-                } label: {
-                    Label("Calendar file (.ics)", systemImage: "calendar.badge.plus")
-                }
-                let routes = TripExports.googleMapsURLs(places: store.visiblePlaces)
-                if !routes.isEmpty {
-                    ForEach(Array(routes.prefix(4).enumerated()), id: \.offset) { index, url in
-                        Button {
-                            openURL(url)
-                        } label: {
-                            Label(
-                                routes.count == 1
-                                    ? "Open route in Google Maps"
-                                    : "Google Maps route \(index + 1)",
-                                systemImage: "map"
-                            )
+                Menu {
+                    Button {
+                        exportPDF()
+                    } label: {
+                        Label("PDF itinerary", systemImage: "doc.richtext")
+                    }
+                    Button {
+                        exportCalendar()
+                    } label: {
+                        Label("Calendar file (.ics)", systemImage: "calendar.badge.plus")
+                    }
+                    let routes = TripExports.googleMapsURLs(places: store.visiblePlaces)
+                    if !routes.isEmpty {
+                        ForEach(Array(routes.prefix(4).enumerated()), id: \.offset) { index, url in
+                            Button {
+                                openURL(url)
+                            } label: {
+                                Label(
+                                    routes.count == 1
+                                        ? "Open route in Google Maps"
+                                        : "Google Maps route \(index + 1)",
+                                    systemImage: "map"
+                                )
+                            }
                         }
                     }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.ligga(.body, weight: .semibold))
+                        .foregroundStyle(WandererTheme.ink)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
-            } label: {
-                Image(systemName: "square.and.arrow.up")
+                .accessibilityLabel("Export trip")
+                .accessibilityIdentifier("trip-export-pdf")
+
+                Button("Done") { dismiss() }
                     .font(.ligga(.body, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
-                    .frame(width: 44, height: 44)
+                    .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("trip-tools-done")
             }
-            .accessibilityLabel("Export trip")
-            .accessibilityIdentifier("trip-export-pdf")
-
-            Button("Done") { dismiss() }
-                .font(.ligga(.body, weight: .semibold))
-                .foregroundStyle(WandererTheme.ink)
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("trip-tools-done")
         }
-        // Like a navigation bar, this row stops growing at AX1 so the title
-        // and three controls still fit on one line.
-        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
 
     private func exportPDF() {
@@ -227,7 +228,7 @@ struct TripToolsView: View {
             }
         }
         .padding(3)
-        .background(WandererTheme.fillMuted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(WandererTheme.fillMuted, in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
         .sensoryFeedback(.selection, trigger: selectedTab)
     }
 
@@ -246,7 +247,7 @@ struct TripToolsView: View {
                     .fixedSize(horizontal: !equalWidth, vertical: false)
                     .minimumScaleFactor(equalWidth ? 0.8 : 1)
                     .padding(.horizontal, equalWidth ? 4 : 14)
-                    .frame(maxWidth: equalWidth ? .infinity : nil, minHeight: 40)
+                    .frame(maxWidth: equalWidth ? .infinity : nil, minHeight: WandererTheme.minimumTarget)
                     .foregroundStyle(isSelected ? WandererTheme.ink : WandererTheme.muted)
                     .background {
                         if isSelected {
@@ -351,7 +352,7 @@ extension String {
 
 enum TripToolsLayout {
     /// Horizontal page gutter shared by every trip tool screen.
-    static let gutter: CGFloat = 16
+    static let gutter = WandererTheme.gutter
     /// Height of the fade that sits above sticky bottom actions.
     static let fadeHeight: CGFloat = 24
 }
@@ -367,7 +368,7 @@ extension View {
     }
 
     /// Plain list styling shared by the trip tool lists: platinum canvas,
-    /// 16pt gutters and no system section chrome.
+    /// Shared gutters and no system section chrome.
     func tripToolList() -> some View {
         listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -388,8 +389,8 @@ struct TripToolGroupLabel: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.ligga(.footnote, weight: .semibold))
-                .foregroundStyle(WandererTheme.muted)
+                .wandererHeading(.group)
+                .foregroundStyle(WandererTheme.ink)
             Spacer(minLength: 8)
             if let trailing {
                 Text(trailing)
@@ -398,8 +399,8 @@ struct TripToolGroupLabel: View {
                     .monospacedDigit()
             }
         }
-        .padding(.top, 10)
-        .padding(.bottom, 2)
+        .padding(.top, LiggaSpace.s)
+        .padding(.bottom, LiggaSpace.xxs)
         .accessibilityAddTraits(.isHeader)
     }
 }
@@ -439,28 +440,7 @@ struct TripToolPrimaryButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if let icon {
-                    Image(systemName: icon)
-                        .font(.ligga(.subheadline, weight: .bold))
-                }
-                Text(title)
-                    .font(.ligga(.headline, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            .frame(maxWidth: .infinity, minHeight: 48)
-            .padding(.horizontal, 12)
-            .foregroundStyle(WandererTheme.onPrimary)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isEnabled ? WandererTheme.primaryFill : WandererTheme.muted.opacity(0.35))
-            )
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
+        PrimaryButton(title: title, icon: icon, isEnabled: isEnabled, action: action)
     }
 }
 
@@ -499,8 +479,8 @@ struct TripToolSecondaryLabel: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
         .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 44)
-        .background(WandererTheme.platinum, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(WandererTheme.platinum, in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
     }
 }
 
@@ -524,7 +504,8 @@ struct TripToolEmptyState: View {
 
             VStack(spacing: 4) {
                 Text(title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.section)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(WandererTheme.ink)
                 Text(message)
                     .font(.ligga(.subheadline))
@@ -540,8 +521,8 @@ struct TripToolEmptyState: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
-        .padding(.horizontal, 20)
+        .padding(.vertical, LiggaSpace.xl)
+        .padding(.horizontal, WandererTheme.gutter)
         .liggaCard()
     }
 }
@@ -638,10 +619,10 @@ struct TripToolChip: View {
             .frame(maxWidth: .infinity, minHeight: 44)
             .foregroundStyle(isSelected ? WandererTheme.onPrimary : WandererTheme.ink)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                     .fill(isSelected ? WandererTheme.primaryFill : WandererTheme.platinum)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])

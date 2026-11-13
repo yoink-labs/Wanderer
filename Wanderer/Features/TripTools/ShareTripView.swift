@@ -113,7 +113,7 @@ struct ShareTripView: View {
                 .foregroundStyle(Color(hex: 0xF2A922))
                 .accessibilityHidden(true)
             Text("Plan this trip together")
-                .font(.display(.title3))
+                .wandererHeading(.section)
                 .foregroundStyle(.white)
             Text("Sharing a link and inviting people need a free Yoink Labs account. Everything you've planned on this phone comes with you.")
                 .font(.ligga(.subheadline))
@@ -430,7 +430,7 @@ struct ShareTripView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Anyone with the link can view the plan")
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.card)
                         .foregroundStyle(WandererTheme.ink)
                         .fixedSize(horizontal: false, vertical: true)
                     Text("Days and stops only. People, notes, costs, bookings and files stay private.")
