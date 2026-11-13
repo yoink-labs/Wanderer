@@ -14,6 +14,12 @@ final class TripDetailStore: ObservableObject {
     @Published private(set) var members: [TripMemberProfile] = []
     @Published private(set) var checklist: [ChecklistRecord] = []
     @Published private(set) var lists: [TripListRecord] = []
+    /// What other people see: the shared rows exactly as stored.
+    @Published private(set) var personal: PersonalLayerRecord = .empty
+    /// Keyed by reservation id; missing when no live status is available.
+    @Published private(set) var flightStatuses: [String: FlightLookupEnvelope] = [:]
+    @Published private(set) var flightAttribution: String?
+    @Published private(set) var flightBudget: FlightBudget?
     @Published private(set) var isLoading = false
     @Published private(set) var cloudUserId: UUID?
     @Published private(set) var isChangingDays = false
@@ -184,8 +190,280 @@ final class TripDetailStore: ObservableObject {
 
     var currentUserId: UUID? { cloudUserId }
 
+    // MARK: - Personal layer
+
+    private static func personalKey(_ id: UUID) -> String {
+        id.uuidString.lowercased()
+    }
+
+    private func overrideMap() -> [String: PersonalOverrideRecord] {
+        Dictionary(personal.overrides.map { ($0.itemId.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Shared places with this member's replacements applied, plus the places
+    /// only they added. Everyone else's view is untouched.
+    var visiblePlaces: [PlaceRecord] {
+        let overrides = overrideMap()
+        let hidden = Set(personal.overrides.filter(\.hidden).map { $0.itemId.lowercased() })
+        let shared = places
+            .filter { !hidden.contains(Self.personalKey($0.id)) }
+            .map { apply(overrides[Self.personalKey($0.id)], to: $0) }
+        return shared + personal.privatePlaces
+    }
+
+    /// Shared reservations with replacements and this member's private
+    /// bookings. Used everywhere the planner lists bookings.
+    var visibleReservations: [ReservationRecord] {
+        let overrides = overrideMap()
+        let hidden = Set(personal.overrides.filter(\.hidden).map { $0.itemId.lowercased() })
+        let shared = reservations
+            .filter { !hidden.contains(Self.personalKey($0.id)) }
+            .map { apply(overrides[Self.personalKey($0.id)], to: $0) }
+        return shared + personal.privateReservations
+    }
+
+    func isPrivate(_ place: PlaceRecord) -> Bool {
+        personal.privatePlaces.contains { $0.id == place.id }
+    }
+
+    func isPrivate(_ reservation: ReservationRecord) -> Bool {
+        personal.privateReservations.contains { $0.id == reservation.id }
+    }
+
+    /// The active replacement for a shared row, if the member made one.
+    func personalOverride(for id: UUID) -> PersonalOverrideRecord? {
+        let key = Self.personalKey(id)
+        return personal.overrides.first { $0.itemId.lowercased() == key }
+    }
+
+    func flightStatus(for reservationID: UUID) -> FlightStatusRecord? {
+        flightStatuses[Self.personalKey(reservationID)]?.flight
+    }
+
+    private func apply(_ override: PersonalOverrideRecord?, to place: PlaceRecord) -> PlaceRecord {
+        guard let data = override?.data, !data.isEmpty else { return place }
+        var updated = place
+        if let value = data["name"]?.stringValue { updated.name = value }
+        if let value = data["address"] { updated.address = value.stringValue }
+        if let value = data["category"]?.stringValue.flatMap(PlaceCategory.init(rawValue:)) {
+            updated.category = value
+        }
+        if let value = data["notes"] { updated.notes = value.stringValue }
+        if let value = data["website"] { updated.website = value.stringValue }
+        if let value = data["phone"] { updated.phone = value.stringValue }
+        if let value = data["start_time"] { updated.startTime = value.stringValue }
+        if let value = data["end_time"] { updated.endTime = value.stringValue }
+        return updated
+    }
+
+    private func apply(_ override: PersonalOverrideRecord?, to reservation: ReservationRecord) -> ReservationRecord {
+        guard let data = override?.data, !data.isEmpty else { return reservation }
+        var updated = reservation
+        if let value = data["title"]?.stringValue { updated.title = value }
+        if let value = data["provider"] { updated.provider = value.stringValue }
+        if let value = data["confirmation_code"] { updated.confirmationCode = value.stringValue }
+        if let value = data["start_at"] { updated.startAt = value.stringValue }
+        if let value = data["end_at"] { updated.endAt = value.stringValue }
+        if let value = data["start_location"] { updated.startLocation = value.stringValue }
+        if let value = data["end_location"] { updated.endLocation = value.stringValue }
+        if let value = data["notes"] { updated.notes = value.stringValue }
+        if let value = data["cost"]?.doubleValue { updated.cost = value }
+        if let value = data["currency"]?.stringValue { updated.currency = value }
+        return updated
+    }
+
+    func hideForMe(_ place: PlaceRecord) async {
+        await setOverride(for: place, hidden: true, data: [:])
+    }
+
+    func hideReservationForMe(_ reservation: ReservationRecord) async {
+        guard let cloud else { return }
+        do {
+            _ = try await cloud.setPersonalOverride(
+                tripID: trip.id,
+                itemType: "reservation",
+                itemID: reservation.id,
+                hidden: true,
+                data: [:]
+            )
+            await reloadPersonal()
+        } catch {
+            errorMessage = "Couldn't hide that booking: \(error.localizedDescription)"
+        }
+    }
+
+    func restoreReservationForMe(_ reservation: ReservationRecord) async {
+        guard let cloud else { return }
+        do {
+            try await cloud.clearPersonalOverride(tripID: trip.id, itemType: "reservation", itemID: reservation.id)
+            await reloadPersonal()
+        } catch {
+            errorMessage = "Couldn't restore that booking: \(error.localizedDescription)"
+        }
+    }
+
+    func restoreForMe(_ place: PlaceRecord) async {
+        guard let cloud else { return }
+        do {
+            try await cloud.clearPersonalOverride(tripID: trip.id, itemType: "place", itemID: place.id)
+            await reloadPersonal()
+        } catch {
+            errorMessage = "Couldn't restore that stop: \(error.localizedDescription)"
+        }
+    }
+
+    /// Saves a replacement that only this member sees.
+    func updateForMe(_ place: PlaceRecord, name: String, notes: String?, category: PlaceCategory) async {
+        var data: [String: JSONValue] = ["name": .string(name), "category": .string(category.rawValue)]
+        data["notes"] = .optional(notes)
+        await setOverride(for: place, hidden: false, data: data)
+    }
+
+    func setOverride(for place: PlaceRecord, hidden: Bool, data: [String: JSONValue]) async {
+        guard let cloud else { return }
+        do {
+            _ = try await cloud.setPersonalOverride(
+                tripID: trip.id,
+                itemType: "place",
+                itemID: place.id,
+                hidden: hidden,
+                data: data
+            )
+            await reloadPersonal()
+        } catch {
+            errorMessage = "Couldn't update your private view: \(error.localizedDescription)"
+        }
+    }
+
+    /// A stop only this member sees. Private stops can sit on a day like any
+    /// other stop but never appear in another member's itinerary.
+    func addPrivatePlace(
+        name: String,
+        address: String?,
+        latitude: Double?,
+        longitude: Double?,
+        category: PlaceCategory,
+        dayID: UUID?
+    ) async {
+        guard let cloud else { return }
+        do {
+            _ = try await cloud.addPrivatePlace(tripID: trip.id, body: [
+                "name": .string(name),
+                "address": .optional(address),
+                "lat": .optional(latitude),
+                "lng": .optional(longitude),
+                "category": .string(category.rawValue),
+                "day_id": .optional(dayID),
+                "position": .integer(places(for: dayID).count)
+            ])
+            await reloadPersonal()
+        } catch {
+            errorMessage = "Couldn't add your private stop: \(error.localizedDescription)"
+        }
+    }
+
+    func deletePrivatePlace(_ place: PlaceRecord) async {
+        guard let cloud else { return }
+        do {
+            try await cloud.deletePrivatePlace(tripID: trip.id, placeID: place.id)
+            await reloadPersonal()
+        } catch {
+            errorMessage = "Couldn't remove that private stop: \(error.localizedDescription)"
+        }
+    }
+
+    func addPrivateReservation(
+        type: ReservationType,
+        title: String,
+        provider: String?,
+        confirmationCode: String?,
+        startAt: Date?,
+        endAt: Date?,
+        startLocation: String?,
+        endLocation: String?,
+        cost: Double?,
+        currency: String,
+        notes: String?,
+        flightNumber: String?,
+        flightDate: String?
+    ) async {
+        guard let cloud else { return }
+        var metadata: [String: JSONValue] = [:]
+        if let flightNumber { metadata["flight_number"] = .string(flightNumber) }
+        if let flightDate { metadata["flight_date"] = .string(flightDate) }
+        do {
+            _ = try await cloud.addPrivateReservation(tripID: trip.id, body: [
+                "type": .string(type.rawValue),
+                "title": .string(title),
+                "provider": .optional(provider),
+                "confirmation_code": .optional(confirmationCode),
+                "start_at": .optional(Self.timestamp(startAt)),
+                "end_at": .optional(Self.timestamp(endAt)),
+                "start_location": .optional(startLocation),
+                "end_location": .optional(endLocation),
+                "cost": .optional(cost),
+                "currency": .string(currency),
+                "notes": .optional(notes),
+                "metadata": .object(metadata)
+            ])
+            await reloadPersonal()
+            await refreshFlights()
+        } catch {
+            errorMessage = "Couldn't add your private booking: \(error.localizedDescription)"
+        }
+    }
+
+    func deletePrivateReservation(_ reservation: ReservationRecord) async {
+        guard let cloud else { return }
+        do {
+            try await cloud.deletePrivateReservation(tripID: trip.id, reservationID: reservation.id)
+            await reloadPersonal()
+        } catch {
+            errorMessage = "Couldn't remove that private booking: \(error.localizedDescription)"
+        }
+    }
+
+    private func reloadPersonal() async {
+        guard let cloud else { return }
+        if let loaded = try? await cloud.personal(tripID: trip.id) {
+            personal = loaded
+        }
+    }
+
+    /// Quietly re-reads the collaborative parts of the trip. Used by the
+    /// planner's 30-second refresh and pull-to-refresh, so a tripmate's edit
+    /// appears without closing and reopening the trip.
+    func refreshCollaboration() async {
+        guard let cloud else { return }
+        async let daysTask = try? cloud.days(tripID: trip.id)
+        async let placesTask = try? cloud.places(tripID: trip.id)
+        async let reservationsTask = try? cloud.reservations(tripID: trip.id)
+        async let listsTask = try? cloud.lists(tripID: trip.id)
+        async let personalTask = try? cloud.personal(tripID: trip.id)
+
+        if let loaded = await daysTask { days = loaded }
+        if let loaded = await placesTask { places = loaded }
+        if let loaded = await reservationsTask { reservations = loaded }
+        if let loaded = await listsTask { lists = loaded }
+        if let loaded = await personalTask { personal = loaded }
+    }
+
+    /// Pulls live status for this trip's flights. Failure is silent: the
+    /// itinerary still works without it.
+    func refreshFlights() async {
+        guard let cloud else { return }
+        guard reservations.contains(where: { $0.type == .flight })
+            || personal.privateReservations.contains(where: { $0.type == .flight }) else { return }
+        if let envelope = try? await cloud.tripFlights(tripID: trip.id) {
+            flightStatuses = envelope.flights
+            flightAttribution = envelope.attribution
+            flightBudget = envelope.budget
+            FlightAlerts.process(tripTitle: trip.title, statuses: envelope.flights)
+        }
+    }
+
     func places(for dayID: UUID?) -> [PlaceRecord] {
-        places
+        visiblePlaces
             .filter { $0.dayId == dayID }
             .sorted { $0.position < $1.position }
     }
@@ -218,7 +496,7 @@ final class TripDetailStore: ObservableObject {
     }
 
     var visitedPlaces: [PlaceRecord] {
-        places.filter(\.isVisited).sorted { ($0.visitedAt ?? "") < ($1.visitedAt ?? "") }
+        visiblePlaces.filter(\.isVisited).sorted { ($0.visitedAt ?? "") < ($1.visitedAt ?? "") }
     }
 
     // MARK: - Load
@@ -240,9 +518,12 @@ final class TripDetailStore: ObservableObject {
             async let splitsTask = cloud.expenseSplits(tripID: trip.id)
             async let settlementsTask = cloud.settlements(tripID: trip.id)
             async let listsTask = cloud.lists(tripID: trip.id)
+            // The personal layer is optional: guest trips and older servers
+            // simply have none, and that must not fail the whole load.
+            async let personalTask = try? cloud.personal(tripID: trip.id)
 
-            let (loadedDays, loadedPlaces, loadedReservations, loadedExpenses, loadedChecklist, loadedMembers, loadedSplits, loadedSettlements, loadedLists) =
-                try await (daysTask, placesTask, reservationsTask, expensesTask, checklistTask, membersTask, splitsTask, settlementsTask, listsTask)
+            let (loadedDays, loadedPlaces, loadedReservations, loadedExpenses, loadedChecklist, loadedMembers, loadedSplits, loadedSettlements, loadedLists, loadedPersonal) =
+                try await (daysTask, placesTask, reservationsTask, expensesTask, checklistTask, membersTask, splitsTask, settlementsTask, listsTask, personalTask)
 
             days = loadedDays
             places = loadedPlaces
@@ -253,8 +534,13 @@ final class TripDetailStore: ObservableObject {
             expenseSplits = loadedSplits
             settlements = loadedSettlements
             lists = loadedLists
+            personal = loadedPersonal ?? .empty
             cloudUserId = try? await cloud.profile().id
             errorMessage = nil
+
+            // Live flight status is a background nicety; never block opening
+            // a trip on a paid lookup.
+            Task { await refreshFlights() }
         } catch {
             errorMessage = "Couldn't load this trip: \(error.localizedDescription)"
         }
@@ -295,6 +581,15 @@ final class TripDetailStore: ObservableObject {
     func updatePlace(_ place: PlaceRecord, name: String, notes: String?, category: PlaceCategory) async {
         guard let cloud else { return }
         do {
+            if isPrivate(place) {
+                _ = try await cloud.updatePrivatePlace(tripID: trip.id, placeID: place.id, body: [
+                    "name": .string(name),
+                    "notes": .optional(notes),
+                    "category": .string(category.rawValue)
+                ])
+                await reloadPersonal()
+                return
+            }
             _ = try await cloud.updatePlace(tripID: trip.id, placeID: place.id, body: [
                 "name": .string(name),
                 "notes": .optional(notes),
@@ -308,6 +603,10 @@ final class TripDetailStore: ObservableObject {
 
     func deletePlace(_ place: PlaceRecord) async {
         guard let cloud else { return }
+        if isPrivate(place) {
+            await deletePrivatePlace(place)
+            return
+        }
         do {
             try await cloud.deletePlace(tripID: trip.id, placeID: place.id)
             places.removeAll { $0.id == place.id }
@@ -655,9 +954,14 @@ final class TripDetailStore: ObservableObject {
         endLocation: String?,
         cost: Double?,
         currency: String,
-        notes: String?
+        notes: String?,
+        flightNumber: String? = nil,
+        flightDate: String? = nil
     ) async {
         guard let cloud else { return }
+        var metadata: [String: JSONValue] = [:]
+        if let flightNumber, !flightNumber.isEmpty { metadata["flight_number"] = .string(flightNumber) }
+        if let flightDate, !flightDate.isEmpty { metadata["flight_date"] = .string(flightDate) }
         do {
             _ = try await cloud.addReservation(tripID: trip.id, body: [
                 "type": .string(type.rawValue),
@@ -670,9 +974,11 @@ final class TripDetailStore: ObservableObject {
                 "end_location": .optional(endLocation),
                 "cost": .optional(cost),
                 "currency": .string(currency),
-                "notes": .optional(notes)
+                "notes": .optional(notes),
+                "metadata": .object(metadata)
             ])
             await reloadReservations()
+            await refreshFlights()
         } catch {
             errorMessage = "Couldn't add that reservation: \(error.localizedDescription)"
         }
@@ -680,6 +986,10 @@ final class TripDetailStore: ObservableObject {
 
     func deleteReservation(_ reservation: ReservationRecord) async {
         guard let cloud else { return }
+        if isPrivate(reservation) {
+            await deletePrivateReservation(reservation)
+            return
+        }
         do {
             try await cloud.deleteReservation(tripID: trip.id, reservationID: reservation.id)
             reservations.removeAll { $0.id == reservation.id }

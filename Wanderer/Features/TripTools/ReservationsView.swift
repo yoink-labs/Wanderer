@@ -15,7 +15,7 @@ struct ReservationsView: View {
 
     var body: some View {
         List {
-            if store.reservations.isEmpty {
+            if store.visibleReservations.isEmpty {
                 TripToolEmptyState(
                     icon: "ticket",
                     title: "No bookings yet",
@@ -64,6 +64,21 @@ struct ReservationsView: View {
                                         Label("Copy confirmation", systemImage: "doc.on.doc")
                                     }
                                 }
+                                if !store.isPrivate(reservation) {
+                                    if store.personalOverride(for: reservation.id) != nil {
+                                        Button {
+                                            Task { await store.restoreReservationForMe(reservation) }
+                                        } label: {
+                                            Label("Restore shared booking", systemImage: "arrow.uturn.backward")
+                                        }
+                                    } else {
+                                        Button {
+                                            Task { await store.hideReservationForMe(reservation) }
+                                        } label: {
+                                            Label("Hide for me", systemImage: "eye.slash")
+                                        }
+                                    }
+                                }
                                 Button(role: .destructive) {
                                     pendingDelete = reservation
                                 } label: {
@@ -76,7 +91,7 @@ struct ReservationsView: View {
         }
         .tripToolList()
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !store.reservations.isEmpty {
+            if !store.visibleReservations.isEmpty {
                 TripToolBottomBar {
                     TripToolPrimaryButton(title: "Add booking", icon: "plus") {
                         showAdd = true
@@ -106,7 +121,7 @@ struct ReservationsView: View {
         } message: { reservation in
             Text(reservation.title)
         }
-        .onChange(of: store.reservations.count) { _, _ in
+        .onChange(of: store.visibleReservations.count) { _, _ in
             if let filter, !availableTypes.contains(filter) {
                 self.filter = nil
             }
@@ -116,11 +131,11 @@ struct ReservationsView: View {
     // MARK: - Filter
 
     private var showsFilter: Bool {
-        store.reservations.count > Self.filterThreshold && availableTypes.count > 1
+        store.visibleReservations.count > Self.filterThreshold && availableTypes.count > 1
     }
 
     private var availableTypes: [ReservationType] {
-        let present = Set(store.reservations.map(\.type))
+        let present = Set(store.visibleReservations.map(\.type))
         return ReservationType.allCases.filter { present.contains($0) }
     }
 
@@ -132,7 +147,7 @@ struct ReservationsView: View {
                 }
                 ForEach(availableTypes) { type in
                     TripToolFilterChip(
-                        title: "\(type.title) · \(store.reservations.filter { $0.type == type }.count)",
+                        title: "\(type.title) · \(store.visibleReservations.filter { $0.type == type }.count)",
                         icon: type.icon,
                         isSelected: filter == type
                     ) {
@@ -147,7 +162,7 @@ struct ReservationsView: View {
     // MARK: - Grouping
 
     private var sections: [ReservationSection] {
-        let visible = store.reservations.filter { filter == nil || $0.type == filter }
+        let visible = store.visibleReservations.filter { filter == nil || $0.type == filter }
         let sorted = visible.sorted { lhs, rhs in
             let left = TripToolsFormat.date(fromISO: lhs.startAt)
             let right = TripToolsFormat.date(fromISO: rhs.startAt)
@@ -203,9 +218,15 @@ struct ReservationsView: View {
     // MARK: - Rows
 
     private func row(for reservation: ReservationRecord) -> some View {
-        BookingTicket(reservation: reservation, timeZone: tripTimeZone, currency: defaultCurrency)
-            .accessibilityLabel(accessibilityLabel(for: reservation))
-            .tripToolListRow()
+        BookingTicket(
+            reservation: reservation,
+            timeZone: tripTimeZone,
+            currency: defaultCurrency,
+            flightStatus: store.flightStatus(for: reservation.id),
+            isPrivate: store.isPrivate(reservation)
+        )
+        .accessibilityLabel(accessibilityLabel(for: reservation))
+        .tripToolListRow()
     }
 
     private func accessibilityLabel(for reservation: ReservationRecord) -> String {
@@ -289,11 +310,21 @@ private struct AddReservationSheet: View {
     @State private var costText = ""
     @State private var currency = ""
     @State private var notes = ""
+    /// Flight tracking: the lookup key is the number plus the local date.
+    @State private var flightNumber = ""
+    @State private var flightDate = Date()
+    @State private var forMe = false
 
     @State private var isSaving = false
 
+    private var resolvedTitle: String {
+        let typed = title.tripToolsTrimmed
+        if !typed.isEmpty { return typed }
+        return type == .flight ? flightNumber.tripToolsTrimmed.uppercased() : ""
+    }
+
     private var canSave: Bool {
-        !isSaving && !title.tripToolsTrimmed.isEmpty
+        !isSaving && !resolvedTitle.isEmpty
     }
 
     var body: some View {
@@ -314,6 +345,26 @@ private struct AddReservationSheet: View {
                                     type = option
                                 }
                             }
+                        }
+
+                        if !LocalTrips.isActive {
+                            Divider().overlay(WandererTheme.line)
+                            Toggle(isOn: $forMe) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Only visible to me")
+                                        .font(.ligga(.subheadline, weight: .semibold))
+                                        .foregroundStyle(WandererTheme.ink)
+                                    Text(
+                                        forMe
+                                            ? "Only you see this booking. The group plan is unchanged."
+                                            : "Everyone on the trip sees this booking."
+                                    )
+                                    .font(.ligga(.caption))
+                                    .foregroundStyle(WandererTheme.muted)
+                                }
+                            }
+                            .tint(WandererTheme.coral)
+                            .accessibilityIdentifier("reservation-private-toggle")
                         }
                     }
 
@@ -346,6 +397,25 @@ private struct AddReservationSheet: View {
                         Text("Schedule")
                             .font(.ligga(.subheadline, weight: .semibold))
                             .foregroundStyle(WandererTheme.muted)
+                        if type == .flight {
+                            TripToolField(
+                                label: "Flight number",
+                                icon: "airplane",
+                                placeholder: "BA123",
+                                text: $flightNumber,
+                                capitalization: .characters,
+                                autocorrectionDisabled: true
+                            )
+                            Divider().overlay(WandererTheme.line)
+                            DatePicker("Flight date", selection: $flightDate, displayedComponents: .date)
+                                .font(.ligga(.body, weight: .medium))
+                                .foregroundStyle(WandererTheme.ink)
+                                .tint(WandererTheme.controlTint)
+                            Text("Add the number to get live status, gate and delays.")
+                                .font(.ligga(.caption))
+                                .foregroundStyle(WandererTheme.muted)
+                            Divider().overlay(WandererTheme.line)
+                        }
                         TripToolOptionalDate(title: "Start", isEnabled: $hasStart, date: $startAt)
                         Divider().overlay(WandererTheme.line)
                         TripToolOptionalDate(title: "End", isEnabled: $hasEnd, date: $endAt)
@@ -400,8 +470,8 @@ private struct AddReservationSheet: View {
                     .accessibilityIdentifier("reservation-save")
                     .padding(.top, 4)
 
-                    if title.tripToolsTrimmed.isEmpty {
-                        Text("Add a title to save.")
+                    if resolvedTitle.isEmpty {
+                        Text(type == .flight ? "Add a flight number or title to save." : "Add a title to save.")
                             .font(.ligga(.footnote))
                             .foregroundStyle(WandererTheme.muted)
                             .frame(maxWidth: .infinity)
@@ -437,7 +507,7 @@ private struct AddReservationSheet: View {
     }
 
     private func save() {
-        let trimmedTitle = title.tripToolsTrimmed
+        let trimmedTitle = resolvedTitle
         guard canSave, !trimmedTitle.isEmpty else { return }
         isSaving = true
 
@@ -452,21 +522,43 @@ private struct AddReservationSheet: View {
         let resolvedStart = hasStart ? startAt : nil
         let resolvedEnd = hasEnd ? endAt : nil
         let resolvedCost = parseCost(costText)
+        let flight = type == .flight ? flightNumber.tripToolsTrimmed.uppercased() : nil
+        let dateString = type == .flight ? Trip.isoDay(flightDate) : nil
 
         Task {
-            await store.addReservation(
-                type: type,
-                title: trimmedTitle,
-                provider: resolvedProvider,
-                confirmationCode: resolvedConfirmation,
-                startAt: resolvedStart,
-                endAt: resolvedEnd,
-                startLocation: resolvedStartLocation,
-                endLocation: resolvedEndLocation,
-                cost: resolvedCost,
-                currency: resolvedCurrency,
-                notes: resolvedNotes
-            )
+            if forMe {
+                await store.addPrivateReservation(
+                    type: type,
+                    title: trimmedTitle,
+                    provider: resolvedProvider,
+                    confirmationCode: resolvedConfirmation,
+                    startAt: resolvedStart,
+                    endAt: resolvedEnd,
+                    startLocation: resolvedStartLocation,
+                    endLocation: resolvedEndLocation,
+                    cost: resolvedCost,
+                    currency: resolvedCurrency,
+                    notes: resolvedNotes,
+                    flightNumber: flight,
+                    flightDate: dateString
+                )
+            } else {
+                await store.addReservation(
+                    type: type,
+                    title: trimmedTitle,
+                    provider: resolvedProvider,
+                    confirmationCode: resolvedConfirmation,
+                    startAt: resolvedStart,
+                    endAt: resolvedEnd,
+                    startLocation: resolvedStartLocation,
+                    endLocation: resolvedEndLocation,
+                    cost: resolvedCost,
+                    currency: resolvedCurrency,
+                    notes: resolvedNotes,
+                    flightNumber: flight,
+                    flightDate: dateString
+                )
+            }
             isSaving = false
             dismiss()
         }

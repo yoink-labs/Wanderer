@@ -58,9 +58,13 @@ struct ExploreView: View {
                 .padding(.horizontal, gutter)
                 .padding(.top, 8)
                 .padding(.bottom, 32)
+                // A guide row reads best as a column; don't stretch it across
+                // the whole inner display.
+                .frame(maxWidth: 900)
+                .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.immediately)
-            .background(WandererTheme.sand.ignoresSafeArea())
+            .background(WandererBackdrop())
             .contentMargins(.bottom, 96, for: .scrollContent)
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await reload() }

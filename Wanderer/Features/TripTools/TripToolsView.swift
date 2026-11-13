@@ -39,6 +39,7 @@ struct TripToolsView: View {
     var initialTab: TripToolTab = .reservations
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var selectedTab: TripToolTab
     @State private var errorText: String?
     @State private var didRequestLoad = false
@@ -129,8 +130,32 @@ struct TripToolsView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Trip journal")
 
-            Button {
-                exportPDF()
+            Menu {
+                Button {
+                    exportPDF()
+                } label: {
+                    Label("PDF itinerary", systemImage: "doc.richtext")
+                }
+                Button {
+                    exportCalendar()
+                } label: {
+                    Label("Calendar file (.ics)", systemImage: "calendar.badge.plus")
+                }
+                let routes = TripExports.googleMapsURLs(places: store.visiblePlaces)
+                if !routes.isEmpty {
+                    ForEach(Array(routes.prefix(4).enumerated()), id: \.offset) { index, url in
+                        Button {
+                            openURL(url)
+                        } label: {
+                            Label(
+                                routes.count == 1
+                                    ? "Open route in Google Maps"
+                                    : "Google Maps route \(index + 1)",
+                                systemImage: "map"
+                            )
+                        }
+                    }
+                }
             } label: {
                 Image(systemName: "square.and.arrow.up")
                     .font(.ligga(.body, weight: .semibold))
@@ -138,8 +163,7 @@ struct TripToolsView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Export trip as PDF")
+            .accessibilityLabel("Export trip")
             .accessibilityIdentifier("trip-export-pdf")
 
             Button("Done") { dismiss() }
@@ -159,11 +183,26 @@ struct TripToolsView: View {
         guard let url = TripPDFExporter.writeTemporaryFile(
             trip: trip,
             days: store.days,
-            places: store.places,
-            reservations: store.reservations,
+            places: store.visiblePlaces,
+            reservations: store.visibleReservations,
             expenses: store.expenses
         ) else {
             errorText = "Couldn't build the PDF. Try again."
+            return
+        }
+        exportURL = url
+        showShareSheet = true
+        LiggaHaptics.success()
+    }
+
+    private func exportCalendar() {
+        guard let url = TripExports.writeCalendarFile(
+            trip: trip,
+            days: store.days,
+            places: store.visiblePlaces,
+            reservations: store.visibleReservations
+        ) else {
+            errorText = "Couldn't build the calendar file. Try again."
             return
         }
         exportURL = url

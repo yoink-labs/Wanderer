@@ -6,6 +6,7 @@ struct PlannerView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
     @StateObject private var store: TripDetailStore
 
     @State private var selection: PlannerSelection = .unscheduled
@@ -57,6 +58,7 @@ struct PlannerView: View {
         case notes
         case attachments
         case nearby
+        case personalItems
         case dayNote(TripDayRecord)
         case place(PlaceRecord)
         case tools(TripToolTab)
@@ -79,6 +81,8 @@ struct PlannerView: View {
                 return "attachments"
             case .nearby:
                 return "nearby"
+            case .personalItems:
+                return "personal-items"
             case .dayNote(let day):
                 return "day-note-\(day.id.uuidString)"
             case .place(let place):
@@ -96,7 +100,7 @@ struct PlannerView: View {
             uniqueKeysWithValues: store.days.enumerated().map { ($0.element.id, $0.offset) }
         )
 
-        return store.places.sorted { lhs, rhs in
+        return store.visiblePlaces.sorted { lhs, rhs in
             let leftDay = lhs.dayId.flatMap { dayOrder[$0] } ?? Int.max
             let rightDay = rhs.dayId.flatMap { dayOrder[$0] } ?? Int.max
             if leftDay != rightDay { return leftDay < rightDay }
@@ -125,7 +129,7 @@ struct PlannerView: View {
 
     private var otherPlaces: [PlaceRecord] {
         let selectedIDs = Set(selectedPlaces.map(\.id))
-        return store.places.filter { !selectedIDs.contains($0.id) }
+        return store.visiblePlaces.filter { !selectedIDs.contains($0.id) }
     }
 
     private var currentDayID: UUID? {
@@ -168,23 +172,22 @@ struct PlannerView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .bottom) {
-                PlannerMapView(
-                    selectedPlaces: selectedPlaces,
-                    otherPlaces: otherPlaces,
-                    cameraPosition: $cameraPosition,
-                    focusedPlaceID: focusedPlaceID,
-                    onSelectPlace: { place in selectFromMap(place) },
-                    onRegionChange: { region in visibleRegion = region }
-                )
-                .ignoresSafeArea()
-
-                panel(height: proxy.size.height)
-                    .frame(height: panelHeight(for: proxy.size.height))
-                    .background(panelBackground)
+            // Two panes need room for two readable columns. At accessibility
+            // text sizes the single-column map + sheet layout keeps every
+            // label intact; same controls, same hierarchy, one pane at a time.
+            let wide = proxy.size.width >= Self.wideBreakpoint && !dynamicTypeSize.isAccessibilitySize
+            Group {
+                if wide {
+                    wideLayout(proxy)
+                } else {
+                    compactLayout(proxy)
+                }
             }
             .onAppear { updateViewport(proxy) }
-            .onChange(of: proxy.size) { _, _ in updateViewport(proxy) }
+            .onChange(of: proxy.size) { _, _ in
+                updateViewport(proxy)
+                framePlaces()
+            }
         }
         .background(WandererTheme.sand)
         .navigationTitle("")
@@ -204,6 +207,23 @@ struct PlannerView: View {
             .padding(.top, 8)
         }
         .task { await bootstrap() }
+        .task {
+            // Fast-enough sync without a socket: a tripmate's edit lands
+            // within half a minute while the planner is on screen.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                if Task.isCancelled { break }
+                await store.refreshCollaboration()
+            }
+        }
+        .task {
+            // Flight lookups are paid and shared-cached, so poll rarely.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(600))
+                if Task.isCancelled { break }
+                await store.refreshFlights()
+            }
+        }
         .onAppear {
             // Large text needs the room: open the panel at its tallest.
             if dynamicTypeSize.isAccessibilitySize {
@@ -219,7 +239,7 @@ struct PlannerView: View {
             focusedPlaceID = nil
             framePlaces()
         }
-        .onChange(of: store.places) { _, places in
+        .onChange(of: store.visiblePlaces) { _, places in
             if let focusedPlaceID, !places.contains(where: { $0.id == focusedPlaceID }) {
                 self.focusedPlaceID = nil
             }
@@ -286,11 +306,120 @@ struct PlannerView: View {
         .sensoryFeedback(.success, trigger: addedCount)
         .sensoryFeedback(.warning, trigger: removedCount)
         .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: detentIndex)
-        .onChange(of: store.places.count) { oldValue, newValue in
+        .onChange(of: store.visiblePlaces.count) { oldValue, newValue in
             if newValue > oldValue {
                 addedCount += 1
             } else if newValue < oldValue {
                 removedCount += 1
+            }
+        }
+    }
+
+    // MARK: - Layouts
+
+    /// At or above this content width the itinerary and the map sit side by
+    /// side instead of stacking. The threshold tracks available space, not a
+    /// device: it is 720pt on iPhone Duo open, on iPad, and in Split View.
+    private static let wideBreakpoint: CGFloat = 720
+
+    private var isWideLayout: Bool {
+        viewport.size.width >= Self.wideBreakpoint && !dynamicTypeSize.isAccessibilitySize
+    }
+
+    private func compactLayout(_ proxy: GeometryProxy) -> some View {
+        ZStack(alignment: .bottom) {
+            PlannerMapView(
+                selectedPlaces: selectedPlaces,
+                otherPlaces: otherPlaces,
+                cameraPosition: $cameraPosition,
+                focusedPlaceID: focusedPlaceID,
+                onSelectPlace: { place in selectFromMap(place) },
+                onRegionChange: { region in visibleRegion = region }
+            )
+            .ignoresSafeArea()
+
+            panel(height: proxy.size.height)
+                .frame(height: panelHeight(for: proxy.size.height))
+                // On a wide canvas (large text on Duo) keep the sheet a
+                // readable column instead of stretching it edge to edge.
+                .frame(maxWidth: proxy.size.width >= 700 ? 760 : .infinity)
+                .wandererGlass(radius: 30, tintOpacity: 0.55)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
+        }
+    }
+
+    /// Two panes: the itinerary floats over the map as a glass card, while
+    /// the map owns the full canvas. The card never covers an interactive
+    /// control and the map stays alive underneath.
+    private func wideLayout(_ proxy: GeometryProxy) -> some View {
+        ZStack(alignment: .leading) {
+            PlannerMapView(
+                selectedPlaces: selectedPlaces,
+                otherPlaces: otherPlaces,
+                cameraPosition: $cameraPosition,
+                focusedPlaceID: focusedPlaceID,
+                onSelectPlace: { place in selectFromMap(place) },
+                onRegionChange: { region in visibleRegion = region }
+            )
+            .ignoresSafeArea()
+
+            widePanel
+                .frame(width: widePanelWidth(for: proxy.size.width))
+                .frame(maxHeight: .infinity)
+                .wandererGlass(radius: 30, tintOpacity: 0.55)
+                .padding(.leading, 18)
+                .padding(.vertical, 18)
+        }
+    }
+
+    private func widePanelWidth(for width: CGFloat) -> CGFloat {
+        min(max(width * 0.36, 360), 460)
+    }
+
+    /// The itinerary column without the compact layout's drag handle.
+    private var widePanel: some View {
+        VStack(spacing: 0) {
+            tripHeader
+                .dynamicTypeSize(...Self.chromeTypeCap)
+                .padding(.horizontal, WandererTheme.screenPadding)
+                .padding(.top, 10)
+
+            wideDayChips
+                .dynamicTypeSize(...Self.chromeTypeCap)
+                .padding(.horizontal, WandererTheme.screenPadding)
+                .padding(.top, 10)
+
+            sectionHeader
+                .dynamicTypeSize(...Self.chromeTypeCap)
+                .padding(.horizontal, WandererTheme.screenPadding)
+                .padding(.top, 10)
+                .padding(.bottom, 3)
+
+            if let note = currentDay?.notes, !note.isEmpty {
+                dayNoteBanner(note)
+                    .padding(.horizontal, WandererTheme.screenPadding)
+                    .padding(.vertical, -4)
+            }
+
+            placesArea
+                .frame(maxHeight: .infinity)
+        }
+    }
+
+    /// The day strip wraps on a wide canvas instead of hiding days behind a
+    /// horizontal scroll. Same chips, same selection.
+    private var wideDayChips: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 58, maximum: 78), spacing: 8)],
+            alignment: .leading,
+            spacing: 8
+        ) {
+            ForEach(store.days) { day in
+                dayChip(for: day)
+            }
+            if showsUnscheduledChip {
+                unscheduledChip
             }
         }
     }
@@ -361,13 +490,6 @@ struct PlannerView: View {
             .accessibilityIdentifier("planner-panel-handle")
     }
 
-    private var panelBackground: some View {
-        UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20, style: .continuous)
-            .fill(WandererTheme.card)
-            .shadow(color: WandererTheme.charcoal.opacity(0.15), radius: 16, x: 0, y: -5)
-            .ignoresSafeArea(edges: .bottom)
-    }
-
     private func panelHeight(for height: CGFloat) -> CGFloat {
         min(max(height * panelFraction, 150), height - 70)
     }
@@ -401,7 +523,7 @@ struct PlannerView: View {
 
     private var tripHeader: some View {
         let stacked = dynamicTypeSize.isAccessibilitySize
-        let meta = "\(trip.dateRange), \(store.days.isEmpty ? trip.days : store.days.count) days, \(store.places.count.liggaCounted("place"))"
+        let meta = "\(trip.dateRange), \(store.days.isEmpty ? trip.days : store.days.count) days, \(store.visiblePlaces.count.liggaCounted("place"))"
         return Group {
             if stacked {
                 VStack(alignment: .leading, spacing: 4) {
@@ -453,7 +575,7 @@ struct PlannerView: View {
         }
         .padding(.horizontal, 10)
         .frame(minHeight: 28)
-        .background(WandererTheme.card, in: Capsule())
+        .background(.ultraThinMaterial, in: Capsule())
         .overlay(Capsule().strokeBorder(WandererTheme.line, lineWidth: 1))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
@@ -464,7 +586,7 @@ struct PlannerView: View {
     private var dayChips: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ForEach(store.days) { day in
                         dayChip(for: day)
                             .id(PlannerSelection.day(day.id))
@@ -522,7 +644,7 @@ struct PlannerView: View {
                 .opacity(count == 0 ? 0 : 1)
             }
             .foregroundStyle(isSelected ? Color(hex: 0x10283A) : WandererTheme.ink)
-            .frame(minWidth: 54, minHeight: 56)
+            .frame(minWidth: 50, minHeight: 56)
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -587,7 +709,7 @@ struct PlannerView: View {
             }
             .foregroundStyle(isSelected ? Color(hex: 0x10283A) : WandererTheme.ink)
             .padding(.horizontal, 8)
-            .frame(minWidth: 60, minHeight: 56)
+            .frame(minWidth: 54, minHeight: 56)
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -666,6 +788,25 @@ struct PlannerView: View {
                     Label("Day note", systemImage: "note.text")
                 }
             }
+
+            Button {
+                if let url = TripExports.googleMapsURLs(places: selectedPlaces).first {
+                    openURL(url)
+                }
+            } label: {
+                Label("Open day in Google Maps", systemImage: "map")
+            }
+            .disabled(selectedPlaces.compactMap(\.coordinate).count < 2)
+
+            if !store.personal.overrides.isEmpty
+                || !store.personal.privatePlaces.isEmpty
+                || !store.personal.privateReservations.isEmpty {
+                Button {
+                    activeSheet = .personalItems
+                } label: {
+                    Label("Hidden & private items", systemImage: "person.crop.circle.badge.checkmark")
+                }
+            }
         } label: {
             Text("Day options")
                 .font(.ligga(.caption, weight: .semibold))
@@ -722,7 +863,7 @@ struct PlannerView: View {
         let calendar = Calendar.current
         let dayStart = calendar.startOfDay(for: date)
 
-        return store.reservations.filter { reservation in
+        return store.visibleReservations.filter { reservation in
             guard let start = reservation.parsedStart else { return false }
             let end = reservation.parsedEnd ?? start
             let startDay = calendar.startOfDay(for: start)
@@ -795,7 +936,7 @@ struct PlannerView: View {
 
     @ViewBuilder
     private var placesArea: some View {
-        if store.isLoading && store.places.isEmpty {
+        if store.isLoading && store.visiblePlaces.isEmpty {
             VStack(spacing: 12) {
                 ProgressView()
                     .tint(WandererTheme.coral)
@@ -873,7 +1014,7 @@ struct PlannerView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .listRowBackground(WandererTheme.card)
+                        .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .accessibilityIdentifier("planner-new-list")
                         .alert("New list", isPresented: $showNewListPrompt) {
@@ -918,7 +1059,7 @@ struct PlannerView: View {
                             }
                             .buttonStyle(.plain)
                             .listRowInsets(EdgeInsets(top: 2, leading: WandererTheme.screenPadding, bottom: 2, trailing: WandererTheme.screenPadding))
-                            .listRowBackground(WandererTheme.card)
+                            .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                         }
                     } header: {
@@ -932,6 +1073,10 @@ struct PlannerView: View {
             .environment(\.defaultMinListHeaderHeight, 0)
             .environment(\.editMode, $editMode)
             .scrollIndicators(.hidden)
+            .refreshable {
+                await store.refreshCollaboration()
+                await store.refreshFlights()
+            }
             .padding(.bottom, 4)
             .onChange(of: listScrollTarget) { _, target in
                 guard let target else { return }
@@ -958,13 +1103,15 @@ struct PlannerView: View {
                 costLabel: costLabel(for: place),
                 rail: selection == .unscheduled || editMode.isEditing
                     ? .none
-                    : PlannerRail(isFirst: number == 1, isLast: number == selectedPlaces.count)
+                    : PlannerRail(isFirst: number == 1, isLast: number == selectedPlaces.count),
+                isPrivate: store.isPrivate(place),
+                hasOverride: store.personalOverride(for: place.id) != nil
             )
         }
         .buttonStyle(.plain)
         .id(place.id)
         .listRowInsets(EdgeInsets(top: 0, leading: WandererTheme.screenPadding, bottom: 0, trailing: WandererTheme.screenPadding))
-        .listRowBackground(isFocused ? WandererTheme.coralSoft.opacity(0.5) : WandererTheme.card)
+        .listRowBackground(isFocused ? WandererTheme.coralSoft.opacity(0.45) : Color.clear)
         // On a day the travel connector separates stops; unscheduled keeps hairlines.
         .listRowSeparator(selection == .unscheduled ? .visible : .hidden)
         .accessibilityIdentifier("planner-place-\(place.id.uuidString)")
@@ -1078,7 +1225,7 @@ struct PlannerView: View {
             .accessibilityIdentifier("planner-nearby")
         }
         .listRowInsets(EdgeInsets(top: 0, leading: WandererTheme.screenPadding, bottom: 6, trailing: WandererTheme.screenPadding))
-        .listRowBackground(WandererTheme.card)
+        .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
         .moveDisabled(true)
     }
@@ -1219,7 +1366,7 @@ struct PlannerView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(WandererTheme.ink)
                 .frame(width: 44, height: 44)
-                .background(WandererTheme.card, in: Circle())
+                .background(.ultraThinMaterial, in: Circle())
                 .shadow(color: WandererTheme.charcoal.opacity(0.18), radius: 10, x: 0, y: 4)
         }
         .accessibilityLabel("Trip tools")
@@ -1237,7 +1384,7 @@ struct PlannerView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(WandererTheme.ink)
                 .frame(width: 44, height: 44)
-                .background(WandererTheme.card, in: Circle())
+                .background(.ultraThinMaterial, in: Circle())
                 .shadow(color: WandererTheme.charcoal.opacity(0.18), radius: 10, x: 0, y: 4)
         }
         .buttonStyle(.plain)
@@ -1268,6 +1415,10 @@ struct PlannerView: View {
             NearbyIdeasView(trip: trip, store: store, dayID: currentDayID)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        case .personalItems:
+            PersonalItemsView(store: store)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         case .dayNote(let day):
             DayNoteView(note: day.notes ?? "", day: day, store: store)
         case .place(let place):
@@ -1289,7 +1440,7 @@ struct PlannerView: View {
         await store.load()
 
         if case .unscheduled = selection,
-           let start = PlannerStartDay.choose(days: store.days, places: store.places) {
+           let start = PlannerStartDay.choose(days: store.days, places: store.visiblePlaces) {
             selection = .day(start)
         }
 
@@ -1325,13 +1476,22 @@ struct PlannerView: View {
         )
     }
 
-    /// The map is full-bleed; this is its size in points.
+    /// The map is full-bleed on both layouts; on the wide one the itinerary
+    /// floats over it, so framing keeps that strip clear.
     private var mapSize: CGSize {
         viewport.mapSize
     }
 
-    /// The strip of map that isn't under the nav bar or the panel.
+    /// The strip of map that isn't under the nav bar or the floating panel.
     private var mapInsets: EdgeInsets {
+        if isWideLayout {
+            return EdgeInsets(
+                top: viewport.safeTop + 28,
+                leading: widePanelWidth(for: viewport.size.width) + 48,
+                bottom: 32,
+                trailing: 40
+            )
+        }
         let panelOnScreen = panelHeight(for: viewport.contentHeight) + viewport.safeBottom
         return EdgeInsets(
             top: viewport.safeTop + 16,
@@ -1428,7 +1588,7 @@ struct PlannerView: View {
 
     /// When a trip has no pinned places yet, still start the map on the destination.
     private func frameDestinationIfNeeded() async {
-        guard store.places.contains(where: { $0.coordinate != nil }) == false else { return }
+        guard store.visiblePlaces.contains(where: { $0.coordinate != nil }) == false else { return }
         guard let results = try? await MapSearchService.search(trip.destination, near: nil),
               let first = results.first else {
             return
@@ -1445,7 +1605,7 @@ struct PlannerView: View {
     }
 
     private func loadWeather() async {
-        guard let coordinate = selectedPlaces.compactMap(\.coordinate).first ?? store.places.compactMap(\.coordinate).first else { return }
+        guard let coordinate = selectedPlaces.compactMap(\.coordinate).first ?? store.visiblePlaces.compactMap(\.coordinate).first else { return }
         guard let snapshot = try? await WeatherService.current(
             latitude: coordinate.latitude,
             longitude: coordinate.longitude
@@ -1503,6 +1663,10 @@ private struct PlannerPlaceRow: View {
     var costLabel: String?
     /// Position on the route line; nil draws a plain bead (unscheduled ideas).
     var rail: PlannerRail?
+    /// A stop only this member sees.
+    var isPrivate = false
+    /// This member saved their own version of a shared stop.
+    var hasOverride = false
 
     @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -1528,8 +1692,13 @@ private struct PlannerPlaceRow: View {
                         .foregroundStyle(WandererTheme.muted)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
 
-                    if place.isVisited || costLabel != nil || timeLabel != nil {
+                    if isPrivate || hasOverride || place.isVisited || costLabel != nil || timeLabel != nil {
                         HStack(spacing: 6) {
+                            if isPrivate {
+                                chip("Only you", icon: "person.fill", tint: WandererTheme.coral)
+                            } else if hasOverride {
+                                chip("Your version", icon: "person", tint: WandererTheme.coral)
+                            }
                             if let timeLabel {
                                 chip(timeLabel, icon: "clock", tint: WandererTheme.sea)
                             }

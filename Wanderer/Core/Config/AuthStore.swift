@@ -39,6 +39,18 @@ final class AuthStore: ObservableObject {
 
     func restore() async {
         defer { isRestoring = false }
+        #if DEBUG
+        // Local integration runs can skip Clerk with a Worker test token.
+        // Release builds never compile this branch, and the Worker only
+        // accepts `test:` tokens when it is itself running in test mode.
+        if let token = ProcessInfo.processInfo.environment["WANDERER_TEST_TOKEN"],
+           token.hasPrefix("test:") {
+            signedInUserID = "local-test-user"
+            signedInEmail = ProcessInfo.processInfo.environment["WANDERER_TEST_EMAIL"] ?? "local@example.com"
+            CloudSession.shared.token = token
+            return
+        }
+        #endif
         await waitForClerk()
         if let user = Clerk.shared.user, Clerk.shared.session != nil {
             applyClerkUser(user)

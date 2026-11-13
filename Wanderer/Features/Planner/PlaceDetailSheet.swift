@@ -38,6 +38,7 @@ struct PlaceDetailSheet: View {
                 statusCard
                 categoryCard
                 notesCard
+                personalCard
                 if websiteURL != nil || phoneURL != nil {
                     linksCard
                 }
@@ -66,7 +67,11 @@ struct PlaceDetailSheet: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("“\(place.name)” will be removed from this trip. This can't be undone.")
+            Text(
+                isPrivateStop
+                    ? "“\(place.name)” is only in your itinerary. This removes it for you."
+                    : "“\(place.name)” will be removed from this trip for everyone. This can't be undone."
+            )
         }
     }
 
@@ -89,6 +94,20 @@ struct PlaceDetailSheet: View {
                     .foregroundStyle(WandererTheme.ink)
                     .textInputAutocapitalization(.words)
                     .accessibilityIdentifier("place-name-field")
+
+                if isPrivateStop || hasPersonalOverride {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(isPrivateStop ? "Only you" : "Your version")
+                            .font(.ligga(.caption2, weight: .bold))
+                    }
+                    .foregroundStyle(WandererTheme.onAccent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(WandererTheme.coral, in: Capsule())
+                    .accessibilityLabel(isPrivateStop ? "Private stop, only you can see it" : "Your private version")
+                }
 
                 if let address = place.address, !address.isEmpty {
                     Text(address)
@@ -310,9 +329,79 @@ struct PlaceDetailSheet: View {
     // MARK: - Status & cost
 
     /// The latest copy of the place: the sheet keeps its own snapshot, while the
-    /// store refreshes after each write.
+    /// store refreshes after each write. Uses the member's view, so a private
+    /// replacement shows its replaced values.
     private var currentPlace: PlaceRecord {
-        store.places.first(where: { $0.id == place.id }) ?? place
+        store.visiblePlaces.first(where: { $0.id == place.id }) ?? place
+    }
+
+    private var isPrivateStop: Bool { store.isPrivate(place) }
+
+    private var hasPersonalOverride: Bool {
+        store.personalOverride(for: place.id) != nil
+    }
+
+    /// "Just for me": hide a shared stop or save a private version of it.
+    /// Private stops are already only yours, so the card is not shown for them.
+    @ViewBuilder
+    private var personalCard: some View {
+        if !isPrivateStop && !LocalTrips.isActive {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Image(systemName: "person.crop.circle.badge.checkmark")
+                        .font(.ligga(.title3, weight: .semibold))
+                        .foregroundStyle(WandererTheme.coralDeep)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Just for me")
+                            .font(.ligga(.subheadline, weight: .bold))
+                            .foregroundStyle(WandererTheme.ink)
+                        Text(
+                            hasPersonalOverride
+                                ? "You've changed this stop. Everyone else still sees the shared version."
+                                : "Hide it or change its details without touching the group plan."
+                        )
+                        .font(.ligga(.caption))
+                        .foregroundStyle(WandererTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                if hasPersonalOverride {
+                    Button {
+                        Task {
+                            await store.restoreForMe(place)
+                            dismiss()
+                        }
+                    } label: {
+                        Label("Restore the shared version", systemImage: "arrow.uturn.backward")
+                            .font(.ligga(.subheadline, weight: .semibold))
+                            .foregroundStyle(WandererTheme.coralDeep)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(WandererTheme.sandDeep.opacity(0.5), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("place-restore-shared")
+                } else {
+                    Button {
+                        Task {
+                            await store.hideForMe(place)
+                            dismiss()
+                        }
+                    } label: {
+                        Label("Hide this stop for me", systemImage: "eye.slash")
+                            .font(.ligga(.subheadline, weight: .semibold))
+                            .foregroundStyle(WandererTheme.coralDeep)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(WandererTheme.sandDeep.opacity(0.5), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("place-hide-for-me")
+                }
+            }
+            .padding(16)
+            .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
     }
 
     private var placeCost: Double {
@@ -512,7 +601,7 @@ struct PlaceDetailSheet: View {
     private var actions: some View {
         VStack(spacing: 12) {
             PrimaryButton(
-                title: isSaving ? "Saving…" : "Save notes",
+                title: isSaving ? "Saving…" : (isPrivateStop ? "Save private stop" : "Save for everyone"),
                 icon: "checkmark",
                 isEnabled: !isSaving && !isDeleting
             ) {
@@ -520,13 +609,36 @@ struct PlaceDetailSheet: View {
             }
             .accessibilityIdentifier("place-save")
 
+            if !isPrivateStop && !LocalTrips.isActive {
+                Button {
+                    Task { await saveForMe() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text("Save for me only")
+                            .font(.ligga(.subheadline, weight: .semibold))
+                    }
+                    .foregroundStyle(WandererTheme.ink)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(
+                        WandererTheme.sandDeep.opacity(0.55),
+                        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isDeleting || isSaving)
+                .accessibilityIdentifier("place-save-for-me")
+            }
+
             Button(role: .destructive) {
                 showDeleteConfirmation = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .semibold))
-                    Text(isDeleting ? "Removing…" : "Remove place")
+                    Text(isDeleting ? "Removing…" : (isPrivateStop ? "Remove private stop" : "Remove place"))
                         .font(.ligga(.subheadline, weight: .semibold))
                 }
                 .foregroundStyle(WandererTheme.coralDeep)
@@ -575,8 +687,27 @@ struct PlaceDetailSheet: View {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
 
         await store.updatePlace(
-            place,
-            name: trimmedName.isEmpty ? place.name : trimmedName,
+            currentPlace,
+            name: trimmedName.isEmpty ? currentPlace.name : trimmedName,
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+            category: category
+        )
+
+        isSaving = false
+        dismiss()
+    }
+
+    /// Saves the same fields as a replacement only this member sees.
+    private func saveForMe() async {
+        guard !isSaving else { return }
+        isSaving = true
+
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        await store.updateForMe(
+            currentPlace,
+            name: trimmedName.isEmpty ? currentPlace.name : trimmedName,
             notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
             category: category
         )

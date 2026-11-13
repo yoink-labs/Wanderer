@@ -17,16 +17,22 @@ enum WandererTheme {
 
     // MARK: Surfaces (follow the system appearance)
 
-    static let platinum = Color(light: 0xEEF2F3, dark: 0x0B151C)
+    static let platinum = Color(light: 0xEEF2F3, dark: 0x070D12)
     static let dust = Color(light: 0xD3DBD8, dark: 0x22323C)
     static let sand = platinum
-    static let sandDeep = Color(light: 0xDDE4E3, dark: 0x13212A)
-    static let card = Color(light: 0xFFFFFF, dark: 0x13212A)
-    static let cardElevated = Color(light: 0xFFFFFF, dark: 0x1A2B36)
+    static let sandDeep = Color(light: 0xDDE4E3, dark: 0x0F1A22)
+    static let card = Color(light: 0xFFFFFF, dark: 0x101B23)
+    static let cardElevated = Color(light: 0xFFFFFF, dark: 0x16242E)
     static let ink = Color(light: 0x10283A, dark: 0xE8EEF1)
     static let muted = Color(light: 0x56697A, dark: 0x93A6B3)
-    static let line = Color(light: 0xD3DBD8, dark: 0x22323C)
+    static let line = Color(light: 0xD3DBD8, dark: 0x24343F)
     static let shadow = Color.black
+
+    /// Chrome that floats over the map. Materials do the blur; this stroke
+    /// and shadow keep the card's edge legible on a busy map.
+    static let glassStroke = Color(light: 0xFFFFFF, dark: 0xFFFFFF).opacity(0.55)
+    static let glassEdge = Color(light: 0x10283A, dark: 0x000000).opacity(0.10)
+    static let glassTint = Color(light: 0xFFFFFF, dark: 0x0B151C)
 
     // MARK: Semantic aliases kept for existing screens
 
@@ -162,21 +168,74 @@ extension Font {
     }
 }
 
+/// Page background: map paper, warmed by a sea and marigold glow. Subtle in
+/// light, richer in dark where the glow carries the identity.
+struct WandererBackdrop: View {
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        ZStack {
+            WandererTheme.platinum
+            RadialGradient(
+                colors: [WandererTheme.sea.opacity(scheme == .dark ? 0.30 : 0.10), .clear],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 620
+            )
+            RadialGradient(
+                colors: [WandererTheme.route.opacity(scheme == .dark ? 0.16 : 0.10), .clear],
+                center: .topLeading,
+                startRadius: 10,
+                endRadius: 460
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
 extension View {
     /// The one card treatment: surface fill, 16pt continuous radius, a single
     /// soft shadow and no stroke. Follows light and dark automatically.
     func liggaCard() -> some View {
         liggaCard(radius: WandererTheme.cardRadius)
     }
-
     func liggaCard(radius: CGFloat) -> some View {
         modifier(LiggaCardModifier(radius: radius))
+    }
+
+    /// Floating chrome over the map: a system material, a hairline highlight
+    /// and a deep shadow. Used by the planner panel and floating controls so
+    /// the map stays visible (and alive) underneath.
+    func wandererGlass(radius: CGFloat = 28, tintOpacity: Double = 0.10) -> some View {
+        modifier(WandererGlassModifier(radius: radius, tintOpacity: tintOpacity))
     }
 
     /// Small sentence-case label that sits above a section or hero.
     func liggaOverline() -> some View {
         font(.ligga(.footnote, weight: .semibold))
             .foregroundStyle(WandererTheme.muted)
+    }
+}
+
+private struct WandererGlassModifier: ViewModifier {
+    let radius: CGFloat
+    let tintOpacity: Double
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        content
+            .background {
+                shape
+                    .fill(.thickMaterial)
+                    .overlay {
+                        shape.fill(WandererTheme.glassTint.opacity(scheme == .dark ? tintOpacity : 0.10))
+                    }
+            }
+            .overlay {
+                shape.strokeBorder(WandererTheme.glassStroke.opacity(scheme == .dark ? 0.16 : 0.6), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(scheme == .dark ? 0.45 : 0.14), radius: 30, x: 0, y: 14)
     }
 }
 

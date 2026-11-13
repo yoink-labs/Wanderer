@@ -223,7 +223,8 @@ struct HomeTripRow: View {
                 Text(trip.title)
                     .font(.ligga(.headline, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
                     .multilineTextAlignment(.leading)
                 Text(trip.destination)
                     .font(.ligga(.subheadline))
@@ -383,6 +384,88 @@ struct HomeGuideResultRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Guide: \([guide.title, guide.destination].compactMap { $0 }.joined(separator: ", "))")
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Compact trip card for the two-/three-column grid on a wide canvas
+/// (iPhone Duo open, iPad, Split View). The featured trip keeps the large
+/// postcard; everything else becomes one of these.
+struct HomeTripTile: View {
+    let trip: Trip
+
+    @Environment(\.colorScheme) private var scheme
+
+    private var countdown: String {
+        switch trip.phase {
+        case .inProgress:
+            return TripRouteProgress(trip: trip).label
+        case .past:
+            return "Past"
+        case .upcoming:
+            guard let start = TripDayRecord.date(from: trip.startDate) else { return "" }
+            let days = Calendar.current.dateComponents(
+                [.day], from: Calendar.current.startOfDay(for: Date()), to: start
+            ).day ?? 0
+            return days <= 1 ? (days <= 0 ? "Today" : "Tomorrow") : "In \(days) d"
+        }
+    }
+
+    var body: some View {
+        NavigationLink(value: trip) {
+            VStack(alignment: .leading, spacing: 0) {
+                HomeTripCover(trip: trip)
+                    .frame(height: 152)
+                    .clipShape(UnevenRoundedRectangle(
+                        topLeadingRadius: 20,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 20,
+                        style: .continuous
+                    ))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(trip.title)
+                        .font(.ligga(.headline, weight: .semibold))
+                        .foregroundStyle(WandererTheme.ink)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(trip.destination)
+                        .font(.ligga(.subheadline))
+                        .foregroundStyle(WandererTheme.muted)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        Text(trip.dateRange)
+                            .font(.ligga(.footnote))
+                            .foregroundStyle(WandererTheme.muted)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(countdown)
+                            .font(.ligga(.caption, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundStyle(
+                                trip.phase == .past || trip.phase == .upcoming
+                                    ? WandererTheme.muted
+                                    : WandererTheme.accentText
+                            )
+                            .lineLimit(1)
+                    }
+                    .padding(.top, 2)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+            .background(WandererTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: WandererTheme.cardShadow(scheme), radius: scheme == .dark ? 0 : 12, x: 0, y: 5)
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.liggaPressable)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(trip.title), \(trip.destination), \(trip.dateRange)")
         .accessibilityAddTraits(.isButton)
     }
 }

@@ -12,6 +12,7 @@ struct ProfileView: View {
     @AppStorage("wanderer.currency") private var currency = "USD"
     @AppStorage("wanderer.units") private var units = "Metric"
     @AppStorage("wanderer.appearance") private var appearanceRaw = WandererAppearance.system.rawValue
+    @AppStorage(FlightAlerts.enabledKey) private var flightAlerts = true
 
     @State private var showDeleteAccountConfirm = false
     @State private var isDeletingAccount = false
@@ -115,8 +116,11 @@ struct ProfileView: View {
                 .padding(.horizontal, gutter)
                 .padding(.top, 8)
                 .padding(.bottom, 30)
+                // Settings read as a column, not a stretched canvas.
+                .frame(maxWidth: 860)
+                .frame(maxWidth: .infinity)
             }
-            .background(WandererTheme.sand.ignoresSafeArea())
+            .background(WandererBackdrop())
             .contentMargins(.bottom, 96, for: .scrollContent)
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await loadAll() }
@@ -411,6 +415,39 @@ struct ProfileView: View {
                 settingsRow(title: "Appearance", value: appearance.title, icon: "circle.lefthalf.filled")
             }
             .buttonStyle(.plain)
+
+            cardDivider
+
+            Toggle(isOn: $flightAlerts) {
+                HStack(spacing: 13) {
+                    Image(systemName: "airplane.circle")
+                        .font(.ligga(.body, weight: .semibold))
+                        .foregroundStyle(WandererTheme.muted)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Flight alerts")
+                            .font(.ligga(.body, weight: .medium))
+                            .foregroundStyle(WandererTheme.ink)
+                        Text("Gate, terminal and delay changes")
+                            .font(.ligga(.caption))
+                            .foregroundStyle(WandererTheme.muted)
+                    }
+                }
+            }
+            .tint(WandererTheme.coral)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 58)
+            .onChange(of: flightAlerts) { _, enabled in
+                guard enabled else { return }
+                Task {
+                    // Denied permission would make the switch a lie.
+                    if await FlightAlerts.requestAuthorization() == false {
+                        flightAlerts = false
+                    }
+                }
+            }
+            .accessibilityIdentifier("profile-flight-alerts")
 
         }
         .liggaCard()

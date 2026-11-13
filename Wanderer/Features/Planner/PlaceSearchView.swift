@@ -15,6 +15,10 @@ struct PlaceSearchView: View {
     @State private var isSearching = false
     @State private var errorMessage: String?
     @State private var addingID: UUID?
+    @State private var forMeOnly = false
+    /// Private stops are a collaboration feature; a solo guest trip already
+    /// has nothing to hide from anyone.
+    private var canGoPrivate: Bool { !LocalTrips.isActive }
 
     init(trip: Trip, store: TripDetailStore, dayID: UUID? = nil) {
         self.trip = trip
@@ -26,6 +30,9 @@ struct PlaceSearchView: View {
         NavigationStack {
             VStack(spacing: 16) {
                 searchField
+                if canGoPrivate {
+                    privateToggle
+                }
                 content
             }
             .padding(.horizontal, 20)
@@ -94,6 +101,38 @@ struct PlaceSearchView: View {
                     lineWidth: 1
                 )
         )
+    }
+
+    // MARK: - Private toggle
+
+    /// The one control that explains the personal layer in the place where
+    /// it matters: adding a stop. Off means the group sees it.
+    private var privateToggle: some View {
+        Toggle(isOn: $forMeOnly) {
+            HStack(spacing: 10) {
+                Image(systemName: forMeOnly ? "person.crop.circle.fill" : "person.2")
+                    .font(.ligga(.body, weight: .semibold))
+                    .foregroundStyle(forMeOnly ? WandererTheme.coralDeep : WandererTheme.muted)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Only visible to me")
+                        .font(.ligga(.subheadline, weight: .semibold))
+                        .foregroundStyle(WandererTheme.ink)
+                    Text(
+                        forMeOnly
+                            ? "This stop stays out of everyone else's itinerary."
+                            : "Everyone on the trip will see this stop."
+                    )
+                    .font(.ligga(.caption))
+                    .foregroundStyle(WandererTheme.muted)
+                }
+            }
+        }
+        .tint(WandererTheme.coral)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityIdentifier("place-private-toggle")
     }
 
     // MARK: - Content
@@ -318,16 +357,27 @@ struct PlaceSearchView: View {
         guard addingID == nil else { return }
         addingID = result.id
 
-        await store.addPlace(
-            name: result.name,
-            address: result.address,
-            latitude: result.latitude,
-            longitude: result.longitude,
-            category: result.category,
-            dayID: dayID,
-            website: result.website,
-            phone: result.phone
-        )
+        if forMeOnly {
+            await store.addPrivatePlace(
+                name: result.name,
+                address: result.address,
+                latitude: result.latitude,
+                longitude: result.longitude,
+                category: result.category,
+                dayID: dayID
+            )
+        } else {
+            await store.addPlace(
+                name: result.name,
+                address: result.address,
+                latitude: result.latitude,
+                longitude: result.longitude,
+                category: result.category,
+                dayID: dayID,
+                website: result.website,
+                phone: result.phone
+            )
+        }
 
         addingID = nil
         dismiss()

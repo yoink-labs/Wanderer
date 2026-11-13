@@ -40,6 +40,7 @@
 		5EBF60E66093E5D81979DC05 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E171BD7ADC742A374405A144 /* RootView.swift */; };
 		5FAEB6005A3BD8BEA33613BF /* PlaceSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC8BFA35C9D4C5BDBC16353 /* PlaceSearchView.swift */; };
 		61BC0B5ED248794DE51E7136 /* TripsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F69303B77F8AE8E3200113D0 /* TripsStore.swift */; };
+		62A1775E120BAE6997E021DD /* FlightAlerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35A0CAB64FC2D39649C5BD5 /* FlightAlerts.swift */; };
 		65DBC0E1655F43658865A88B /* HomeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9114EE1202D8858FA472D7C7 /* HomeModels.swift */; };
 		6736384E634711CC5D0DFAB7 /* SpendByDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01F040C1B9770F6A1F0255C /* SpendByDay.swift */; };
 		68F5D88D5ACCBC4BFDFA7E06 /* WandererSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB2D2377DBE4521775F583A3 /* WandererSkeleton.swift */; };
@@ -48,6 +49,7 @@
 		76A4637738B2EF6FB55D351C /* TravelStores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6529D84648694842189BCC07 /* TravelStores.swift */; };
 		77110250E360EE29082A074E /* TripJournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADAEACF98D0CB994446D48C /* TripJournalView.swift */; };
 		778A966077222E42507CFE8B /* PlannerMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 278E3C4A6A45BDE4413BEE5A /* PlannerMapView.swift */; };
+		77E2670E3A179071A1AF4BA2 /* FlightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E84324DD90E9C2C4F1DD844E /* FlightModels.swift */; };
 		7C1FE113C89958EAD1323C28 /* ProfileAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71ADCE542CB24AB187F20814 /* ProfileAvatar.swift */; };
 		7CA2B278DA0C98AFBCBEC3C9 /* TripsBacking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139E6CDC21F9B4DB1ECA89A7 /* TripsBacking.swift */; };
 		7FAD8E36BE9F9E7939056B49 /* TripsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F821EEAC812B7309DAAB142 /* TripsHomeView.swift */; };
@@ -58,6 +60,7 @@
 		904A0003FF84B0317604FCF8 /* PlanTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2069F5EE2932AF83C1E27C2B /* PlanTripSheet.swift */; };
 		97218AE0C14F428671B06969 /* TripSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0DBA9C09B5F697577A3EF3 /* TripSettingsView.swift */; };
 		9997556D50DD551813AFBB77 /* TravelModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78015B4F18A43D4BDB2DDA2D /* TravelModels.swift */; };
+		9D9A2486F68D784D51824E2C /* PersonalItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E90060C0555135B8D76B41 /* PersonalItemsView.swift */; };
 		9FA8AA633269ED1A2C8C05FF /* ExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85224A44E9AFA3B3A16611D5 /* ExploreView.swift */; };
 		A25790F6B03B6C0401C229DC /* DayNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17CA550B1A652A690CE62511 /* DayNoteView.swift */; };
 		A4969B7060AD45D48DDED22B /* HomeCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5923EE04A4450F18A7AF0F /* HomeCards.swift */; };
@@ -71,6 +74,7 @@
 		CC3D5714E664E124A84C30C7 /* GuestTripsBacking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF7C94D0B8E212B94CA5733 /* GuestTripsBacking.swift */; };
 		CC66BEAE5BE8C7927890CCD7 /* EmailAuthSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE27CCE1B726D127167825E0 /* EmailAuthSheet.swift */; };
 		CCD3CA48AC49C45FDAA22475 /* LanguagePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37DD9D79B1A57BE12E142567 /* LanguagePickerView.swift */; };
+		CCF896C8100C17DBD9F6B5D9 /* TripExports.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E5D5651A1DD3D86ADC6AC5 /* TripExports.swift */; };
 		D139EFE2DA68DFA507F1DEB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47D71F678F3B4C1FC21ED47D /* Assets.xcassets */; };
 		D8805FDA4CCF1E217C817063 /* HomeModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B853FE45E4BB79432762A7 /* HomeModelsTests.swift */; };
 		D896FE4EFC486924A5208C18 /* DebugSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7826EBF72AA8AD4BAEE74BBB /* DebugSeed.swift */; };
@@ -81,6 +85,7 @@
 		EB95BDC51723B2E51E0EED60 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40CBC266203E6DEA3EBCBA8 /* MainTabView.swift */; };
 		ECBB0056F8D12F587EC53FD3 /* WandererAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7995E8A175F060E562A7EC70 /* WandererAPI.swift */; };
 		EF37C8450DF59471988C3034 /* DailySpendTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ACDC46B84107502F7CA4821 /* DailySpendTests.swift */; };
+		EFF47E86C885FDA6E67160D9 /* TripExportsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A2746550DE2F87D6C59194 /* TripExportsTests.swift */; };
 		F84CA46EB066CAE3A265D416 /* PlannerStartDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */; };
 		FA767ED6DD3A13B1D33783D7 /* BookingTicket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706F29C6FD72AEE60AA9F2F0 /* BookingTicket.swift */; };
 		FAC6BEA6C9FC2BA359C97A88 /* WandererTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEF6BD19C497B3ADFC73866 /* WandererTheme.swift */; };
@@ -120,11 +125,13 @@
 		2F4CB288BEC919A49A9D78ED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2F82F121DA13D96DC84852E2 /* BookingTicketModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingTicketModelTests.swift; sourceTree = "<group>"; };
 		37DD9D79B1A57BE12E142567 /* LanguagePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerView.swift; sourceTree = "<group>"; };
+		37E90060C0555135B8D76B41 /* PersonalItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalItemsView.swift; sourceTree = "<group>"; };
 		391427890E0E1BEF9DE64DF1 /* TripToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripToolsView.swift; sourceTree = "<group>"; };
 		3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitMathTests.swift; sourceTree = "<group>"; };
 		3C5923EE04A4450F18A7AF0F /* HomeCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeCards.swift; sourceTree = "<group>"; };
 		429FC03BBEA9FC63A71A2B8C /* PlannerGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerGeometry.swift; sourceTree = "<group>"; };
 		4593CAD5D6124451B87A0F0A /* PlannerGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerGeometryTests.swift; sourceTree = "<group>"; };
+		46E5D5651A1DD3D86ADC6AC5 /* TripExports.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripExports.swift; sourceTree = "<group>"; };
 		47D71F678F3B4C1FC21ED47D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		485340E25E1BB38F5575799C /* ExpensesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpensesView.swift; sourceTree = "<group>"; };
 		49D629CDD6308CB3B73C8BB7 /* GuideDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideDetailView.swift; sourceTree = "<group>"; };
@@ -162,6 +169,7 @@
 		B4C34BC83E9744B200BA4157 /* ExportAndGuestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportAndGuestTests.swift; sourceTree = "<group>"; };
 		B5C5347617248161E0B9A2FA /* TripRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRecord.swift; sourceTree = "<group>"; };
 		B80258A288419D8CD3BD3BA6 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		B9A2746550DE2F87D6C59194 /* TripExportsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripExportsTests.swift; sourceTree = "<group>"; };
 		BB86F69472D5706EAFB68DBC /* TripAttachmentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripAttachmentsView.swift; sourceTree = "<group>"; };
 		BCC8BFA35C9D4C5BDBC16353 /* PlaceSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSearchView.swift; sourceTree = "<group>"; };
 		BD235FF44F0C42303F6104C0 /* WandererHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WandererHaptics.swift; sourceTree = "<group>"; };
@@ -179,8 +187,10 @@
 		E1D6D7CE9E8363D41E43AC72 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		E40CBC266203E6DEA3EBCBA8 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		E487B2AEC43681C24ABA3DDC /* TravelServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelServices.swift; sourceTree = "<group>"; };
+		E84324DD90E9C2C4F1DD844E /* FlightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightModels.swift; sourceTree = "<group>"; };
 		EE938851E76A6594D1D2B6A9 /* PlaceDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceDetailSheet.swift; sourceTree = "<group>"; };
 		F08DFC9293EDE1EB208DB540 /* WandererApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WandererApp.swift; sourceTree = "<group>"; };
+		F35A0CAB64FC2D39649C5BD5 /* FlightAlerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightAlerts.swift; sourceTree = "<group>"; };
 		F69303B77F8AE8E3200113D0 /* TripsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -212,6 +222,7 @@
 				9CED402C874738F92140CF85 /* PlannerUndoTests.swift */,
 				C0F809E329815D3277BA161D /* SocialSignInTests.swift */,
 				3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */,
+				B9A2746550DE2F87D6C59194 /* TripExportsTests.swift */,
 			);
 			path = WandererTests;
 			sourceTree = "<group>";
@@ -344,6 +355,7 @@
 		8E453D44EC1EFD38E268BB7C /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				E84324DD90E9C2C4F1DD844E /* FlightModels.swift */,
 				606D36FA95F6EE1648FEACD7 /* LanguageOption.swift */,
 				CB5EBDF9094936E690FECE20 /* SplitMath.swift */,
 				78015B4F18A43D4BDB2DDA2D /* TravelModels.swift */,
@@ -367,8 +379,10 @@
 		94F68B2D93A86FE27A694A09 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				F35A0CAB64FC2D39649C5BD5 /* FlightAlerts.swift */,
 				2889361D37EE394A9EEB81F0 /* ImageCatalog.swift */,
 				E487B2AEC43681C24ABA3DDC /* TravelServices.swift */,
+				46E5D5651A1DD3D86ADC6AC5 /* TripExports.swift */,
 				0FFE84B509D6A42620681B9B /* TripPDFExporter.swift */,
 			);
 			path = Services;
@@ -379,6 +393,7 @@
 			children = (
 				17CA550B1A652A690CE62511 /* DayNoteView.swift */,
 				540B4AAB58475E1CC20E0B65 /* NearbyIdeasView.swift */,
+				37E90060C0555135B8D76B41 /* PersonalItemsView.swift */,
 				EE938851E76A6594D1D2B6A9 /* PlaceDetailSheet.swift */,
 				BCC8BFA35C9D4C5BDBC16353 /* PlaceSearchView.swift */,
 				429FC03BBEA9FC63A71A2B8C /* PlannerGeometry.swift */,
@@ -576,6 +591,8 @@
 				CC66BEAE5BE8C7927890CCD7 /* EmailAuthSheet.swift in Sources */,
 				2A86BCA769BE5C0C54B726B3 /* ExpensesView.swift in Sources */,
 				9FA8AA633269ED1A2C8C05FF /* ExploreView.swift in Sources */,
+				62A1775E120BAE6997E021DD /* FlightAlerts.swift in Sources */,
+				77E2670E3A179071A1AF4BA2 /* FlightModels.swift in Sources */,
 				43F0E4D9B372A4F50382F3C6 /* GuestTripImporter.swift in Sources */,
 				CC3D5714E664E124A84C30C7 /* GuestTripsBacking.swift in Sources */,
 				0377ADC9CCC4A161D2461FBD /* GuestTripsStore.swift in Sources */,
@@ -590,6 +607,7 @@
 				EB95BDC51723B2E51E0EED60 /* MainTabView.swift in Sources */,
 				7040B5C635E6D135AB22A5B9 /* NearbyIdeasView.swift in Sources */,
 				45DE9336C856C18DE7ADEC47 /* OfflineReadCache.swift in Sources */,
+				9D9A2486F68D784D51824E2C /* PersonalItemsView.swift in Sources */,
 				2FB62B6A59E19D6AEB320239 /* PlaceDetailSheet.swift in Sources */,
 				5FAEB6005A3BD8BEA33613BF /* PlaceSearchView.swift in Sources */,
 				904A0003FF84B0317604FCF8 /* PlanTripSheet.swift in Sources */,
@@ -612,6 +630,7 @@
 				5D333E21EF1CBE0C66D5A54E /* TripAttachmentsView.swift in Sources */,
 				FF054BEEBD037791D36312F1 /* TripDetailStore.swift in Sources */,
 				C5AF9EF650590A855022CD30 /* TripDetailView.swift in Sources */,
+				CCF896C8100C17DBD9F6B5D9 /* TripExports.swift in Sources */,
 				77110250E360EE29082A074E /* TripJournalView.swift in Sources */,
 				3C3026BE42C761CC1E8D9285 /* TripNotesView.swift in Sources */,
 				4EF3498A30F986350829261F /* TripPDFExporter.swift in Sources */,
@@ -648,6 +667,7 @@
 				4DE7F6D17D21FE981D5FF0FA /* PlannerUndoTests.swift in Sources */,
 				32635A3B3E5C9663C4A39A49 /* SocialSignInTests.swift in Sources */,
 				8B56FE752B7C4B17E1189299 /* SplitMathTests.swift in Sources */,
+				EFF47E86C885FDA6E67160D9 /* TripExportsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -772,7 +792,7 @@
 				CODE_SIGN_ENTITLEMENTS = Wanderer/Resources/Wanderer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 64PUT29XZ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -806,7 +826,7 @@
 				CODE_SIGN_ENTITLEMENTS = Wanderer/Resources/Wanderer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 64PUT29XZ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
