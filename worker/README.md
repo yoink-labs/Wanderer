@@ -42,6 +42,13 @@ JSON it always did.
 | GET/POST/DELETE | `/v1/trips/:tripId/attachments` | raw bytes, `x-file-name` header |
 | GET | `/v1/trips/:tripId/attachments/:id/url` | signed, 1 hour |
 | GET | `/v1/guides`, `/v1/guides/:id`, `/v1/guides/:id/places` | public |
+| GET | `/v1/trips/:tripId/bundle` | one read for the whole trip + the caller's personal layer |
+| GET | `/v1/trips/:tripId/personal` | overrides, private places and private bookings for the caller |
+| PUT/DELETE | `/v1/trips/:tripId/personal/overrides/:itemType/:itemId` | hide or replace a shared row for one member |
+| GET/POST/PATCH/DELETE | `/v1/trips/:tripId/personal/places` | places only the caller sees |
+| GET/POST/PATCH/DELETE | `/v1/trips/:tripId/personal/reservations` | bookings only the caller sees |
+| GET | `/v1/trips/:tripId/flights` | live status for the trip's flight reservations |
+| GET | `/v1/flights/:flightNumber/:date` | one flight, shared-cached |
 | GET/POST/DELETE | `/v1/visited` | |
 | GET | `/media/*` | public objects, or signed private objects |
 
@@ -69,6 +76,37 @@ Set these as Worker secrets/vars; never commit values:
 | `MEDIA_SIGNING_SECRET` | random 32+ byte secret for attachment links |
 | `RESEND_API_KEY` | optional; invite email falls back to the Mail sheet |
 | `RESEND_FROM_EMAIL` | verified sender on the Yoink domain |
+| `RAPIDAPI_KEY` | AeroDataBox key from the RapidAPI marketplace |
+| `RAPIDAPI_HOST` | optional; defaults to `aerodatabox.p.rapidapi.com` |
+| `WEB_ORIGINS` | optional comma list of browser origins allowed by CORS |
+| `FLIGHT_MONTHLY_UNIT_CAP` | optional; defaults to 380 (Basic plan is 400 units) |
+
+## Flight status budget
+
+The AeroDataBox Basic plan allows 400 API units and 1,600 requests per month,
+with a 7-day caching allowance. A flight-status lookup is Tier 2 (2 units), so
+the Worker is built around a shared cache rather than per-user calls:
+
+- one `flight_cache` row per flight number + local departure date serves every
+  member tracking it;
+- a refresh only happens when the cached copy has expired (20 min near
+  departure, 2 h within three days, 12 h further out, 7 days once landed);
+- `flight_usage` enforces the monthly unit and request caps before any upstream
+  call; when the budget is spent the last known status is served with
+  `budget_exhausted: true`;
+- a trip page refresh spends at most three upstream lookups.
+
+AeroDataBox requires attribution on the free plan. Every flight payload carries
+`attribution` and both apps render "Flight data by AeroDataBox" linked to
+`https://aerodatabox.com`. The Basic plan has no commercial-use license; check
+the terms before charging for the app.
+
+## Browser clients (CORS)
+
+The iOS app needs no CORS. The web app is allowed by `WEB_ORIGINS` (defaults to
+the two localhost ports and `wanderer.yoinklabs.dev`). Preflight is answered
+before authentication and never allows credentials — the API expects a bearer
+token.
 
 Create the D1 database and R2 bucket, then replace the placeholder ids in
 `wrangler.jsonc`:

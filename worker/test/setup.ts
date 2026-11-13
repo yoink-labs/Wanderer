@@ -13,6 +13,10 @@ declare global {
     CLERK_ISSUER: string;
     CLERK_JWKS_URL: string;
       CLERK_AUTHORIZED_PARTIES: string;
+    RAPIDAPI_KEY: string;
+    RAPIDAPI_HOST: string;
+    FLIGHT_MONTHLY_UNIT_CAP: string;
+    FLIGHT_MONTHLY_REQUEST_CAP: string;
     }
   }
 }
