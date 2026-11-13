@@ -25,7 +25,7 @@ struct NearbyIdeasView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Nearby ideas")
-                            .font(.ligga(.title2, weight: .bold))
+                            .wandererHeading(.title)
                             .foregroundStyle(WandererTheme.ink)
                         Text("Apple Maps places around \(dayLabel). Tap add to put one in the day.")
                             .font(.ligga(.subheadline))
@@ -97,7 +97,7 @@ struct NearbyIdeasView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.name)
-                    .font(.ligga(.headline))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(1)
                 Text([result.category.title, result.address].compactMap { $0 }.joined(separator: " · "))

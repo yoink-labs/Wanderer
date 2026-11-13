@@ -223,8 +223,9 @@ struct GuideDetailView: View {
 
     private var cover: some View {
         ZStack(alignment: .bottomLeading) {
-            GuideCoverImage(guide: guide)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Color.clear
+                .overlay { GuideCoverImage(guide: guide) }
+                .clipped()
 
             LinearGradient(
                 stops: [
@@ -246,14 +247,13 @@ struct GuideDetailView: View {
                 }
 
                 Text(guide.title)
-                    .font(.display(.title))
+                    .wandererHeading(.hero)
                     .foregroundStyle(.white)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(nil)
             }
             .padding(20)
         }
-        .frame(height: 260)
+        .frame(minHeight: 260)
         .clipShape(RoundedRectangle(cornerRadius: WandererTheme.cardRadius, style: .continuous))
         .padding(.top, 8)
         .accessibilityElement(children: .combine)
@@ -296,7 +296,7 @@ struct GuideDetailView: View {
                 .font(.ligga(.title, weight: .semibold))
                 .foregroundStyle(WandererTheme.muted.opacity(0.6))
             Text("No stops added yet")
-                .font(.ligga(.headline, weight: .semibold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
             Text("This guide is still being mapped out.")
                 .font(.ligga(.subheadline))
@@ -379,7 +379,7 @@ private struct GuidePlaceCard: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(place.name)
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.card)
                         .foregroundStyle(WandererTheme.ink)
 
                     if let address = place.address, !address.isEmpty {

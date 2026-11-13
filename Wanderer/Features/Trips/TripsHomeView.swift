@@ -179,7 +179,7 @@ struct TripsHomeView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: LiggaSpace.s) {
             Text("Trips")
-                .font(.display(.largeTitle))
+                .wandererHeading(.screen)
                 .foregroundStyle(WandererTheme.ink)
                 .accessibilityAddTraits(.isHeader)
 
@@ -192,7 +192,7 @@ struct TripsHomeView: View {
                     : WandererAppearance.dark.rawValue
             } label: {
                 Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.stars.fill")
-                    .font(.ligga(.body, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
                     .frame(width: 44, height: 44)
                     .background {
@@ -212,7 +212,7 @@ struct TripsHomeView: View {
                 showPlanner = true
             } label: {
                 Image(systemName: "plus")
-                    .font(.ligga(.title3, weight: .bold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(WandererTheme.onAccent)
                     .frame(width: 44, height: 44)
                     .background(WandererTheme.route, in: Circle())
@@ -478,7 +478,7 @@ struct TripsHomeView: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Find a stay in \(Self.city(from: trip.destination))")
-                            .font(.ligga(.headline, weight: .semibold))
+                            .wandererHeading(.card)
                             .foregroundStyle(WandererTheme.ink)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -546,7 +546,7 @@ struct TripsHomeView: View {
             WandererMark(size: 52)
             VStack(spacing: LiggaSpace.xs) {
                 Text("No trips yet")
-                    .font(.ligga(.title2, weight: .bold))
+                    .wandererHeading(.section)
                     .foregroundStyle(WandererTheme.ink)
                 Text("Pick a destination and Wanderer will lay out the days. You can add places, bookings and notes as you go.")
                     .font(.ligga(.subheadline))

@@ -283,7 +283,7 @@ struct PlaceSearchView: View {
             }
 
             Text(title)
-                .font(.ligga(.headline, weight: .semibold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
 
             Text(message)

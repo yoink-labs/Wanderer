@@ -275,7 +275,7 @@ struct BookingTicket: View {
     private func endView(_ end: BookingTicketModel.End, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 2) {
             Text(end.mark)
-                .font(end.mark.count <= 4 ? .display(.largeTitle) : .display(.title2))
+                .font(end.mark.count <= 4 ? .wanderer(.screen) : .wanderer(.title))
                 .foregroundStyle(WandererTheme.ink)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)

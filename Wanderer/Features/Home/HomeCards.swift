@@ -53,12 +53,12 @@ struct HomeFeaturedTripCard: View {
     var body: some View {
         NavigationLink(value: trip) {
             ZStack(alignment: .bottomLeading) {
-                HomeTripCover(trip: trip)
+                Color.clear.overlay { HomeTripCover(trip: trip) }.clipped()
 
                 LinearGradient(
                     stops: [
                         .init(color: WandererTheme.charcoal.opacity(0.35), location: 0),
-                        .init(color: .clear, location: 0.3),
+                        .init(color: WandererTheme.charcoal.opacity(0.4), location: 0.3),
                         .init(color: WandererTheme.charcoal.opacity(0.92), location: 1)
                     ],
                     startPoint: .top,
@@ -78,16 +78,15 @@ struct HomeFeaturedTripCard: View {
                     Spacer(minLength: LiggaSpace.l)
 
                     Text(trip.title)
-                        .font(.display(.title, weight: .heavy))
+                        .wandererHeading(.hero)
                         .foregroundStyle(.white)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                         .multilineTextAlignment(.leading)
                     Text(trip.destination)
                         .font(.ligga(.subheadline, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(1)
-                        .padding(.top, 2)
+                        .padding(.top, LiggaSpace.xxs)
 
                     TripRouteSpine(progress: progress)
                         .padding(.top, LiggaSpace.m)
@@ -102,7 +101,7 @@ struct HomeFeaturedTripCard: View {
                                     .padding(.leading, LiggaSpace.xs)
                             }
                         }
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                             Text(trip.dateRange)
                             Text(progress.label)
                             if trip.places > 0 {
@@ -116,11 +115,11 @@ struct HomeFeaturedTripCard: View {
                     .lineLimit(1)
                     .padding(.top, LiggaSpace.xs)
                 }
-                .padding(LiggaSpace.l - 4)
+                .padding(WandererTheme.gutter)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: height)
+            .frame(minHeight: height)
             .clipShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
             .modifier(TripTransitionSource(id: trip.id, namespace: transitionNamespace))
@@ -219,12 +218,11 @@ struct HomeTripRow: View {
                 .frame(width: min(thumbSize, 80), height: min(thumbSize, 80))
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                 Text(trip.title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .multilineTextAlignment(.leading)
                 Text(trip.destination)
                     .font(.ligga(.subheadline))
@@ -320,7 +318,7 @@ struct HomeGuideTile: View {
 
             VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                 Text(guide.title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(2, reservesSpace: true)
                     .multilineTextAlignment(.leading)
@@ -357,9 +355,9 @@ struct HomeGuideResultRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                 Text(guide.title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -370,7 +368,7 @@ struct HomeGuideResultRow: View {
                         .lineLimit(1)
                 }
                 LiggaStatusChip(title: "Guide", tone: .quiet)
-                    .padding(.top, 2)
+                    .padding(.top, LiggaSpace.xxs)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -424,9 +422,9 @@ struct HomeTripTile: View {
                         style: .continuous
                     ))
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                     Text(trip.title)
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.card)
                         .foregroundStyle(WandererTheme.ink)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -453,7 +451,7 @@ struct HomeTripTile: View {
                             )
                             .lineLimit(1)
                     }
-                    .padding(.top, 2)
+                    .padding(.top, LiggaSpace.xxs)
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)

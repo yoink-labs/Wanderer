@@ -528,9 +528,9 @@ struct PlannerView: View {
             if stacked {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(trip.title)
-                        .font(.display(.title2))
+                        .wandererHeading(.title)
                         .foregroundStyle(WandererTheme.ink)
-                        .lineLimit(3)
+                        .lineLimit(nil)
                     Text(meta)
                         .font(.ligga(.footnote, weight: .medium))
                         .foregroundStyle(WandererTheme.muted)
@@ -545,7 +545,7 @@ struct PlannerView: View {
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(trip.title)
-                            .font(.display(.title2))
+                            .wandererHeading(.title)
                             .foregroundStyle(WandererTheme.ink)
                             .lineLimit(2)
                             .minimumScaleFactor(0.8)
@@ -644,6 +644,7 @@ struct PlannerView: View {
                 .opacity(count == 0 ? 0 : 1)
             }
             .foregroundStyle(isSelected ? Color(hex: 0x10283A) : WandererTheme.ink)
+            .padding(.horizontal, LiggaSpace.xs)
             .frame(minWidth: 50, minHeight: 56)
             .background {
                 if isSelected {
@@ -739,9 +740,9 @@ struct PlannerView: View {
 
     private var sectionHeader: some View {
         let stacked = dynamicTypeSize.isAccessibilitySize
-        let titles = VStack(alignment: .leading, spacing: 1) {
+        let titles = VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
             Text(sectionTitle)
-                .font(.ligga(.title3, weight: .bold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
             Text(sectionSubtitle)
                 .font(.ligga(.footnote))
@@ -1165,7 +1166,7 @@ struct PlannerView: View {
     private func listGroupHeader(_ list: TripListRecord?, count: Int) -> some View {
         HStack(alignment: .center, spacing: LiggaSpace.xs) {
             Text(list?.title ?? "No list")
-                .font(.ligga(.subheadline, weight: .semibold))
+                .wandererHeading(.group)
                 .foregroundStyle(WandererTheme.ink)
                 .textCase(nil)
             Text("\(count)")
@@ -1183,7 +1184,7 @@ struct PlannerView: View {
                     Image(systemName: "ellipsis")
                         .font(.ligga(.footnote, weight: .bold))
                         .foregroundStyle(WandererTheme.muted)
-                        .frame(width: 44, height: 32)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Options for \(list.title)")
@@ -1253,9 +1254,9 @@ struct PlannerView: View {
 
     private func listHeader(_ text: String) -> some View {
         Text(text)
-            .font(.ligga(.footnote, weight: .semibold))
+            .wandererHeading(.group)
             .foregroundStyle(WandererTheme.muted)
-            .lineLimit(1)
+            .lineLimit(nil)
             .textCase(nil)
             // Plain-list headers sit 4pt left of the panel gutter.
             .padding(.leading, 4)
@@ -1668,7 +1669,9 @@ private struct PlannerPlaceRow: View {
     /// This member saved their own version of a shared stop.
     var hasOverride = false
 
-    @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
+    @ScaledMetric(relativeTo: .headline) private var scaledBeadSize: CGFloat = 28
+    // A decorative route marker must leave room for the full-size stop name.
+    private var beadSize: CGFloat { min(scaledBeadSize, WandererTheme.minimumTarget) }
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -1682,7 +1685,7 @@ private struct PlannerPlaceRow: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(place.name)
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.card)
                         .foregroundStyle(WandererTheme.ink)
                         .strikethrough(false)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
@@ -1806,7 +1809,9 @@ private struct PlannerPlaceRow: View {
 private struct PlannerLegConnector: View {
     let leg: PlannerTravelLeg
     var showsRail = true
-    @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
+    @ScaledMetric(relativeTo: .headline) private var scaledBeadSize: CGFloat = 28
+    // A decorative route marker must leave room for the full-size stop name.
+    private var beadSize: CGFloat { min(scaledBeadSize, WandererTheme.minimumTarget) }
 
     var body: some View {
         HStack(spacing: 12) {
