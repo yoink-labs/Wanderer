@@ -23,6 +23,10 @@ targets:
     platform: iOS
     sources:
       - path: Wanderer
+        excludes:
+          # StoreKit testing config: used by the scheme and unit tests, never
+          # shipped in the app bundle.
+          - Resources/Wanderer.storekit
     dependencies:
       - package: Clerk
         product: ClerkKit
@@ -56,6 +60,9 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Wanderer/Resources/Wanderer.entitlements
     scheme:
       gatherCoverageData: false
+      # Local tip products for the simulator and Xcode runs. Real products
+      # are created in App Store Connect by a human (see README).
+      storeKitConfiguration: Wanderer/Resources/Wanderer.storekit
       testTargets:
         - WandererTests
 
@@ -64,6 +71,9 @@ targets:
     platform: iOS
     sources:
       - path: WandererTests
+      # Bundled so a test can check the config lists every tip tier.
+      - path: Wanderer/Resources/Wanderer.storekit
+        buildPhase: resources
     dependencies:
       - target: Wanderer
     settings:
