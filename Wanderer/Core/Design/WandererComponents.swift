@@ -143,10 +143,13 @@ struct SectionHeader: View {
             }
             if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: LiggaSpace.xs) }
             if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(WandererTheme.accentText)
-                    .frame(minHeight: 44)
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(.ligga(.subheadline, weight: .semibold))
+                        .foregroundStyle(WandererTheme.accentText)
+                        .frame(minWidth: WandererTheme.minimumTarget, minHeight: WandererTheme.minimumTarget)
+                        .contentShape(Rectangle())
+                }
             }
         }
     }

@@ -127,7 +127,7 @@ struct TripToolsView: View {
                     Image(systemName: "map")
                         .font(.ligga(.body, weight: .semibold))
                         .foregroundStyle(WandererTheme.ink)
-                        .frame(width: 44, height: 44)
+                        .frame(minWidth: WandererTheme.minimumTarget, minHeight: WandererTheme.minimumTarget)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -163,21 +163,24 @@ struct TripToolsView: View {
                     Image(systemName: "square.and.arrow.up")
                         .font(.ligga(.body, weight: .semibold))
                         .foregroundStyle(WandererTheme.ink)
-                        .frame(width: 44, height: 44)
+                        .frame(minWidth: WandererTheme.minimumTarget, minHeight: WandererTheme.minimumTarget)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Export trip")
                 .accessibilityIdentifier("trip-export-pdf")
 
-                Button("Done") { dismiss() }
-                    .font(.ligga(.body, weight: .semibold))
-                    .foregroundStyle(WandererTheme.ink)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("trip-tools-done")
+                Button { dismiss() } label: {
+                    Text("Done")
+                        .font(.ligga(.body, weight: .semibold))
+                        .foregroundStyle(WandererTheme.ink)
+                        .frame(minWidth: WandererTheme.minimumTarget, minHeight: WandererTheme.minimumTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("trip-tools-done")
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func exportPDF() {

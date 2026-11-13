@@ -192,7 +192,7 @@ struct TripsHomeView: View {
                     : WandererAppearance.dark.rawValue
             } label: {
                 Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.stars.fill")
-                    .font(.ligga(.body, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
                     .frame(width: 44, height: 44)
                     .background {
@@ -212,7 +212,7 @@ struct TripsHomeView: View {
                 showPlanner = true
             } label: {
                 Image(systemName: "plus")
-                    .font(.ligga(.title3, weight: .bold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(WandererTheme.onAccent)
                     .frame(width: 44, height: 44)
                     .background(WandererTheme.route, in: Circle())

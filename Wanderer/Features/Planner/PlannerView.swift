@@ -644,6 +644,7 @@ struct PlannerView: View {
                 .opacity(count == 0 ? 0 : 1)
             }
             .foregroundStyle(isSelected ? Color(hex: 0x10283A) : WandererTheme.ink)
+            .padding(.horizontal, LiggaSpace.xs)
             .frame(minWidth: 50, minHeight: 56)
             .background {
                 if isSelected {
@@ -1253,9 +1254,9 @@ struct PlannerView: View {
 
     private func listHeader(_ text: String) -> some View {
         Text(text)
-            .font(.ligga(.footnote, weight: .semibold))
+            .wandererHeading(.group)
             .foregroundStyle(WandererTheme.muted)
-            .lineLimit(1)
+            .lineLimit(nil)
             .textCase(nil)
             // Plain-list headers sit 4pt left of the panel gutter.
             .padding(.leading, 4)
@@ -1668,7 +1669,9 @@ private struct PlannerPlaceRow: View {
     /// This member saved their own version of a shared stop.
     var hasOverride = false
 
-    @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
+    @ScaledMetric(relativeTo: .headline) private var scaledBeadSize: CGFloat = 28
+    // A decorative route marker must leave room for the full-size stop name.
+    private var beadSize: CGFloat { min(scaledBeadSize, WandererTheme.minimumTarget) }
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -1806,7 +1809,9 @@ private struct PlannerPlaceRow: View {
 private struct PlannerLegConnector: View {
     let leg: PlannerTravelLeg
     var showsRail = true
-    @ScaledMetric(relativeTo: .headline) private var beadSize: CGFloat = 28
+    @ScaledMetric(relativeTo: .headline) private var scaledBeadSize: CGFloat = 28
+    // A decorative route marker must leave room for the full-size stop name.
+    private var beadSize: CGFloat { min(scaledBeadSize, WandererTheme.minimumTarget) }
 
     var body: some View {
         HStack(spacing: 12) {

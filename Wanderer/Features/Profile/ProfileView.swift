@@ -207,12 +207,18 @@ struct ProfileView: View {
             .buttonStyle(.liggaPressable)
             .accessibilityIdentifier("profile-guest-create-account")
 
-            Button("I already have an account") {
+            Button {
                 withAnimation { isGuest = false }
+            } label: {
+                Text("I already have an account")
+                    .font(.ligga(.subheadline, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, minHeight: WandererTheme.minimumTarget)
+                    .contentShape(Rectangle())
             }
-            .font(.ligga(.subheadline, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .buttonStyle(.plain)
         }
         .padding(20)
         .background(WandererTheme.charcoal, in: RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))

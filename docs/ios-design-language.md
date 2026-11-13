@@ -25,7 +25,10 @@ Headings add 2pt of scaled leading without imposing a fixed line height.
 Native navigation and form sheet titles retain the system's scaling and
 VoiceOver semantics. Ticket endpoints, totals and statistics are values,
 not headings. Small map-pin numbers and decorative icons retain their own
-geometry rather than growing into the surrounding map.
+geometry rather than growing into the surrounding map. The Planner retains
+its existing AX2 cap on fixed map chrome so the stop list has room; stop text
+continues to the user's full accessibility size. Route beads cap at 44pt to
+leave that text a usable reading width.
 
 ## Layout and surfaces
 

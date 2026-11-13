@@ -58,7 +58,7 @@ struct HomeFeaturedTripCard: View {
                 LinearGradient(
                     stops: [
                         .init(color: WandererTheme.charcoal.opacity(0.35), location: 0),
-                        .init(color: .clear, location: 0.3),
+                        .init(color: WandererTheme.charcoal.opacity(0.4), location: 0.3),
                         .init(color: WandererTheme.charcoal.opacity(0.92), location: 1)
                     ],
                     startPoint: .top,
