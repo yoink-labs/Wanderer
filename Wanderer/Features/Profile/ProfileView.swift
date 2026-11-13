@@ -20,6 +20,7 @@ struct ProfileView: View {
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarSavedCount = 0
     @State private var avatarFailedCount = 0
+    @State private var showTipJar = DebugLaunch.route == "tipJar"
 
     private let gutter: CGFloat = 16
 
@@ -100,6 +101,7 @@ struct ProfileView: View {
                         visitedCard
                     }
                     settingsCard
+                    supportCard
 
                     if !isGuest, let message = profileStore.errorMessage ?? visitedStore.errorMessage {
                         errorNote(message)
@@ -124,6 +126,9 @@ struct ProfileView: View {
             .contentMargins(.bottom, 96, for: .scrollContent)
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await loadAll() }
+            .navigationDestination(isPresented: $showTipJar) {
+                TipJarView(store: .shared)
+            }
         }
         .sensoryFeedback(.success, trigger: avatarSavedCount)
         .sensoryFeedback(.error, trigger: avatarFailedCount)
@@ -376,6 +381,45 @@ struct ProfileView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Visited places, \(visitedSummary)")
         .accessibilityIdentifier("profile-visited-places")
+    }
+
+    // MARK: - Support
+
+    /// The optional tip jar. Shown to guests too; it unlocks nothing.
+    private var supportCard: some View {
+        Button {
+            LiggaHaptics.tap()
+            showTipJar = true
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "heart.fill")
+                    .font(.ligga(.body, weight: .semibold))
+                    .foregroundStyle(WandererTheme.coralDeep)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Support Wanderer")
+                        .font(.ligga(.body, weight: .medium))
+                        .foregroundStyle(WandererTheme.ink)
+                    Text("Leave an optional tip")
+                        .font(.ligga(.caption))
+                        .foregroundStyle(WandererTheme.muted)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.ligga(.caption2, weight: .bold))
+                    .foregroundStyle(WandererTheme.muted.opacity(0.5))
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 58)
+            .contentShape(Rectangle())
+            .liggaCard()
+        }
+        .buttonStyle(.liggaPressable)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens the optional tip jar")
+        .accessibilityIdentifier("profile-support-wanderer")
     }
 
     // MARK: - Settings

@@ -17,6 +17,9 @@ struct WandererApp: App {
             Clerk.configure(publishableKey: key)
         }
         Self.configureBars()
+        // Finish tips StoreKit delivers outside the purchase sheet (Ask to
+        // Buy approvals, or a transaction interrupted by a crash).
+        Task { @MainActor in TipJarStore.shared.startObservingTransactions() }
     }
 
     var body: some Scene {

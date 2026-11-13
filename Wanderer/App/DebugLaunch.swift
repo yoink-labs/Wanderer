@@ -8,6 +8,8 @@ import Foundation
 ///     -uiSheet expenses|bookings|checklist|share|files|journal|settings
 ///                                    open a trip sheet after the trip loads
 ///     -uiDemo YES                    seed a local demo trip for guests
+///     -uiRoute tipJar                push Support Wanderer on Profile
+///                                    (pair with -uiTab profile)
 ///
 /// Appearance and guest mode use the standard UserDefaults argument domain:
 /// `-wanderer.appearance dark -wanderer.isGuest YES`.
@@ -27,4 +29,5 @@ enum DebugLaunch {
     static var opensFirstTrip: Bool { value("uiOpenTrip") != nil }
     static var sheet: String? { value("uiSheet") }
     static var wantsDemo: Bool { value("uiDemo") != nil }
+    static var route: String? { value("uiRoute") }
 }
