@@ -198,6 +198,41 @@ optionally `-uiTipOutcome thanks|pending|failed|cancel`) to serve the tips
 from that file instead, e.g. with `-uiTab profile -uiRoute tipJar` for
 screenshots. Release builds ignore these flags.
 
+## TestFlight
+
+One command archives the app and uploads it to App Store Connect:
+
+```bash
+scripts/testflight.sh              # next build number (project.yml + 1)
+scripts/testflight.sh 9            # a specific build number
+scripts/testflight.sh --skip-tests # skip the simulator unit tests
+scripts/testflight.sh --no-upload  # archive and export an .ipa locally only
+```
+
+It sets `CURRENT_PROJECT_VERSION` in `project.yml`, runs `xcodegen`, runs the
+unit tests (no upload if they fail), archives Release for
+`generic/platform=iOS` with automatic signing, then exports with
+`scripts/ExportOptions.plist` (`app-store-connect`, `destination: upload`),
+which uploads straight to App Store Connect. Commit the `project.yml` and
+`Wanderer.xcodeproj` bump afterwards. Logs, the archive and DerivedData go
+to `~/Library/Developer/Wanderer-TestFlight/` (outside this folder, whose
+File Provider xattrs break codesign).
+
+Signing uses an App Store Connect API key, read from the environment:
+
+| Variable | Default |
+| --- | --- |
+| `ASC_KEY_ID` | `2VGQN75FV5` |
+| `ASC_KEY_PATH` | `~/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8` |
+| `ASC_ISSUER_ID` | none: required (Undrift LLC team issuer, from App Store Connect → Users and Access → Integrations) |
+| `ASC_ENV_FILE` | `~/.appstoreconnect/asc.env`, sourced if present; put `ASC_ISSUER_ID=…` there once |
+| `TEST_DESTINATION` | `platform=iOS Simulator,name=iPhone 17 Pro` |
+
+The key must have cloud signing permission (Admin): with
+`23TY3H4W7Z` the export fails with "Cloud signing permission error". No key
+material or issuer id is committed. Apple processes an upload for roughly
+5–30 minutes before it shows in TestFlight.
+
 ## Backend
 
 See `worker/README.md` for routes, local development, deployment and secrets.
