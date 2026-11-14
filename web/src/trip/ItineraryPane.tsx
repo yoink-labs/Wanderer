@@ -55,14 +55,18 @@ export function ItineraryPane({
   const [pendingDelete, setPendingDelete] = useState<Place | null>(null);
   const [pendingBookingDelete, setPendingBookingDelete] = useState<Reservation | null>(null);
   const [busy, setBusy] = useState(false);
+  const previousDayId = useRef<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const { toast } = useToast();
   const timezone = store.bundle?.trip.timezone ?? "UTC";
 
   useEffect(() => {
     if (!selectedDayId) return;
+    // Initial selection should not scroll the page past the trip header.
+    const shouldScroll = previousDayId.current !== null;
+    previousDayId.current = selectedDayId;
     if (selectedDayId === "unscheduled") {
-      document.getElementById("itinerary-unscheduled")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (shouldScroll) document.getElementById("itinerary-unscheduled")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     setCollapsed((current) => {
@@ -70,7 +74,7 @@ export function ItineraryPane({
       next.delete(selectedDayId);
       return next;
     });
-    document.getElementById(`itinerary-${selectedDayId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (shouldScroll) document.getElementById(`itinerary-${selectedDayId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedDayId]);
 
   useEffect(() => {
