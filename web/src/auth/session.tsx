@@ -1,5 +1,12 @@
 import { ClerkProvider, useAuth, useClerk, useUser } from "@clerk/clerk-react";
-import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  type ReactNode,
+} from "react";
+import { useTheme } from "../lib/theme";
 import { TEST_TOKEN, USE_TEST_AUTH, WandererApi } from "../lib/api";
 
 export interface SessionUser {
@@ -29,7 +36,9 @@ export function useSession(): SessionValue {
   return value;
 }
 
-const TEST_EMAIL = TEST_TOKEN.includes("|") ? TEST_TOKEN.split("|")[1] : "web@example.com";
+const TEST_EMAIL = TEST_TOKEN.includes("|")
+  ? TEST_TOKEN.split("|")[1]
+  : "web@example.com";
 const TEST_SUB = TEST_TOKEN.replace(/^test:/, "").split("|")[0] || "webuser";
 const TEST_LOCAL = TEST_EMAIL.split("@")[0] || TEST_SUB;
 const TEST_NAME = TEST_LOCAL.charAt(0).toUpperCase() + TEST_LOCAL.slice(1);
@@ -55,7 +64,9 @@ function TestSessionHost({ children }: { children: ReactNode }) {
     }),
     [api],
   );
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }
 
 function ClerkSessionHost({ children }: { children: ReactNode }) {
@@ -78,7 +89,11 @@ function ClerkSessionHost({ children }: { children: ReactNode }) {
       user: user
         ? {
             id: user.id,
-            displayName: user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split("@")[0] || "Traveler",
+            displayName:
+              user.fullName ||
+              user.username ||
+              user.primaryEmailAddress?.emailAddress.split("@")[0] ||
+              "Traveler",
             email: user.primaryEmailAddress?.emailAddress ?? null,
             avatarUrl: user.imageUrl ?? null,
           }
@@ -95,7 +110,9 @@ function ClerkSessionHost({ children }: { children: ReactNode }) {
     [api, clerk, isLoaded, isSignedIn, signOut, user],
   );
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }
 
 const CLERK_APPEARANCE = {
@@ -107,7 +124,8 @@ const CLERK_APPEARANCE = {
     colorInputBackground: "#F3F6F5",
     colorInputText: "#10283A",
     borderRadius: "14px",
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif',
     fontSize: "15px",
   },
   elements: {
@@ -118,12 +136,33 @@ const CLERK_APPEARANCE = {
 };
 
 export function SessionHost({ children }: { children: ReactNode }) {
+  const { resolved } = useTheme();
+  const dark = resolved === "dark";
   if (USE_TEST_AUTH) return <TestSessionHost>{children}</TestSessionHost>;
   const publishableKey =
     (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined) ??
     "pk_live_Y2xlcmsueW9pbmtsYWJzLmRldiQ";
   return (
-    <ClerkProvider publishableKey={publishableKey} appearance={CLERK_APPEARANCE}>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      appearance={{
+        ...CLERK_APPEARANCE,
+        variables: {
+          ...CLERK_APPEARANCE.variables,
+          colorPrimary: dark ? "#FFC14D" : "#10283A",
+          colorText: dark ? "#E8EEF1" : "#10283A",
+          colorTextSecondary: dark ? "#93A6B3" : "#56697A",
+          colorBackground: dark ? "#101B23" : "#FFFFFF",
+          colorInputBackground: dark ? "#16242E" : "#EEF2F3",
+          colorInputText: dark ? "#E8EEF1" : "#10283A",
+          colorTextOnPrimaryBackground: dark ? "#10283A" : "#FFFFFF",
+          colorNeutral: dark ? "#E8EEF1" : "#10283A",
+          fontFamily:
+            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          borderRadius: "18px",
+        },
+      }}
+    >
       <ClerkSessionHost>{children}</ClerkSessionHost>
     </ClerkProvider>
   );

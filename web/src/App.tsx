@@ -7,6 +7,8 @@ import { ThemeProvider } from "./lib/theme";
 import Explore from "./pages/Explore";
 import GuideDetail from "./pages/GuideDetail";
 import Home from "./pages/Home";
+import Landing from "./pages/Landing";
+import SignIn from "./pages/SignIn";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import TripWorkspace from "./pages/TripWorkspace";
@@ -28,6 +30,8 @@ function Shell() {
       <main id="main-content">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<Landing />} />
+          <Route path="/sign-in" element={<SignIn />} />
           <Route path="/guides" element={<Explore />} />
           <Route path="/guides/:guideId" element={<GuideDetail />} />
           <Route path="/trips/:tripId" element={<TripWorkspace />} />

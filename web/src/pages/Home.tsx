@@ -11,6 +11,7 @@ import { useToast } from "../components/Toast";
 import { countdownLabel, dayCount, daysUntil, fmtDateRange, tripPhase } from "../lib/dates";
 import { plural, summaryName } from "../lib/format";
 import { guestTrips, loadGuestBundles, migrateGuestTrips } from "../lib/guest";
+import Landing from "./Landing";
 import type { Guide, Member, Trip } from "../types";
 
 interface TripRow extends Trip {
@@ -88,6 +89,12 @@ function memberNames(trip: TripRow): string[] {
 }
 
 export default function Home() {
+  const session = useSession();
+  // Marketing needs no API round trip. Existing guest plans still open the atlas.
+  return !session.isSignedIn && guestTrips().length === 0 ? <Landing /> : <TripHome />;
+}
+
+function TripHome() {
   const session = useSession();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -170,7 +177,7 @@ export default function Home() {
       <header className="home-heading">
         <div>
           <p className="context-line">{todayLine}</p>
-          <h1>{session.isSignedIn ? `${greeting()}, ${firstName}.` : "Where to next?"}</h1>
+          <h1>{session.isSignedIn ? `${greeting()}, ${firstName}.` : "Your next chapter."}</h1>
           <p className="home-heading__sub">
             {session.isSignedIn
               ? "A quiet place for the trips you're taking and the ones you're still dreaming up."
@@ -299,7 +306,7 @@ export default function Home() {
 
       <footer className="home-footer">
         <span className="home-footer__word">Wanderer</span>
-        <span>Trip planning, with room to breathe.</span>
+        <span>Open source. No paywall. Optional tips in the iOS app.</span>
         <button type="button" className="text-link" onClick={() => setPlanOpen(true)}>Start a trip <ArrowRight size={14} /></button>
       </footer>
 

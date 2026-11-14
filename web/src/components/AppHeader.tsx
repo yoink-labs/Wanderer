@@ -27,6 +27,7 @@ export function AppHeader() {
         </nav>
 
         <div className="site-header__actions">
+          <Link to="/about" className="header-about">Made for the journey</Link>
           <button
             type="button"
             className="icon-button icon-button--quiet theme-toggle"
@@ -43,9 +44,9 @@ export function AppHeader() {
               <span className="site-header__account-label">{displayName.split(" ")[0]}</span>
             </Link>
           ) : (
-            <button type="button" className="button button--ink button--small" onClick={session.signIn} disabled={!session.isLoaded}>
+            <Link to="/sign-in" className="button button--ink button--small">
               Sign in
-            </button>
+            </Link>
           )}
         </div>
       </div>
