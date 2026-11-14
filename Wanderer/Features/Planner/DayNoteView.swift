@@ -33,7 +33,7 @@ struct DayNoteView: View {
                     .scrollContentBackground(.hidden)
                     .padding(12)
                     .frame(minHeight: 240)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(WandererTheme.line, lineWidth: 1)

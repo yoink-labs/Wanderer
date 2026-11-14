@@ -2051,3 +2051,10 @@ body {
     padding: 12px;
   }
 }
+/* Apple's monochrome provider mark needs a light silhouette in dark mode. */
+[data-theme="dark"] .cl-socialButtonsProviderIcon__apple {
+  filter: brightness(0) invert(1);
+}
+.cl-socialButtonsBlockButtonText {
+  color: var(--ink);
+}

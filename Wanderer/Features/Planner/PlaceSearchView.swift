@@ -300,8 +300,8 @@ struct PlaceSearchView: View {
                         .font(.ligga(.subheadline, weight: .bold))
                         .foregroundStyle(WandererTheme.coralDeep)
                         .padding(.horizontal, 18)
-                        .frame(height: 42)
-                        .background(.white, in: Capsule())
+                        .frame(minHeight: WandererTheme.minimumTarget)
+                        .background(WandererTheme.card, in: Capsule())
                         .overlay(Capsule().stroke(WandererTheme.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)

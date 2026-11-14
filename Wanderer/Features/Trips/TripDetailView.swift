@@ -151,7 +151,7 @@ struct TripDetailView: View {
                 .background(WandererTheme.sandDeep.opacity(0.7), in: Circle())
         }
         .padding(12)
-        .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func reservationRow(title: String, detail: String, icon: String) -> some View {
@@ -177,7 +177,7 @@ struct TripDetailView: View {
             Spacer()
         }
         .padding(12)
-        .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

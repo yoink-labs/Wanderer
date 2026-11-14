@@ -22,6 +22,7 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const fitRef = useRef<() => void>(() => undefined);
   const selectedRef = useRef(selectedPlaceId);
   const [dayFilter, setDayFilter] = useState<string | null>(focusDayId);
   selectedRef.current = selectedPlaceId;
@@ -44,7 +45,13 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
 
   const fit = useCallback(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const container = containerRef.current;
+    // On phones the itinerary hides this pane. Leaflet's flyTo divides by
+    // the viewport size and produces NaN coordinates for a hidden map.
+    if (!map || !container?.clientWidth || !container.clientHeight) return;
+    // Visibility can change before ResizeObserver runs. Refresh Leaflet's
+    // cached zero size before starting any camera animation.
+    map.invalidateSize({ pan: false });
     const points = filtered.map((place) => L.latLng(place.lat!, place.lng!));
     if (!points.length) {
       map.setView([24, 8], 2, { animate: true });
@@ -56,6 +63,7 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
     }
     map.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 15, animate: true });
   }, [filtered]);
+  fitRef.current = fit;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -73,9 +81,13 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
     mapRef.current = map;
     layerRef.current = L.layerGroup().addTo(map);
 
-    const resize = new ResizeObserver(() => map.invalidateSize());
+    const resize = new ResizeObserver(() => {
+      const container = containerRef.current;
+      if (!container?.clientWidth || !container.clientHeight) return;
+      // Refit with the latest stops once the map becomes visible or resizes.
+      fitRef.current();
+    });
     resize.observe(containerRef.current);
-    window.setTimeout(() => map.invalidateSize(), 120);
 
     return () => {
       resize.disconnect();
