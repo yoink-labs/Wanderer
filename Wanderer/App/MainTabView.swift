@@ -35,6 +35,10 @@ struct MainTabView: View {
         }
         .tint(WandererTheme.controlTint)
         .sensoryFeedback(.selection, trigger: selection)
+        // On a regular-width canvas (iPhone Duo open, iPad, Split View) the
+        // system lays the tabs out as a vertical sidebar beside the content.
+        // Compact width keeps the familiar bottom bar. No device checks.
+        .tabViewStyle(.sidebarAdaptable)
     }
 
     /// Outline glyphs for unselected tabs, filled for the active one. The tab

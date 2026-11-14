@@ -53,12 +53,12 @@ struct HomeFeaturedTripCard: View {
     var body: some View {
         NavigationLink(value: trip) {
             ZStack(alignment: .bottomLeading) {
-                HomeTripCover(trip: trip)
+                Color.clear.overlay { HomeTripCover(trip: trip) }.clipped()
 
                 LinearGradient(
                     stops: [
                         .init(color: WandererTheme.charcoal.opacity(0.35), location: 0),
-                        .init(color: .clear, location: 0.3),
+                        .init(color: WandererTheme.charcoal.opacity(0.4), location: 0.3),
                         .init(color: WandererTheme.charcoal.opacity(0.92), location: 1)
                     ],
                     startPoint: .top,
@@ -78,16 +78,15 @@ struct HomeFeaturedTripCard: View {
                     Spacer(minLength: LiggaSpace.l)
 
                     Text(trip.title)
-                        .font(.display(.title, weight: .heavy))
+                        .wandererHeading(.hero)
                         .foregroundStyle(.white)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                         .multilineTextAlignment(.leading)
                     Text(trip.destination)
                         .font(.ligga(.subheadline, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(1)
-                        .padding(.top, 2)
+                        .padding(.top, LiggaSpace.xxs)
 
                     TripRouteSpine(progress: progress)
                         .padding(.top, LiggaSpace.m)
@@ -102,7 +101,7 @@ struct HomeFeaturedTripCard: View {
                                     .padding(.leading, LiggaSpace.xs)
                             }
                         }
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                             Text(trip.dateRange)
                             Text(progress.label)
                             if trip.places > 0 {
@@ -116,11 +115,11 @@ struct HomeFeaturedTripCard: View {
                     .lineLimit(1)
                     .padding(.top, LiggaSpace.xs)
                 }
-                .padding(LiggaSpace.l - 4)
+                .padding(WandererTheme.gutter)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: height)
+            .frame(minHeight: height)
             .clipShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
             .modifier(TripTransitionSource(id: trip.id, namespace: transitionNamespace))
@@ -219,11 +218,11 @@ struct HomeTripRow: View {
                 .frame(width: min(thumbSize, 80), height: min(thumbSize, 80))
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                 Text(trip.title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .multilineTextAlignment(.leading)
                 Text(trip.destination)
                     .font(.ligga(.subheadline))
@@ -319,7 +318,7 @@ struct HomeGuideTile: View {
 
             VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                 Text(guide.title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(2, reservesSpace: true)
                     .multilineTextAlignment(.leading)
@@ -356,9 +355,9 @@ struct HomeGuideResultRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                 Text(guide.title)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -369,7 +368,7 @@ struct HomeGuideResultRow: View {
                         .lineLimit(1)
                 }
                 LiggaStatusChip(title: "Guide", tone: .quiet)
-                    .padding(.top, 2)
+                    .padding(.top, LiggaSpace.xxs)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -383,6 +382,88 @@ struct HomeGuideResultRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Guide: \([guide.title, guide.destination].compactMap { $0 }.joined(separator: ", "))")
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Compact trip card for the two-/three-column grid on a wide canvas
+/// (iPhone Duo open, iPad, Split View). The featured trip keeps the large
+/// postcard; everything else becomes one of these.
+struct HomeTripTile: View {
+    let trip: Trip
+
+    @Environment(\.colorScheme) private var scheme
+
+    private var countdown: String {
+        switch trip.phase {
+        case .inProgress:
+            return TripRouteProgress(trip: trip).label
+        case .past:
+            return "Past"
+        case .upcoming:
+            guard let start = TripDayRecord.date(from: trip.startDate) else { return "" }
+            let days = Calendar.current.dateComponents(
+                [.day], from: Calendar.current.startOfDay(for: Date()), to: start
+            ).day ?? 0
+            return days <= 1 ? (days <= 0 ? "Today" : "Tomorrow") : "In \(days) d"
+        }
+    }
+
+    var body: some View {
+        NavigationLink(value: trip) {
+            VStack(alignment: .leading, spacing: 0) {
+                HomeTripCover(trip: trip)
+                    .frame(height: 152)
+                    .clipShape(UnevenRoundedRectangle(
+                        topLeadingRadius: 20,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 20,
+                        style: .continuous
+                    ))
+
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
+                    Text(trip.title)
+                        .wandererHeading(.card)
+                        .foregroundStyle(WandererTheme.ink)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(trip.destination)
+                        .font(.ligga(.subheadline))
+                        .foregroundStyle(WandererTheme.muted)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        Text(trip.dateRange)
+                            .font(.ligga(.footnote))
+                            .foregroundStyle(WandererTheme.muted)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(countdown)
+                            .font(.ligga(.caption, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundStyle(
+                                trip.phase == .past || trip.phase == .upcoming
+                                    ? WandererTheme.muted
+                                    : WandererTheme.accentText
+                            )
+                            .lineLimit(1)
+                    }
+                    .padding(.top, LiggaSpace.xxs)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+            .background(WandererTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: WandererTheme.cardShadow(scheme), radius: scheme == .dark ? 0 : 12, x: 0, y: 5)
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.liggaPressable)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(trip.title), \(trip.destination), \(trip.dateRange)")
         .accessibilityAddTraits(.isButton)
     }
 }

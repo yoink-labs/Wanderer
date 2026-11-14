@@ -12,6 +12,7 @@ struct ProfileView: View {
     @AppStorage("wanderer.currency") private var currency = "USD"
     @AppStorage("wanderer.units") private var units = "Metric"
     @AppStorage("wanderer.appearance") private var appearanceRaw = WandererAppearance.system.rawValue
+    @AppStorage(FlightAlerts.enabledKey) private var flightAlerts = true
 
     @State private var showDeleteAccountConfirm = false
     @State private var isDeletingAccount = false
@@ -19,8 +20,9 @@ struct ProfileView: View {
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarSavedCount = 0
     @State private var avatarFailedCount = 0
+    @State private var showTipJar = DebugLaunch.route == "tipJar"
 
-    private let gutter: CGFloat = 16
+    private let gutter = WandererTheme.gutter
 
     private let currencyCodes = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD"]
     private let unitOptions = ["Metric", "Imperial"]
@@ -84,9 +86,9 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
+                VStack(spacing: LiggaSpace.l) {
                     Text("Profile")
-                        .font(.display(.largeTitle))
+                        .wandererHeading(.screen)
                         .foregroundStyle(WandererTheme.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityAddTraits(.isHeader)
@@ -99,6 +101,7 @@ struct ProfileView: View {
                         visitedCard
                     }
                     settingsCard
+                    supportCard
 
                     if !isGuest, let message = profileStore.errorMessage ?? visitedStore.errorMessage {
                         errorNote(message)
@@ -113,13 +116,19 @@ struct ProfileView: View {
                 }
                 }
                 .padding(.horizontal, gutter)
-                .padding(.top, 8)
-                .padding(.bottom, 30)
+                .padding(.top, LiggaSpace.xs)
+                .padding(.bottom, LiggaSpace.xl)
+                // Settings read as a column, not a stretched canvas.
+                .frame(maxWidth: 860)
+                .frame(maxWidth: .infinity)
             }
-            .background(WandererTheme.sand.ignoresSafeArea())
+            .background(WandererBackdrop())
             .contentMargins(.bottom, 96, for: .scrollContent)
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await loadAll() }
+            .navigationDestination(isPresented: $showTipJar) {
+                TipJarView(store: .shared)
+            }
         }
         .sensoryFeedback(.success, trigger: avatarSavedCount)
         .sensoryFeedback(.error, trigger: avatarFailedCount)
@@ -170,9 +179,9 @@ struct ProfileView: View {
                 : AnyLayout(HStackLayout(spacing: 12))
             headerLayout {
                 WandererMark(size: 44)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                     Text("Planning as a guest")
-                        .font(.display(.title3))
+                        .wandererHeading(.section)
                         .foregroundStyle(.white)
                     Text(tripCount == 0
                          ? "Trips you plan stay on this phone"
@@ -193,23 +202,31 @@ struct ProfileView: View {
             } label: {
                 Text("Create a free account")
                     .font(.ligga(.headline, weight: .bold))
-                    .foregroundStyle(Color(hex: 0x10283A))
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 50)
-                    .background(Color(hex: 0xF2A922), in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
+                    .foregroundStyle(WandererTheme.charcoal)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
+                    .padding(LiggaSpace.s)
+                    .frame(maxWidth: .infinity, minHeight: WandererTheme.buttonHeight)
+                    .background(WandererTheme.route, in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
             }
             .buttonStyle(.liggaPressable)
             .accessibilityIdentifier("profile-guest-create-account")
 
-            Button("I already have an account") {
+            Button {
                 withAnimation { isGuest = false }
+            } label: {
+                Text("I already have an account")
+                    .font(.ligga(.subheadline, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, minHeight: WandererTheme.minimumTarget)
+                    .contentShape(Rectangle())
             }
-            .font(.ligga(.subheadline, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .buttonStyle(.plain)
         }
         .padding(20)
-        .background(Color(hex: 0x10283A), in: RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
+        .background(WandererTheme.charcoal, in: RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: WandererTheme.postcardRadius, style: .continuous)
                 .strokeBorder(.white.opacity(0.08), lineWidth: 1)
@@ -219,15 +236,17 @@ struct ProfileView: View {
     // MARK: - Header
 
     private var profileCard: some View {
-        HStack(spacing: 16) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+            : AnyLayout(HStackLayout(spacing: LiggaSpace.m))
+        return layout {
             avatarControl
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName)
-                    .font(.ligga(.title2, weight: .bold))
+                    .wandererHeading(.title)
                     .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
 
                 Text(emailLine)
                     .font(.ligga(.footnote))
@@ -342,7 +361,7 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Visited places")
-                        .font(.ligga(.headline, weight: .semibold))
+                        .wandererHeading(.card)
                         .foregroundStyle(WandererTheme.ink)
                     Spacer()
                     HStack(spacing: 4) {
@@ -372,6 +391,53 @@ struct ProfileView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Visited places, \(visitedSummary)")
         .accessibilityIdentifier("profile-visited-places")
+    }
+
+    // MARK: - Support
+
+    /// The optional tip jar. Shown to guests too; it unlocks nothing.
+    private var supportCard: some View {
+        Button {
+            LiggaHaptics.tap()
+            showTipJar = true
+        } label: {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+                : AnyLayout(HStackLayout(spacing: LiggaSpace.s))
+            layout {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(WandererTheme.accentText)
+                    .frame(width: 26)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
+                    Text("Support Wanderer")
+                        .font(.wanderer(.card))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(WandererTheme.ink)
+                    Text("Leave an optional tip")
+                        .font(.ligga(.footnote))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(WandererTheme.muted)
+                }
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.ligga(.caption2, weight: .bold))
+                        .foregroundStyle(WandererTheme.muted)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(LiggaSpace.m)
+            .frame(minHeight: WandererTheme.minimumTarget)
+            .contentShape(Rectangle())
+            .liggaCard()
+        }
+        .buttonStyle(.liggaPressable)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens the optional tip jar")
+        .accessibilityIdentifier("profile-support-wanderer")
     }
 
     // MARK: - Settings
@@ -411,6 +477,39 @@ struct ProfileView: View {
                 settingsRow(title: "Appearance", value: appearance.title, icon: "circle.lefthalf.filled")
             }
             .buttonStyle(.plain)
+
+            cardDivider
+
+            Toggle(isOn: $flightAlerts) {
+                HStack(spacing: 13) {
+                    Image(systemName: "airplane.circle")
+                        .font(.ligga(.body, weight: .semibold))
+                        .foregroundStyle(WandererTheme.muted)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Flight alerts")
+                            .font(.ligga(.body, weight: .medium))
+                            .foregroundStyle(WandererTheme.ink)
+                        Text("Gate, terminal and delay changes")
+                            .font(.ligga(.caption))
+                            .foregroundStyle(WandererTheme.muted)
+                    }
+                }
+            }
+            .tint(WandererTheme.coral)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 58)
+            .onChange(of: flightAlerts) { _, enabled in
+                guard enabled else { return }
+                Task {
+                    // Denied permission would make the switch a lie.
+                    if await FlightAlerts.requestAuthorization() == false {
+                        flightAlerts = false
+                    }
+                }
+            }
+            .accessibilityIdentifier("profile-flight-alerts")
 
         }
         .liggaCard()

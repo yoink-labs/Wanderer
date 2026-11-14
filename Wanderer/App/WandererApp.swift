@@ -17,6 +17,9 @@ struct WandererApp: App {
             Clerk.configure(publishableKey: key)
         }
         Self.configureBars()
+        // Finish tips StoreKit delivers outside the purchase sheet (Ask to
+        // Buy approvals, or a transaction interrupted by a crash).
+        Task { @MainActor in TipJarStore.shared.startObservingTransactions() }
     }
 
     var body: some Scene {
@@ -33,8 +36,8 @@ struct WandererApp: App {
     private static func configureBars() {
         let navigation = UINavigationBarAppearance()
         navigation.configureWithOpaqueBackground()
-        navigation.backgroundColor = .adaptive(light: 0xEEF2F3, dark: 0x0B151C)
-        let title = UIColor.adaptive(light: 0x10283A, dark: 0xE8EEF1)
+        navigation.backgroundColor = UIColor(WandererTheme.platinum)
+        let title = UIColor(WandererTheme.ink)
         navigation.titleTextAttributes = [.foregroundColor: title]
         navigation.largeTitleTextAttributes = [.foregroundColor: title]
         let bar = UINavigationBar.appearance()
@@ -44,7 +47,7 @@ struct WandererApp: App {
 
         let tab = UITabBarAppearance()
         tab.configureWithOpaqueBackground()
-        tab.backgroundColor = .adaptive(light: 0xEEF2F3, dark: 0x0B151C)
+        tab.backgroundColor = UIColor(WandererTheme.platinum)
         UITabBar.appearance().standardAppearance = tab
         UITabBar.appearance().scrollEdgeAppearance = tab
     }

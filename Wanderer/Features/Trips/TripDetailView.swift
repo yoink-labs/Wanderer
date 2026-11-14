@@ -75,7 +75,7 @@ struct TripDetailView: View {
                     .font(.ligga(.subheadline, weight: .medium))
                     .foregroundStyle(.white.opacity(0.8))
                 Text(trip.title)
-                    .font(.ligga(.title, weight: .bold))
+                    .wandererHeading(.hero)
                     .foregroundStyle(.white)
                 HStack(spacing: 8) {
                     Text(trip.dateRange)

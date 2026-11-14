@@ -26,9 +26,14 @@ struct TripsHomeView: View {
     @FocusState private var searchFocused: Bool
     @Namespace private var tripTransition
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage("wanderer.appearance") private var appearanceRaw = WandererAppearance.system.rawValue
     @State private var path = NavigationPath()
     @State private var didApplyDebugRoute = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Regular width means iPhone Duo open, iPad, or Split View — never a
+    /// specific device. It only changes the arrangement, not the content.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var memberInitials: [String] {
         let email = auth.userEmail
@@ -83,10 +88,14 @@ struct TripsHomeView: View {
                 .padding(.horizontal, WandererTheme.gutter)
                 .padding(.top, LiggaSpace.xs)
                 .padding(.bottom, LiggaSpace.xl)
+                // Keep the reading column comfortable on a wide canvas
+                // instead of letting a phone layout stretch edge to edge.
+                .frame(maxWidth: 1080, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .animation(.easeOut(duration: 0.2), value: isSearching)
             }
             .scrollDismissesKeyboard(.immediately)
-            .background(WandererTheme.platinum.ignoresSafeArea())
+            .background(WandererBackdrop())
             .contentMargins(.bottom, LiggaSpace.l, for: .scrollContent)
             .refreshable {
                 await refresh()
@@ -170,7 +179,7 @@ struct TripsHomeView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: LiggaSpace.s) {
             Text("Trips")
-                .font(.display(.largeTitle))
+                .wandererHeading(.screen)
                 .foregroundStyle(WandererTheme.ink)
                 .accessibilityAddTraits(.isHeader)
 
@@ -178,10 +187,32 @@ struct TripsHomeView: View {
 
             Button {
                 LiggaHaptics.tap()
+                appearanceRaw = colorScheme == .dark
+                    ? WandererAppearance.light.rawValue
+                    : WandererAppearance.dark.rawValue
+            } label: {
+                Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.stars.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .frame(width: 44, height: 44)
+                    .background {
+                        Circle().fill(.ultraThinMaterial)
+                    }
+                    .overlay {
+                        Circle().strokeBorder(WandererTheme.line, lineWidth: 1)
+                    }
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.liggaPressable)
+            .accessibilityLabel(colorScheme == .dark ? "Switch to light appearance" : "Switch to dark appearance")
+            .accessibilityIdentifier("home-appearance")
+
+            Button {
+                LiggaHaptics.tap()
                 showPlanner = true
             } label: {
                 Image(systemName: "plus")
-                    .font(.ligga(.title3, weight: .bold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(WandererTheme.onAccent)
                     .frame(width: 44, height: 44)
                     .background(WandererTheme.route, in: Circle())
@@ -297,12 +328,29 @@ struct TripsHomeView: View {
                     subtitle: ordering.others.count.liggaCounted("trip")
                 )
 
-                HomeGroupedCard(items: ordering.others) { trip in
-                    NavigationLink(value: trip) {
-                        HomeTripRow(trip: trip)
-                            .modifier(TripTransitionSource(id: trip.id, namespace: tripTransition))
+                if horizontalSizeClass == .regular {
+                    // Wide canvas: a grid of cards instead of one stretched
+                    // list. Adaptive columns keep each card close to the size
+                    // it has on a phone.
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 280, maximum: 420), spacing: LiggaSpace.m)],
+                        alignment: .leading,
+                        spacing: LiggaSpace.m
+                    ) {
+                        ForEach(ordering.others) { trip in
+                            HomeTripTile(trip: trip)
+                                .modifier(TripTransitionSource(id: trip.id, namespace: tripTransition))
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.top, LiggaSpace.xxs)
+                } else {
+                    HomeGroupedCard(items: ordering.others) { trip in
+                        NavigationLink(value: trip) {
+                            HomeTripRow(trip: trip)
+                                .modifier(TripTransitionSource(id: trip.id, namespace: tripTransition))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -430,7 +478,7 @@ struct TripsHomeView: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Find a stay in \(Self.city(from: trip.destination))")
-                            .font(.ligga(.headline, weight: .semibold))
+                            .wandererHeading(.card)
                             .foregroundStyle(WandererTheme.ink)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -498,7 +546,7 @@ struct TripsHomeView: View {
             WandererMark(size: 52)
             VStack(spacing: LiggaSpace.xs) {
                 Text("No trips yet")
-                    .font(.ligga(.title2, weight: .bold))
+                    .wandererHeading(.section)
                     .foregroundStyle(WandererTheme.ink)
                 Text("Pick a destination and Wanderer will lay out the days. You can add places, bookings and notes as you go.")
                     .font(.ligga(.subheadline))

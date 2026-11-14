@@ -8,8 +8,9 @@
     "ENVIRONMENT": "production",
     "CLERK_ISSUER": "https://clerk.yoinklabs.dev",
     "CLERK_JWKS_URL": "https://clerk.yoinklabs.dev/.well-known/jwks.json",
-    "CLERK_AUTHORIZED_PARTIES": "https://yoinklabs.dev,https://www.yoinklabs.dev,com.wanderer.ios",
-    "APP_SHARE_BASE_URL": "https://api.yoinklabs.dev"
+    "CLERK_AUTHORIZED_PARTIES": "https://yoinklabs.dev,https://www.yoinklabs.dev,https://wanderer.yoinklabs.dev,https://wanderer-trips.yoinklabs.workers.dev,com.wanderer.ios",
+    "APP_SHARE_BASE_URL": "https://api.yoinklabs.dev",
+    "WEB_ORIGINS": "https://wanderer.yoinklabs.dev,https://wanderer-trips.yoinklabs.workers.dev,https://wanderer-trips.pages.dev,http://localhost:5173,http://127.0.0.1:5173"
   },
   "d1_databases": [
     {

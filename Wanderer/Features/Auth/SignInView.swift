@@ -66,7 +66,7 @@ struct SignInView: View {
     private func hero(topInset: CGFloat, minHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: LiggaSpace.xs) {
             Text("Plan trips on a map,\nday by day.")
-                .font(.display(.title))
+                .wandererHeading(.hero)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)

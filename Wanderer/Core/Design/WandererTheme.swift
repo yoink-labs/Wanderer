@@ -17,16 +17,22 @@ enum WandererTheme {
 
     // MARK: Surfaces (follow the system appearance)
 
-    static let platinum = Color(light: 0xEEF2F3, dark: 0x0B151C)
+    static let platinum = Color(light: 0xEEF2F3, dark: 0x070D12)
     static let dust = Color(light: 0xD3DBD8, dark: 0x22323C)
     static let sand = platinum
-    static let sandDeep = Color(light: 0xDDE4E3, dark: 0x13212A)
-    static let card = Color(light: 0xFFFFFF, dark: 0x13212A)
-    static let cardElevated = Color(light: 0xFFFFFF, dark: 0x1A2B36)
+    static let sandDeep = Color(light: 0xDDE4E3, dark: 0x0F1A22)
+    static let card = Color(light: 0xFFFFFF, dark: 0x101B23)
+    static let cardElevated = Color(light: 0xFFFFFF, dark: 0x16242E)
     static let ink = Color(light: 0x10283A, dark: 0xE8EEF1)
     static let muted = Color(light: 0x56697A, dark: 0x93A6B3)
-    static let line = Color(light: 0xD3DBD8, dark: 0x22323C)
+    static let line = Color(light: 0xD3DBD8, dark: 0x24343F)
     static let shadow = Color.black
+
+    /// Chrome that floats over the map. Materials do the blur; this stroke
+    /// and shadow keep the card's edge legible on a busy map.
+    static let glassStroke = Color(light: 0xFFFFFF, dark: 0xFFFFFF).opacity(0.55)
+    static let glassEdge = Color(light: 0x10283A, dark: 0x000000).opacity(0.10)
+    static let glassTint = Color(light: 0xFFFFFF, dark: 0x0B151C)
 
     // MARK: Semantic aliases kept for existing screens
 
@@ -59,6 +65,8 @@ enum WandererTheme {
     /// Horizontal gutter shared by every top-level screen.
     static let gutter: CGFloat = 20
     static let screenPadding: CGFloat = gutter
+    static let minimumTarget: CGFloat = 44
+    static let buttonHeight: CGFloat = 52
 
     static func cardShadow(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? Color.clear : Color(hex: 0x10283A, opacity: 0.07)
@@ -156,27 +164,128 @@ extension Font {
         .system(style, design: .default).weight(weight)
     }
 
-    /// Display face: SF Pro Expanded, heavy. Trip names and screen titles only.
-    static func display(_ style: Font.TextStyle, weight: Font.Weight = .heavy) -> Font {
-        .system(style, design: .default).weight(weight).width(.expanded)
+    static func wanderer(_ role: WandererType) -> Font {
+        .system(role.textStyle, design: .default).weight(role.weight)
+    }
+}
+
+/// A single hierarchy for titles. Native text styles retain optical sizing and
+/// Dynamic Type metrics, including all accessibility sizes.
+enum WandererType {
+    case screen, hero, title, section, card, group
+
+    var textStyle: Font.TextStyle {
+        switch self {
+        case .screen: return .largeTitle
+        case .hero: return .title
+        case .title: return .title2
+        case .section: return .title3
+        case .card: return .headline
+        case .group: return .subheadline
+        }
+    }
+
+    var weight: Font.Weight { self == .screen ? .bold : .semibold }
+    var tracking: CGFloat {
+        switch self {
+        case .screen: return -0.4
+        case .hero: return -0.2
+        default: return 0
+        }
+    }
+}
+
+private struct WandererHeadingModifier: ViewModifier {
+    let role: WandererType
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .headline) private var leading: CGFloat = 2
+
+    func body(content: Content) -> some View {
+        content
+            .font(.wanderer(role))
+            .tracking(dynamicTypeSize.isAccessibilitySize ? 0 : role.tracking)
+            .lineSpacing(leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
 extension View {
-    /// The one card treatment: surface fill, 16pt continuous radius, a single
+    /// Structural titles only. Values and controls use `Font.wanderer` without
+    /// header traits. Color stays with the surface (ink on cards, white on photos).
+    func wandererHeading(_ role: WandererType) -> some View {
+        modifier(WandererHeadingModifier(role: role))
+    }
+}
+
+/// Page background: map paper, warmed by a sea and marigold glow. Subtle in
+/// light, richer in dark where the glow carries the identity.
+struct WandererBackdrop: View {
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        ZStack {
+            WandererTheme.platinum
+            RadialGradient(
+                colors: [WandererTheme.sea.opacity(scheme == .dark ? 0.12 : 0.05), .clear],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 620
+            )
+            RadialGradient(
+                colors: [WandererTheme.route.opacity(scheme == .dark ? 0.06 : 0.04), .clear],
+                center: .topLeading,
+                startRadius: 10,
+                endRadius: 460
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+extension View {
+    /// The one card treatment: surface fill, shared continuous radius, a single
     /// soft shadow and no stroke. Follows light and dark automatically.
     func liggaCard() -> some View {
         liggaCard(radius: WandererTheme.cardRadius)
     }
-
     func liggaCard(radius: CGFloat) -> some View {
         modifier(LiggaCardModifier(radius: radius))
+    }
+
+    /// Floating chrome over the map: a system material, a hairline highlight
+    /// and a deep shadow. Used by the planner panel and floating controls so
+    /// the map stays visible (and alive) underneath.
+    func wandererGlass(radius: CGFloat = 28, tintOpacity: Double = 0.10) -> some View {
+        modifier(WandererGlassModifier(radius: radius, tintOpacity: tintOpacity))
     }
 
     /// Small sentence-case label that sits above a section or hero.
     func liggaOverline() -> some View {
         font(.ligga(.footnote, weight: .semibold))
             .foregroundStyle(WandererTheme.muted)
+    }
+}
+
+private struct WandererGlassModifier: ViewModifier {
+    let radius: CGFloat
+    let tintOpacity: Double
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        content
+            .background {
+                shape
+                    .fill(.thickMaterial)
+                    .overlay {
+                        shape.fill(WandererTheme.glassTint.opacity(scheme == .dark ? tintOpacity : 0.10))
+                    }
+            }
+            .overlay {
+                shape.strokeBorder(WandererTheme.glassStroke.opacity(scheme == .dark ? 0.16 : 0.6), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(scheme == .dark ? 0.45 : 0.14), radius: 30, x: 0, y: 14)
     }
 }
 

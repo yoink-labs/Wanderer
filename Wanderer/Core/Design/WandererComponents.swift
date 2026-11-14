@@ -39,8 +39,8 @@ struct PrimaryButton: View {
                             .font(.ligga(.body, weight: .semibold))
                     }
                     Text(title)
-                        .font(.ligga(.headline, weight: .bold))
-                        .lineLimit(2)
+                        .font(.wanderer(.card))
+                        .fixedSize(horizontal: false, vertical: true)
                         .multilineTextAlignment(.center)
                 }
                 .opacity(isLoading ? 0 : 1)
@@ -51,14 +51,15 @@ struct PrimaryButton: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
+            .padding(.vertical, LiggaSpace.s)
+            .frame(minHeight: WandererTheme.buttonHeight)
             .padding(.horizontal, LiggaSpace.m)
             .foregroundStyle(isEnabled ? WandererTheme.onPrimary : WandererTheme.muted)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                     .fill(isEnabled ? WandererTheme.primaryFill : WandererTheme.fillMuted)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
         }
         .buttonStyle(.liggaPressable)
         .disabled(!isActive)
@@ -86,8 +87,8 @@ struct SocialSignInButton: View {
                         .font(.ligga(.body, weight: .semibold))
                     Text(title)
                         .font(.ligga(.body, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.center)
                 }
                 .opacity(isLoading ? 0 : 1)
 
@@ -97,18 +98,19 @@ struct SocialSignInButton: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
+            .padding(.vertical, LiggaSpace.s)
+            .frame(minHeight: WandererTheme.buttonHeight)
             .padding(.horizontal, LiggaSpace.m)
             .foregroundStyle(foreground)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                     .fill(background)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                             .stroke(WandererTheme.line, lineWidth: background == .white ? 1 : 0)
                     )
             )
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
             .opacity(isEnabled ? 1 : 0.5)
         }
         .buttonStyle(.liggaPressable)
@@ -121,26 +123,33 @@ struct SectionHeader: View {
     var subtitle: String?
     var actionTitle: String?
     var action: (() -> Void)?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.xxs))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: LiggaSpace.s))
+        layout {
             VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                 Text(title)
-                    .font(.ligga(.title3, weight: .bold))
+                    .wandererHeading(.section)
                     .foregroundStyle(WandererTheme.ink)
                     .accessibilityAddTraits(.isHeader)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.ligga(.caption))
+                        .font(.ligga(.subheadline))
                         .foregroundStyle(WandererTheme.muted)
                 }
             }
-            Spacer()
+            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: LiggaSpace.xs) }
             if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(WandererTheme.accentText)
-                    .frame(minHeight: 44)
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(.ligga(.subheadline, weight: .semibold))
+                        .foregroundStyle(WandererTheme.accentText)
+                        .frame(minWidth: WandererTheme.minimumTarget, minHeight: WandererTheme.minimumTarget)
+                        .contentShape(Rectangle())
+                }
             }
         }
     }
@@ -198,49 +207,35 @@ struct LiggaRetryCard: View {
     var message: String?
     var isRetrying: Bool = false
     let retry: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(alignment: .center, spacing: LiggaSpace.s) {
-            Image(systemName: "wifi.exclamationmark")
-                .font(.ligga(.title3, weight: .semibold))
-                .foregroundStyle(WandererTheme.coralDeep)
-                .frame(width: 32)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: LiggaSpace.s) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: LiggaSpace.s))
+            layout {
+                Image(systemName: "wifi.exclamationmark")
+                    .font(.ligga(.title3, weight: .semibold))
+                    .foregroundStyle(WandererTheme.coralDeep)
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(WandererTheme.ink)
-                if let message {
-                    Text(message)
-                        .font(.ligga(.footnote))
-                        .foregroundStyle(WandererTheme.muted)
-                        .lineLimit(3)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button {
-                LiggaHaptics.tap()
-                retry()
-            } label: {
-                ZStack {
-                    Text("Retry").opacity(isRetrying ? 0 : 1)
-                    if isRetrying {
-                        ProgressView().tint(WandererTheme.onPrimary)
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
+                    Text(title)
+                        .wandererHeading(.section)
+                        .foregroundStyle(WandererTheme.ink)
+                    if let message {
+                        Text(message)
+                            .font(.ligga(.subheadline))
+                            .foregroundStyle(WandererTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .font(.ligga(.subheadline, weight: .semibold))
-                .foregroundStyle(WandererTheme.onPrimary)
-                .padding(.horizontal, LiggaSpace.m)
-                .frame(minHeight: 36)
-                .background(WandererTheme.primaryFill, in: Capsule())
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.liggaPressable)
-            .disabled(isRetrying)
-            .accessibilityIdentifier("retry-button")
+
+            PrimaryButton(title: "Retry", isLoading: isRetrying, action: retry)
+                .accessibilityIdentifier("retry-button")
         }
         .padding(LiggaSpace.m)
         .liggaCard()
@@ -260,10 +255,10 @@ struct LiggaEmptyState: View {
         VStack(spacing: LiggaSpace.s) {
             Image(systemName: icon)
                 .font(.ligga(.largeTitle, weight: .semibold))
-                .foregroundStyle(WandererTheme.muted.opacity(0.7))
+                .foregroundStyle(WandererTheme.muted)
                 .accessibilityHidden(true)
             Text(title)
-                .font(.ligga(.headline, weight: .semibold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
                 .multilineTextAlignment(.center)
             if let message {

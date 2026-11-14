@@ -2,7 +2,7 @@ import Foundation
 
 /// Minimal JSON value used for request bodies, so callers can post partial
 /// rows without declaring a struct for every endpoint.
-enum JSONValue: Encodable, Sendable {
+enum JSONValue: Encodable, Decodable, Sendable {
     case string(String)
     case number(Double)
     case integer(Int)
@@ -10,6 +10,55 @@ enum JSONValue: Encodable, Sendable {
     case null
     case array([JSONValue])
     case object([String: JSONValue])
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Int.self) {
+            self = .integer(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([JSONValue].self) {
+            self = .array(value)
+        } else if let value = try? container.decode([String: JSONValue].self) {
+            self = .object(value)
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON value.")
+        }
+    }
+
+    var stringValue: String? {
+        if case .string(let value) = self { return value }
+        return nil
+    }
+
+    var doubleValue: Double? {
+        switch self {
+        case .number(let value): return value
+        case .integer(let value): return Double(value)
+        case .string(let value): return Double(value)
+        default: return nil
+        }
+    }
+
+    var intValue: Int? {
+        switch self {
+        case .integer(let value): return value
+        case .number(let value): return Int(value)
+        case .string(let value): return Int(value)
+        default: return nil
+        }
+    }
+
+    var boolValue: Bool? {
+        if case .bool(let value) = self { return value }
+        return nil
+    }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -272,6 +321,74 @@ struct WandererAPI: Sendable {
 
     func deleteReservation(tripID: UUID, reservationID: UUID) async throws {
         try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/reservations/\(reservationID.uuidString)")
+    }
+
+    // MARK: - Flights
+
+    /// Live status for a trip's flight reservations. The Worker refreshes at
+    /// most a few upstream lookups and serves cache when the monthly budget
+    /// is spent.
+    func tripFlights(tripID: UUID) async throws -> TripFlightsEnvelope {
+        try await send("GET", "/v1/trips/\(tripID.uuidString)/flights")
+    }
+
+    func flightStatus(number: String, date: String, refresh: Bool = false) async throws -> FlightLookupEnvelope {
+        try await send(
+            "GET",
+            "/v1/flights/\(number)/\(date)",
+            query: refresh ? [URLQueryItem(name: "refresh", value: "1")] : []
+        )
+    }
+
+    // MARK: - Personal layer
+
+    func personal(tripID: UUID) async throws -> PersonalLayerRecord {
+        try await send("GET", "/v1/trips/\(tripID.uuidString)/personal")
+    }
+
+    /// Hides or replaces a shared row for the signed-in user only.
+    func setPersonalOverride(
+        tripID: UUID,
+        itemType: String,
+        itemID: UUID,
+        hidden: Bool,
+        data: [String: JSONValue]
+    ) async throws -> PersonalOverrideRecord {
+        try await send(
+            "PUT",
+            "/v1/trips/\(tripID.uuidString)/personal/overrides/\(itemType)/\(itemID.uuidString)",
+            body: ["hidden": .bool(hidden), "data": .object(data)]
+        )
+    }
+
+    func clearPersonalOverride(tripID: UUID, itemType: String, itemID: UUID) async throws {
+        try await sendEmpty(
+            "DELETE",
+            "/v1/trips/\(tripID.uuidString)/personal/overrides/\(itemType)/\(itemID.uuidString)"
+        )
+    }
+
+    func addPrivatePlace(tripID: UUID, body: [String: JSONValue]) async throws -> PlaceRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/personal/places", body: body)
+    }
+
+    func updatePrivatePlace(tripID: UUID, placeID: UUID, body: [String: JSONValue]) async throws -> PlaceRecord {
+        try await send("PATCH", "/v1/trips/\(tripID.uuidString)/personal/places/\(placeID.uuidString)", body: body)
+    }
+
+    func deletePrivatePlace(tripID: UUID, placeID: UUID) async throws {
+        try await sendEmpty("DELETE", "/v1/trips/\(tripID.uuidString)/personal/places/\(placeID.uuidString)")
+    }
+
+    func addPrivateReservation(tripID: UUID, body: [String: JSONValue]) async throws -> ReservationRecord {
+        try await send("POST", "/v1/trips/\(tripID.uuidString)/personal/reservations", body: body)
+    }
+
+    func deletePrivateReservation(tripID: UUID, reservationID: UUID) async throws {
+        try await sendEmpty(
+            "DELETE",
+            "/v1/trips/\(tripID.uuidString)/personal/reservations/\(reservationID.uuidString)"
+        )
     }
 
     func expenses(tripID: UUID) async throws -> [ExpenseRecord] {

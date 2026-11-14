@@ -209,7 +209,7 @@ struct VisitedPlacesView: View {
             .accessibilityHidden(true)
 
             Text("No places yet")
-                .font(.ligga(.headline, weight: .semibold))
+                .wandererHeading(.section)
                 .foregroundStyle(WandererTheme.ink)
             Text("Add the first country you've wandered. Cities and years are optional.")
                 .font(.ligga(.subheadline))
@@ -317,7 +317,7 @@ private struct VisitedPlaceRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(countryName)
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(2)
 
@@ -374,7 +374,7 @@ struct AddVisitedPlaceSheet: View {
                 VStack(alignment: .leading, spacing: 22) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Where have you been?")
-                            .font(.ligga(.title2, weight: .bold))
+                            .wandererHeading(.title)
                             .foregroundStyle(WandererTheme.ink)
                         Text("Add a country, and optionally the city and year.")
                             .font(.ligga(.subheadline))

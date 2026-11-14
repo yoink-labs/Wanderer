@@ -56,7 +56,7 @@ struct SpendByDayChart: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Spend by day")
-                    .font(.ligga(.headline, weight: .semibold))
+                    .wandererHeading(.section)
                     .foregroundStyle(WandererTheme.ink)
                 Spacer()
                 if let dailyBudget {

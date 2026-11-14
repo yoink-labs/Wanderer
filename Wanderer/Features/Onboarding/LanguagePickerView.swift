@@ -38,7 +38,7 @@ struct LanguagePickerView: View {
 
             VStack(alignment: .leading, spacing: LiggaSpace.xs) {
                 Text("Choose your language")
-                    .font(.display(.largeTitle))
+                    .wandererHeading(.screen)
                     .foregroundStyle(WandererTheme.ink)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)

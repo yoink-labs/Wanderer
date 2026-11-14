@@ -111,7 +111,7 @@ struct EmailAuthSheet: View {
         VStack(alignment: .leading, spacing: LiggaSpace.l) {
             VStack(alignment: .leading, spacing: LiggaSpace.xs) {
                 Text(mode == .signIn ? "Welcome back" : "Create your account")
-                    .font(.ligga(.title, weight: .bold))
+                    .wandererHeading(.title)
                     .foregroundStyle(WandererTheme.ink)
                     .accessibilityAddTraits(.isHeader)
                 Text(mode == .signIn
@@ -208,7 +208,7 @@ struct EmailAuthSheet: View {
         VStack(alignment: .leading, spacing: LiggaSpace.l) {
             VStack(alignment: .leading, spacing: LiggaSpace.xs) {
                 Text("Check your email")
-                    .font(.ligga(.title, weight: .bold))
+                    .wandererHeading(.title)
                     .foregroundStyle(WandererTheme.ink)
                     .accessibilityAddTraits(.isHeader)
                 Text("We sent a six-digit code to \(auth.pendingEmail ?? trimmedEmail).")

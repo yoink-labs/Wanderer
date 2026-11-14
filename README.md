@@ -18,12 +18,35 @@ AI features are intentionally out of scope.
 | FX rates | Frankfurter | free, no key |
 | Photos | Curated CDN + user uploads | free |
 | Email | Resend (invites) | free tier |
+| Tips | StoreKit 2 consumables, no third-party SDK | Apple's commission only |
 
 The backend lives at `https://api.yoinklabs.dev` on the Yoink Labs Cloudflare
 account.
 
 ## What is built
 
+- **iPhone Duo / iPad** — the same SwiftUI app adapts by available width: the
+  tab bar becomes a sidebar on a regular-width canvas, Home becomes a grid, and
+  the planner puts the itinerary and map side by side. Large accessibility text
+  falls back to the single-column map + sheet layout rather than squeezing two
+  columns. No device-specific branches.
+- **Live flight status** — AeroDataBox through RapidAPI, shared-cached per
+  flight and date with a monthly unit budget, attribution, gate/terminal/delay
+  chips on booking tickets, and local alerts when a tracked flight changes.
+- **Personal layer** — any member can hide a shared stop or booking, save their
+  own version of it, or add private stops and bookings that only they see. The
+  group plan is never changed. "Only you" in the trip tools lists and restores
+  everything.
+- **Exports** — native PDF, a calendar `.ics` of timed stops and bookings, and
+  per-day Google Maps route links.
+- **Fast-enough sync** — the planner re-reads the collaborative rows every 30
+  seconds and supports pull-to-refresh, so a tripmate's edit appears without
+  reopening the trip.
+- **Web app** — `web/`: the same product as a responsive three-pane workspace
+  (day rail, itinerary, map) with a single-column phone layout, guest plans,
+  offline read cache, private layer, live flight status, budgets, checklist,
+  notes, sharing, print, calendar and Google Maps export. Live at
+  `https://wanderer.yoinklabs.dev` (Cloudflare Workers static assets).
 - **Auth** — Clerk (same Yoink Labs account as yoinklabs.dev): native Sign in
   with Apple, Google (Clerk OAuth, returns to `com.wanderer.ios://callback`),
   or a six-digit emailed code. Team `64PUT29XZ8`, Sign in with Apple entitlement
@@ -60,6 +83,12 @@ account.
 - **Guides** — searchable public guides and one-tap copy into a trip.
 - **Profile** — avatar, stats, language, currency, units, appearance
   (System/Light/Dark), visited countries/cities, sign out, delete account.
+- **Tip jar** — "Support Wanderer" on Profile (guests too): three optional
+  consumable tips through StoreKit 2. Prices are whatever the App Store
+  returns for the user's storefront. A thank-you card after a tip; cancel
+  returns quietly; Ask to Buy shows a pending note and thanks on approval;
+  failures show an inline message. Tips unlock nothing. See
+  [Tip jar](#tip-jar) for the App Store Connect setup.
 - **Guest trips** — created before sign-in, persisted on device, copied into the
   account once and then cleared.
 - **Accessibility** — Dynamic Type (including AX sizes), dark mode, VoiceOver
@@ -67,10 +96,16 @@ account.
 
 ## Deliberately not built
 
+- Paywalls, a Pro tier or subscriptions. Wanderer is free; the only
+  monetization is the optional tip jar.
+
 - AI features (trip generation, chat assistant) — out of scope.
-- Live flight status / live hotel availability — paid APIs; deep links only.
-- Google Maps / Google Places — MapKit is free and sufficient.
-- Push notifications, offline editing, OAuth sign-in and App Store submission.
+- Server push notifications — flight alerts are local notifications raised when
+  the app refreshes a tracked flight.
+- Hotel/flight price feeds — the AeroDataBox free plan has no commercial-use
+  licence; hotel search remains a Booking.com deep link.
+- Google Maps / Google Places — MapKit and OpenStreetMap are free; Google Maps
+  is used only as an outbound directions link.
 
 ## Repo layout
 
@@ -86,6 +121,7 @@ Wanderer/                     SwiftUI app (Cloudflare + Clerk only)
                               TripSettings, Explore, Profile
   Resources/                  asset catalog, app icon
 worker/                       Cloudflare Worker + D1 migrations + tests
+web/                          Vite + React web app (see web/README.md)
 supabase/                     legacy schema and edge function (reference only)
 Archive/Supabase/             frozen pre-migration Swift stores (not compiled)
 Config/                       App.xcconfig (public API/Clerk values)
@@ -119,7 +155,48 @@ cd worker && npm test
 ```
 
 `WandererTests` covers split/settle-up math, Home search and ordering, planner
-geometry, API client shaping/decoding, PDF export and guest-trip persistence.
+geometry, API client shaping/decoding, PDF and calendar export, guest-trip
+persistence, and the tip jar's purchase states and StoreKit configuration.
+
+The web app builds independently:
+
+```bash
+cd web
+npm install
+npm run build          # tsc --noEmit + vite build
+npm run dev            # http://localhost:5173
+```
+
+`web/README.md` covers the local Worker, test auth and production env.
+
+## Tip jar
+
+`Wanderer/Core/Services/TipJar.swift` (StoreKit 2) and
+`Wanderer/Features/Profile/TipJarView.swift`. The product ids are
+placeholders:
+
+| Product id | Type |
+| --- | --- |
+| `dev.yoinklabs.wanderer.tip.small` | Consumable |
+| `dev.yoinklabs.wanderer.tip.medium` | Consumable |
+| `dev.yoinklabs.wanderer.tip.large` | Consumable |
+
+**A human must create these in App Store Connect** (In-App Purchases →
+Consumable), choose their prices there, add a display name, description and
+review screenshot, and attach them to the next app version for review. Until
+they exist, the screen says tips aren't available and the rest of the app is
+unaffected. If the ids change, update `TipTier.productID` and
+`Wanderer/Resources/Wanderer.storekit` together (a unit test checks they
+match).
+
+Local testing: the Wanderer scheme points at `Wanderer/Resources/Wanderer.storekit`,
+so **Run from Xcode** gives working tips in the simulator, with purchases
+listed under Debug → StoreKit → Manage Transactions. The prices in that file
+exist only for local testing. Launches outside Xcode (simctl, ADE) don't apply
+a StoreKit configuration; in Debug builds pass `-uiTipJar config` (and
+optionally `-uiTipOutcome thanks|pending|failed|cancel`) to serve the tips
+from that file instead, e.g. with `-uiTab profile -uiRoute tipJar` for
+screenshots. Release builds ignore these flags.
 
 ## Backend
 

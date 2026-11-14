@@ -120,6 +120,10 @@ struct BookingTicket: View {
     let reservation: ReservationRecord
     let timeZone: TimeZone
     let currency: String
+    /// Live status when AeroDataBox has one for this flight.
+    var flightStatus: FlightStatusRecord?
+    /// True when the booking is in this member's private layer.
+    var isPrivate = false
 
     @State private var copied = false
     @State private var measuredStubHeight: CGFloat = 52
@@ -136,6 +140,12 @@ struct BookingTicket: View {
             header
                 .padding(.horizontal, 18)
                 .padding(.top, 16)
+
+            if let flightStatus {
+                statusStrip(flightStatus)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 8)
+            }
 
             route
                 .padding(.horizontal, 18)
@@ -174,6 +184,14 @@ struct BookingTicket: View {
                 .font(.ligga(.subheadline, weight: .semibold))
                 .foregroundStyle(WandererTheme.muted)
                 .lineLimit(1)
+            if isPrivate {
+                Image(systemName: "person.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(WandererTheme.onAccent)
+                    .padding(4)
+                    .background(WandererTheme.coral, in: Circle())
+                    .accessibilityLabel("Only you can see this booking")
+            }
             Spacer(minLength: 4)
             if let span = model.span {
                 Text(span)
@@ -182,6 +200,50 @@ struct BookingTicket: View {
                     .foregroundStyle(WandererTheme.accentText)
             }
         }
+    }
+
+    /// Live status from AeroDataBox. Kept to one line so the ticket stays a
+    /// ticket, with gate/terminal as the trailing detail.
+    private func statusStrip(_ status: FlightStatusRecord) -> some View {
+        let tint: Color = status.isTrouble
+            ? WandererTheme.signal
+            : (status.isFinished ? WandererTheme.muted : WandererTheme.lagoon)
+
+        return HStack(spacing: 7) {
+            Circle()
+                .fill(tint)
+                .frame(width: 7, height: 7)
+            Text(status.statusLabel)
+                .font(.ligga(.footnote, weight: .bold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+
+            if let delay = status.departure.delay, delay > 0 {
+                Text("+\(delay) min")
+                    .font(.ligga(.caption, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(WandererTheme.signal)
+            }
+
+            Spacer(minLength: 4)
+
+            if let gate = status.departure.gate?.tripToolsNilIfEmpty {
+                Label(gate, systemImage: "door.left.hand.open")
+                    .font(.ligga(.caption, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .lineLimit(1)
+            } else if let terminal = status.departure.terminal?.tripToolsNilIfEmpty {
+                Label("Terminal \(terminal)", systemImage: "building.2")
+                    .font(.ligga(.caption, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(minHeight: 30)
+        .background(tint.opacity(0.12), in: Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Live flight status: \(status.statusLabel)")
     }
 
     /// The type for coded routes ("Flight"), the name otherwise, never the
@@ -213,7 +275,7 @@ struct BookingTicket: View {
     private func endView(_ end: BookingTicketModel.End, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 2) {
             Text(end.mark)
-                .font(end.mark.count <= 4 ? .display(.largeTitle) : .display(.title2))
+                .font(end.mark.count <= 4 ? .wanderer(.screen) : .wanderer(.title))
                 .foregroundStyle(WandererTheme.ink)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
@@ -269,7 +331,8 @@ struct BookingTicket: View {
         let layout = stacked
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
             : AnyLayout(HStackLayout(spacing: 10))
-        return layout {
+        return VStack(alignment: .leading, spacing: 5) {
+            layout {
             VStack(alignment: .leading, spacing: 1) {
                 if let provider = reservation.provider?.tripToolsNilIfEmpty {
                     Text(provider)
@@ -317,6 +380,16 @@ struct BookingTicket: View {
                 .buttonStyle(.liggaPressable)
                 .accessibilityLabel("Confirmation \(code)")
                 .accessibilityHint("Copies the confirmation code")
+            }
+            }
+            if flightStatus != nil {
+                Link(destination: URL(string: "https://aerodatabox.com")!) {
+                    Text("Flight data by AeroDataBox")
+                        .font(.ligga(.caption2))
+                        .foregroundStyle(WandererTheme.muted)
+                        .underline()
+                }
+                .accessibilityLabel("Flight data by AeroDataBox")
             }
         }
     }

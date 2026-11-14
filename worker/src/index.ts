@@ -1,5 +1,7 @@
 import { AuthError, verifyClerkJwt, type ClerkClaims } from "./auth";
 
+import { fetchFlightStatus, flightsForReservations } from "./flights";
+import { ApiError, json } from "./http";
 import { serveInvitePage, serveSharedTrip } from "./publicPages";
 
 export interface Env {
@@ -14,6 +16,13 @@ export interface Env {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   APP_SHARE_BASE_URL?: string;
+  /** Comma-separated browser origins allowed to call the API (the web app). */
+  WEB_ORIGINS?: string;
+  /** AeroDataBox credentials, as issued by the RapidAPI marketplace. */
+  RAPIDAPI_KEY?: string;
+  RAPIDAPI_HOST?: string;
+  FLIGHT_MONTHLY_UNIT_CAP?: string;
+  FLIGHT_MONTHLY_REQUEST_CAP?: string;
   /** Test-only escape hatch. Ignored unless ENVIRONMENT is exactly "test". */
   ALLOW_TEST_AUTH?: string;
 }
@@ -22,17 +31,6 @@ const JSON_LIMIT_BYTES = 1_000_000;
 const UPLOAD_LIMIT_BYTES = 10_000_000;
 const DEFAULT_PAGE_SIZE = 500;
 const MAX_PAGE_SIZE = 1000;
-
-class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-
-  constructor(status: number, code: string, message: string) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
-}
 
 interface User {
   id: string;
@@ -48,17 +46,6 @@ interface Context {
 }
 
 type Handler = (context: Context) => Promise<Response>;
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-    },
-  });
-}
 
 function errorResponse(error: unknown): Response {
   if (error instanceof ApiError) {
@@ -788,6 +775,16 @@ registerTripResource(routes, "reservations", {
   required: ["title"],
   orderBy: "start_at",
   createdBy: "created_by",
+  // Clients may send metadata as an object; D1 stores it as JSON text.
+  prepare: (values) => {
+    if (values.metadata !== undefined && typeof values.metadata === "object" && values.metadata !== null) {
+      values.metadata = JSON.stringify(values.metadata);
+    }
+  },
+  transform: (row) => ({
+    ...row,
+    metadata: typeof row.metadata === "string" ? safeJson(row.metadata) : (row.metadata ?? {}),
+  }),
 });
 
 registerTripResource(routes, "checklist", {
@@ -891,6 +888,382 @@ on("GET", "/v1/trips/:tripId/expense-splits", async ({ env, user, params }) => {
     .bind(params.tripId)
     .all();
   return json(rows.results ?? []);
+});
+
+// --- personal layer --------------------------------------------------------
+//
+// Each member can hide a shared item, replace its details for themselves, or
+// add private stops and bookings. Every row is keyed by (trip, user): no
+// endpoint below can read or write another member's personal layer.
+
+const OVERRIDE_FIELDS: Record<string, { place: string[]; reservation: string[] }> = {
+  place: {
+    place: [
+      "day_id", "name", "address", "lat", "lng", "category", "notes", "website",
+      "phone", "price_level", "rating", "photo_url", "start_time", "end_time",
+      "position", "list_id", "visited_at",
+    ],
+    reservation: [],
+  },
+  reservation: {
+    place: [],
+    reservation: [
+      "type", "title", "provider", "confirmation_code", "start_at", "end_at",
+      "start_location", "end_location", "cost", "currency", "notes", "metadata",
+    ],
+  },
+};
+
+function overrideFields(itemType: string): string[] | null {
+  if (itemType === "place") return OVERRIDE_FIELDS.place.place;
+  if (itemType === "reservation") return OVERRIDE_FIELDS.reservation.reservation;
+  return null;
+}
+
+function cleanOverrideData(itemType: string, raw: unknown): Record<string, unknown> {
+  const allowed = overrideFields(itemType);
+  if (!allowed) throw new ApiError(400, "invalid_item_type", "Personalise a place or a reservation.");
+  if (raw === undefined || raw === null) return {};
+  if (!isRecord(raw)) throw new ApiError(400, "invalid_data", "The replacement must be an object.");
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!allowed.includes(key)) {
+      throw new ApiError(400, "unknown_fields", `Unknown field: ${key}`);
+    }
+    if (value === undefined) continue;
+    if (key === "metadata" && typeof value === "object" && value !== null && !Array.isArray(value)) {
+      data[key] = JSON.stringify(value);
+      continue;
+    }
+    if ((key === "day_id" || key === "list_id") && typeof value === "string" && UUID_PATTERN.test(value)) {
+      data[key] = value.toLowerCase();
+      continue;
+    }
+    data[key] = value;
+  }
+  return data;
+}
+
+interface PersonalOverrideRow {
+  item_type: string;
+  item_id: string;
+  hidden: number;
+  data: string;
+  updated_at: string;
+}
+
+function overrideTransform(row: PersonalOverrideRow): Record<string, unknown> {
+  let data: unknown = {};
+  try {
+    data = JSON.parse(row.data ?? "{}");
+  } catch {
+    data = {};
+  }
+  return { ...row, hidden: row.hidden === 1, data };
+}
+
+async function loadPersonal(env: Env, tripId: string, userId: string) {
+  const [overrides, places, reservations] = await Promise.all([
+    env.DB.prepare(
+      "SELECT item_type, item_id, hidden, data, updated_at FROM personal_overrides WHERE trip_id = ? AND user_id = ?",
+    )
+      .bind(tripId, userId)
+      .all<PersonalOverrideRow>(),
+    env.DB.prepare(
+      "SELECT * FROM private_places WHERE trip_id = ? AND user_id = ? ORDER BY day_id, position, name",
+    )
+      .bind(tripId, userId)
+      .all<Record<string, unknown>>(),
+    env.DB.prepare(
+      "SELECT * FROM private_reservations WHERE trip_id = ? AND user_id = ? ORDER BY start_at",
+    )
+      .bind(tripId, userId)
+      .all<Record<string, unknown>>(),
+  ]);
+  return {
+    overrides: (overrides.results ?? []).map(overrideTransform),
+    private_places: places.results ?? [],
+    private_reservations: (reservations.results ?? []).map((row) => ({
+      ...row,
+      metadata: typeof row.metadata === "string" ? safeJson(row.metadata) : row.metadata,
+    })),
+  };
+}
+
+function safeJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
+on("GET", "/v1/trips/:tripId/personal", async ({ env, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  return json(await loadPersonal(env, params.tripId, user.id));
+});
+
+on("PUT", "/v1/trips/:tripId/personal/overrides/:itemType/:itemId", async ({ env, request, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const itemType = params.itemType;
+  const allowed = overrideFields(itemType);
+  if (!allowed) throw new ApiError(400, "invalid_item_type", "Personalise a place or a reservation.");
+
+  const body = await readJson<Record<string, unknown>>(request);
+  const hidden = body.hidden === true;
+  const data = cleanOverrideData(itemType, body.data ?? {});
+  if (!hidden && Object.keys(data).length === 0) {
+    // An empty override is the same as no override.
+    await env.DB.prepare(
+      "DELETE FROM personal_overrides WHERE trip_id = ? AND user_id = ? AND item_type = ? AND item_id = ?",
+    )
+      .bind(params.tripId, user.id, itemType, params.itemId)
+      .run();
+    return json({ deleted: true });
+  }
+
+  const row = await env.DB.prepare(
+    `INSERT INTO personal_overrides (trip_id, user_id, item_type, item_id, hidden, data, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (trip_id, user_id, item_type, item_id) DO UPDATE SET
+       hidden = excluded.hidden,
+       data = excluded.data,
+       updated_at = excluded.updated_at
+     RETURNING item_type, item_id, hidden, data, updated_at`,
+  )
+    .bind(params.tripId, user.id, itemType, params.itemId, hidden ? 1 : 0, JSON.stringify(data), new Date().toISOString())
+    .first<PersonalOverrideRow>();
+  return json(overrideTransform(row!));
+});
+
+on("DELETE", "/v1/trips/:tripId/personal/overrides/:itemType/:itemId", async ({ env, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  await env.DB.prepare(
+    "DELETE FROM personal_overrides WHERE trip_id = ? AND user_id = ? AND item_type = ? AND item_id = ?",
+  )
+    .bind(params.tripId, user.id, params.itemType, params.itemId)
+    .run();
+  return json({ deleted: true });
+});
+
+on("GET", "/v1/trips/:tripId/personal/places", async ({ env, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const rows = await env.DB.prepare(
+    "SELECT * FROM private_places WHERE trip_id = ? AND user_id = ? ORDER BY day_id, position, name",
+  )
+    .bind(params.tripId, user.id)
+    .all();
+  return json(rows.results ?? []);
+});
+
+on("POST", "/v1/trips/:tripId/personal/places", async ({ env, request, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const body = await readJson<Record<string, unknown>>(request);
+  const values = pickPersonalPlace(body);
+  if (typeof values.name !== "string" || values.name.trim().length === 0) {
+    throw new ApiError(400, "missing_field", "A name is required.");
+  }
+  const row = await insertRow(env, "private_places", {
+    ...values,
+    name: values.name.trim(),
+    trip_id: params.tripId,
+    user_id: user.id,
+  });
+  return json(row, 201);
+});
+
+function pickPersonalPlace(body: Record<string, unknown>): Record<string, unknown> {
+  const allowed = [
+    "day_id", "list_id", "name", "address", "lat", "lng", "category", "notes",
+    "website", "phone", "photo_url", "start_time", "end_time", "position", "visited_at",
+  ];
+  const values: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (!allowed.includes(key)) throw new ApiError(400, "unknown_fields", `Unknown field: ${key}`);
+    if ((key === "day_id" || key === "list_id") && typeof value === "string" && UUID_PATTERN.test(value)) {
+      values[key] = value.toLowerCase();
+    } else {
+      values[key] = value;
+    }
+  }
+  return values;
+}
+
+on("PATCH", "/v1/trips/:tripId/personal/places/:id", async ({ env, request, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const body = await readJson<Record<string, unknown>>(request);
+  const values = pickPersonalPlace(body);
+  const keys = Object.keys(values);
+  if (keys.length === 0) throw new ApiError(400, "empty_update", "Nothing to update.");
+  const row = await env.DB.prepare(
+    `UPDATE private_places SET ${keys.map((key) => `${key} = ?`).join(", ")}
+      WHERE id = ? AND trip_id = ? AND user_id = ? RETURNING *`,
+  )
+    .bind(...keys.map((key) => values[key] ?? null), params.id, params.tripId, user.id)
+    .first();
+  if (!row) throw new ApiError(404, "not_found", "That private place was not found.");
+  return json(row);
+});
+
+on("DELETE", "/v1/trips/:tripId/personal/places/:id", async ({ env, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const result = await env.DB.prepare(
+    "DELETE FROM private_places WHERE id = ? AND trip_id = ? AND user_id = ?",
+  )
+    .bind(params.id, params.tripId, user.id)
+    .run();
+  if (!result.meta.changes) throw new ApiError(404, "not_found", "That private place was not found.");
+  return json({ deleted: true });
+});
+
+on("POST", "/v1/trips/:tripId/personal/reservations", async ({ env, request, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const body = await readJson<Record<string, unknown>>(request);
+  const values = pickPersonalReservation(body);
+  if (typeof values.title !== "string" || values.title.trim().length === 0) {
+    throw new ApiError(400, "missing_field", "A title is required.");
+  }
+  const row = await insertRow(env, "private_reservations", {
+    ...values,
+    title: values.title.trim(),
+    trip_id: params.tripId,
+    user_id: user.id,
+  });
+  return json(row, 201);
+});
+
+function pickPersonalReservation(body: Record<string, unknown>): Record<string, unknown> {
+  const allowed = [
+    "type", "title", "provider", "confirmation_code", "start_at", "end_at",
+    "start_location", "end_location", "cost", "currency", "notes", "metadata",
+  ];
+  const values: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (!allowed.includes(key)) throw new ApiError(400, "unknown_fields", `Unknown field: ${key}`);
+    if (key === "metadata" && typeof value === "object" && value !== null && !Array.isArray(value)) {
+      values[key] = JSON.stringify(value);
+    } else {
+      values[key] = value;
+    }
+  }
+  return values;
+}
+
+on("PATCH", "/v1/trips/:tripId/personal/reservations/:id", async ({ env, request, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const body = await readJson<Record<string, unknown>>(request);
+  const values = pickPersonalReservation(body);
+  const keys = Object.keys(values);
+  if (keys.length === 0) throw new ApiError(400, "empty_update", "Nothing to update.");
+  const row = await env.DB.prepare(
+    `UPDATE private_reservations SET ${keys.map((key) => `${key} = ?`).join(", ")}
+      WHERE id = ? AND trip_id = ? AND user_id = ? RETURNING *`,
+  )
+    .bind(...keys.map((key) => values[key] ?? null), params.id, params.tripId, user.id)
+    .first<Record<string, unknown>>();
+  if (!row) throw new ApiError(404, "not_found", "That private booking was not found.");
+  return json({ ...row, metadata: typeof row.metadata === "string" ? safeJson(row.metadata) : row.metadata });
+});
+
+on("DELETE", "/v1/trips/:tripId/personal/reservations/:id", async ({ env, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const result = await env.DB.prepare(
+    "DELETE FROM private_reservations WHERE id = ? AND trip_id = ? AND user_id = ?",
+  )
+    .bind(params.id, params.tripId, user.id)
+    .run();
+  if (!result.meta.changes) throw new ApiError(404, "not_found", "That private booking was not found.");
+  return json({ deleted: true });
+});
+
+// --- flights ---------------------------------------------------------------
+
+on("GET", "/v1/flights/:flightNumber/:date", async ({ env, url, user: _user, params }) => {
+  const result = await fetchFlightStatus(env, params.flightNumber, params.date, {
+    force: url.searchParams.get("refresh") === "1",
+  });
+  return json(result);
+});
+
+on("GET", "/v1/trips/:tripId/flights", async ({ env, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const rows = await env.DB.prepare(
+    "SELECT id, type, title, start_at, metadata FROM reservations WHERE trip_id = ? AND type = 'flight'",
+  )
+    .bind(params.tripId)
+    .all<{ id: string; type: string; title: string; start_at: string | null; metadata: string }>();
+  const { flights, refreshed } = await flightsForReservations(env, rows.results ?? []);
+  const usage = await env.DB.prepare(
+    "SELECT units, requests FROM flight_usage WHERE month = ?",
+  )
+    .bind(new Date().toISOString().slice(0, 7))
+    .first<{ units: number; requests: number }>();
+  return json({
+    flights,
+    refreshed,
+    attribution: "Flight data by AeroDataBox",
+    budget: {
+      units_used: usage?.units ?? 0,
+      requests_used: usage?.requests ?? 0,
+      units_cap: Number(env.FLIGHT_MONTHLY_UNIT_CAP ?? 380),
+      requests_cap: Number(env.FLIGHT_MONTHLY_REQUEST_CAP ?? 1500),
+    },
+  });
+});
+
+// --- bundle ----------------------------------------------------------------
+//
+// One read for the whole trip. The iOS planner and the web app both hydrate
+// from it, which keeps opening a trip to a single request instead of nine.
+
+on("GET", "/v1/trips/:tripId/bundle", async ({ env, user, params }) => {
+  await requireTrip(env, user.id, params.tripId, "read");
+  const tripId = params.tripId;
+  const [trip, days, places, lists, reservations, expenses, splits, settlements, checklist, members, personal] =
+    await Promise.all([
+      env.DB.prepare(
+        `SELECT t.*, (SELECT COUNT(*) FROM places p WHERE p.trip_id = t.id) AS place_count
+           FROM trips t WHERE t.id = ?`,
+      ).bind(tripId).first(),
+      env.DB.prepare("SELECT * FROM trip_days WHERE trip_id = ? ORDER BY day_index").bind(tripId).all(),
+      env.DB.prepare("SELECT * FROM places WHERE trip_id = ? ORDER BY position").bind(tripId).all(),
+      env.DB.prepare("SELECT * FROM trip_lists WHERE trip_id = ? ORDER BY position").bind(tripId).all(),
+      env.DB.prepare("SELECT * FROM reservations WHERE trip_id = ? ORDER BY start_at").bind(tripId).all(),
+      env.DB.prepare("SELECT * FROM expenses WHERE trip_id = ? ORDER BY spent_at DESC").bind(tripId).all(),
+      env.DB.prepare("SELECT * FROM expense_splits WHERE trip_id = ?").bind(tripId).all(),
+      env.DB.prepare("SELECT * FROM settlements WHERE trip_id = ? ORDER BY settled_at DESC").bind(tripId).all(),
+      env.DB.prepare("SELECT * FROM checklist_items WHERE trip_id = ? ORDER BY position").bind(tripId).all(),
+      env.DB.prepare(
+        `SELECT m.trip_id, m.user_id, m.role, m.joined_at,
+                p.id AS profile_id, p.display_name, p.email
+           FROM trip_members m JOIN profiles p ON p.id = m.user_id
+          WHERE m.trip_id = ?`,
+      ).bind(tripId).all(),
+      loadPersonal(env, tripId, user.id),
+    ]);
+  if (!trip) throw new ApiError(404, "not_found", "That trip was not found.");
+  return json({
+    trip,
+    days: days.results ?? [],
+    places: places.results ?? [],
+    lists: lists.results ?? [],
+    reservations: (reservations.results ?? []).map((row) => ({
+      ...row,
+      metadata: typeof row.metadata === "string" ? safeJson(row.metadata) : row.metadata,
+    })),
+    expenses: (expenses.results ?? []).map((row) => ({
+      ...row,
+      split_with: typeof row.split_with === "string" ? safeJson(row.split_with) : row.split_with,
+    })),
+    expense_splits: splits.results ?? [],
+    settlements: settlements.results ?? [],
+    checklist: (checklist.results ?? []).map((row) => ({
+      ...row,
+      is_checked: row.is_checked === 1 || row.is_checked === true,
+    })),
+    members: members.results ?? [],
+    personal,
+  });
 });
 
 // --- members ---------------------------------------------------------------
@@ -1314,9 +1687,70 @@ async function sendInviteEmail(
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
+    const response = await handleRequest(request, env);
+    return withCors(response, request, env);
+  },
+} satisfies ExportedHandler<Env>;
 
-    try {
+/**
+ * Browser CORS. The iOS app does not need it; the web app does. Only origins
+ * listed in WEB_ORIGINS are echoed, and credentials are never allowed because
+ * the API authenticates with a bearer token.
+ */
+const DEFAULT_WEB_ORIGINS = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://wanderer.yoinklabs.dev",
+  "https://www.wanderer.yoinklabs.dev",
+];
+
+function allowedOrigin(request: Request, env: Env): string | null {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+  const configured = (env.WEB_ORIGINS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowed = configured.length > 0 ? configured : DEFAULT_WEB_ORIGINS;
+  return allowed.includes(origin) ? origin : null;
+}
+
+function withCors(response: Response, request: Request, env: Env): Response {
+  const origin = allowedOrigin(request, env);
+  if (!origin) return response;
+  const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", origin);
+  headers.set("vary", "origin");
+  headers.set("access-control-expose-headers", "idempotent-replay");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+async function handleRequest(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+
+  if (request.method === "OPTIONS") {
+    const origin = allowedOrigin(request, env);
+    if (!origin) {
+      return new Response(null, { status: 403 });
+    }
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "access-control-allow-origin": origin,
+        "access-control-allow-methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+        "access-control-allow-headers":
+          "authorization, content-type, idempotency-key, x-file-name",
+        "access-control-max-age": "86400",
+        vary: "origin",
+      },
+    });
+  }
+
+  try {
       if (request.method === "GET" && url.pathname === "/health") {
         const row = await env.DB.prepare("SELECT 1 AS ok").first<{ ok: number }>();
         return json({ ok: row?.ok === 1, service: "wanderer-api" });
@@ -1374,8 +1808,7 @@ export default {
     } catch (error) {
       return errorResponse(error);
     }
-  },
-} satisfies ExportedHandler<Env>;
+}
 
 /** Rate-limit bucket for anonymous pages: a short hash, never the raw IP. */
 async function clientBucket(request: Request): Promise<string> {
