@@ -7,6 +7,7 @@ struct NearbyIdeasView: View {
     let dayID: UUID?
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var results: [MapSearchResult] = []
     @State private var isLoading = false
     @State private var errorText: String?
@@ -99,11 +100,11 @@ struct NearbyIdeasView: View {
                 Text(result.name)
                     .wandererHeading(.card)
                     .foregroundStyle(WandererTheme.ink)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                 Text([result.category.title, result.address].compactMap { $0 }.joined(separator: " · "))
                     .font(.ligga(.footnote))
                     .foregroundStyle(WandererTheme.muted)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
             }
 
             Spacer(minLength: 6)
@@ -128,7 +129,7 @@ struct NearbyIdeasView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(WandererTheme.line.opacity(0.7), lineWidth: 1)

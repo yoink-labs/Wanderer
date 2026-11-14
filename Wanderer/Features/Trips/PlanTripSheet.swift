@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlanTripSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var destination = ""
     @State private var tripTitle = ""
@@ -50,9 +51,17 @@ struct PlanTripSheet: View {
                                 .font(.ligga(.subheadline, weight: .semibold))
                                 .foregroundStyle(WandererTheme.muted)
 
-                            HStack(spacing: 12) {
-                                datePicker("Start", date: $startDate)
-                                datePicker("End", date: $endDate)
+                            ViewThatFits(in: .horizontal) {
+                                HStack(alignment: .top, spacing: LiggaSpace.s) {
+                                    datePicker("Start", date: $startDate)
+                                    datePicker("End", date: $endDate)
+                                }
+                                .fixedSize(horizontal: true, vertical: false)
+
+                                VStack(alignment: .leading, spacing: LiggaSpace.m) {
+                                    datePicker("Start", date: $startDate)
+                                    datePicker("End", date: $endDate)
+                                }
                             }
 
                             Text("\(dayCount) days · \(dateRange)")
@@ -62,18 +71,26 @@ struct PlanTripSheet: View {
                     }
 
                     fieldCard {
-                        HStack {
+                        let layout = dynamicTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+                            : AnyLayout(HStackLayout(spacing: LiggaSpace.s))
+                        layout {
                             Label("Travelers", systemImage: "person.2.fill")
                                 .font(.ligga(.subheadline, weight: .semibold))
                                 .foregroundStyle(WandererTheme.muted)
-                            Spacer()
-                            Stepper(value: $travelers, in: 1...12) {
+                            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: LiggaSpace.xs) }
+                            HStack(spacing: LiggaSpace.s) {
                                 Text("\(travelers)")
-                                    .font(.ligga(.headline, weight: .bold))
+                                    .font(.ligga(.headline, weight: .semibold))
+                                    .monospacedDigit()
                                     .foregroundStyle(WandererTheme.ink)
-                                    .frame(minWidth: 24)
+                                    .accessibilityHidden(true)
+                                Stepper("Travelers", value: $travelers, in: 1...12)
+                                    .labelsHidden()
+                                    .fixedSize()
+                                    .accessibilityLabel("Travelers")
+                                    .accessibilityValue("\(travelers)")
                             }
-                            .labelsHidden()
                         }
                     }
                 }
@@ -118,8 +135,9 @@ struct PlanTripSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             content()
         }
-        .padding(16)
-        .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(LiggaSpace.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liggaCard()
     }
 
     private func labeledField(_ label: String, systemImage: String, placeholder: String, text: Binding<String>) -> some View {
@@ -147,6 +165,9 @@ struct PlanTripSheet: View {
             DatePicker("", selection: date, displayedComponents: .date)
                 .labelsHidden()
                 .datePickerStyle(.compact)
+                // The picker opens a native calendar; keep its compact value
+                // within the card while the surrounding labels scale to AX5.
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
     }
 }
