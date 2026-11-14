@@ -401,28 +401,36 @@ struct ProfileView: View {
             LiggaHaptics.tap()
             showTipJar = true
         } label: {
-            HStack(spacing: 13) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+                : AnyLayout(HStackLayout(spacing: LiggaSpace.s))
+            layout {
                 Image(systemName: "heart.fill")
-                    .font(.ligga(.body, weight: .semibold))
-                    .foregroundStyle(WandererTheme.coralDeep)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(WandererTheme.accentText)
                     .frame(width: 26)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                     Text("Support Wanderer")
-                        .font(.ligga(.body, weight: .medium))
+                        .font(.wanderer(.card))
+                        .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(WandererTheme.ink)
                     Text("Leave an optional tip")
-                        .font(.ligga(.caption))
+                        .font(.ligga(.footnote))
+                        .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(WandererTheme.muted)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.ligga(.caption2, weight: .bold))
-                    .foregroundStyle(WandererTheme.muted.opacity(0.5))
-                    .accessibilityHidden(true)
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.ligga(.caption2, weight: .bold))
+                        .foregroundStyle(WandererTheme.muted)
+                        .accessibilityHidden(true)
+                }
             }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 58)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(LiggaSpace.m)
+            .frame(minHeight: WandererTheme.minimumTarget)
             .contentShape(Rectangle())
             .liggaCard()
         }

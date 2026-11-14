@@ -6,17 +6,15 @@ struct TipJarView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let gutter: CGFloat = 16
-
     var body: some View {
         ScrollView {
-            VStack(spacing: LiggaSpace.m) {
+            VStack(spacing: LiggaSpace.l) {
                 header
                 statusCard
                 tipsSection
                 footnote
             }
-            .padding(.horizontal, gutter)
+            .padding(.horizontal, WandererTheme.gutter)
             .padding(.top, LiggaSpace.xs)
             .padding(.bottom, LiggaSpace.xl)
             .frame(maxWidth: 640)
@@ -44,29 +42,28 @@ struct TipJarView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: LiggaSpace.s) {
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                     .fill(WandererTheme.route)
                 Image(systemName: "heart.fill")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(WandererTheme.onAccent)
             }
-            .frame(width: 48, height: 48)
+            .frame(width: WandererTheme.minimumTarget, height: WandererTheme.minimumTarget)
             .accessibilityHidden(true)
 
             Text("Enjoying Wanderer?")
-                .font(.display(.title2))
+                .wandererHeading(.title)
                 .foregroundStyle(WandererTheme.ink)
                 .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
 
             Text("Wanderer is free, and every feature stays free. If it helped you plan a trip, you can leave a tip. It's completely optional and doesn't unlock anything.")
                 .font(.ligga(.subheadline))
                 .foregroundStyle(WandererTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(LiggaSpace.m + 4)
+        .padding(LiggaSpace.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .liggaCard(radius: WandererTheme.postcardRadius)
+        .liggaCard()
     }
 
     // MARK: - Status
@@ -173,7 +170,7 @@ struct TipJarView: View {
                 .foregroundStyle(WandererTheme.muted)
                 .accessibilityHidden(true)
             Text("In-app purchases are turned off on this device, so tips can't be sent from here.")
-                .font(.ligga(.footnote))
+                .font(.ligga(.subheadline))
                 .foregroundStyle(WandererTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -186,15 +183,15 @@ struct TipJarView: View {
         VStack(spacing: 0) {
             ForEach(TipTier.allCases) { tier in
                 HStack(spacing: LiggaSpace.s) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                         .fill(WandererTheme.fillMuted)
-                        .frame(width: 44, height: 44)
-                    VStack(alignment: .leading, spacing: 6) {
+                        .frame(width: WandererTheme.minimumTarget, height: WandererTheme.minimumTarget)
+                    VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                         SkeletonBlock(width: 120, height: 14)
-                        SkeletonBlock(width: 180, height: 11)
+                        SkeletonBlock(height: 11)
                     }
                     Spacer()
-                    Capsule().fill(WandererTheme.fillMuted).frame(width: 72, height: 36)
+                    RoundedRectangle(cornerRadius: WandererTheme.controlRadius).fill(WandererTheme.fillMuted).frame(width: 72, height: WandererTheme.minimumTarget)
                 }
                 .padding(LiggaSpace.m)
             }
@@ -245,9 +242,10 @@ private struct TipRow: View {
                 if !dynamicTypeSize.isAccessibilitySize {
                     icon
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                     Text(product.title)
-                        .font(.ligga(.body, weight: .semibold))
+                        .font(.wanderer(.card))
+                        .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(WandererTheme.ink)
                     if !product.description.isEmpty {
                         Text(product.description)
@@ -277,22 +275,22 @@ private struct TipRow: View {
 
     private var icon: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                 .fill(WandererTheme.routeSoft)
             Image(systemName: product.tier.symbol)
                 .font(.ligga(.body, weight: .semibold))
-                .foregroundStyle(WandererTheme.coralDeep)
+                .foregroundStyle(WandererTheme.accentText)
         }
-        .frame(width: 44, height: 44)
+        .frame(width: WandererTheme.minimumTarget, height: WandererTheme.minimumTarget)
         .accessibilityHidden(true)
     }
 
     private var priceTag: some View {
         ZStack {
             Text(product.displayPrice)
-                .font(.ligga(.subheadline, weight: .bold))
+                .font(.wanderer(.card))
                 .monospacedDigit()
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
                 .opacity(isPurchasing ? 0 : 1)
             if isPurchasing {
                 ProgressView().tint(WandererTheme.onPrimary)
@@ -300,9 +298,9 @@ private struct TipRow: View {
         }
         .foregroundStyle(WandererTheme.onPrimary)
         .padding(.horizontal, LiggaSpace.m)
-        .frame(minWidth: 76, minHeight: 36)
-        .background(WandererTheme.primaryFill, in: Capsule())
-        .fixedSize()
+        .padding(.vertical, LiggaSpace.xs)
+        .frame(minWidth: WandererTheme.minimumTarget, minHeight: WandererTheme.minimumTarget)
+        .background(WandererTheme.primaryFill, in: RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous))
     }
 }
 
@@ -315,35 +313,30 @@ private struct TipStatusBanner: View {
     let actionTitle: String
     let action: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         VStack(alignment: .leading, spacing: LiggaSpace.s) {
-            HStack(alignment: .firstTextBaseline, spacing: LiggaSpace.s) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: LiggaSpace.s))
+            layout {
                 Image(systemName: icon)
                     .font(.ligga(.title2, weight: .semibold))
                     .foregroundStyle(tint)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
                     Text(title)
-                        .font(.ligga(.headline, weight: .bold))
+                        .wandererHeading(.section)
                         .foregroundStyle(WandererTheme.ink)
-                        .accessibilityAddTraits(.isHeader)
                     Text(message)
                         .font(.ligga(.subheadline))
                         .foregroundStyle(WandererTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 0)
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
             }
-            Button {
-                action()
-            } label: {
-                Text(actionTitle)
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(WandererTheme.accentText)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            PrimaryButton(title: actionTitle, action: action)
         }
         .padding(LiggaSpace.m)
         .frame(maxWidth: .infinity, alignment: .leading)

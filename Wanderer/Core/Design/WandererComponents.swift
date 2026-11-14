@@ -207,49 +207,35 @@ struct LiggaRetryCard: View {
     var message: String?
     var isRetrying: Bool = false
     let retry: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(alignment: .center, spacing: LiggaSpace.s) {
-            Image(systemName: "wifi.exclamationmark")
-                .font(.ligga(.title3, weight: .semibold))
-                .foregroundStyle(WandererTheme.coralDeep)
-                .frame(width: 32)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: LiggaSpace.s) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: LiggaSpace.s))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: LiggaSpace.s))
+            layout {
+                Image(systemName: "wifi.exclamationmark")
+                    .font(.ligga(.title3, weight: .semibold))
+                    .foregroundStyle(WandererTheme.coralDeep)
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(WandererTheme.ink)
-                if let message {
-                    Text(message)
-                        .font(.ligga(.footnote))
-                        .foregroundStyle(WandererTheme.muted)
-                        .lineLimit(3)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button {
-                LiggaHaptics.tap()
-                retry()
-            } label: {
-                ZStack {
-                    Text("Retry").opacity(isRetrying ? 0 : 1)
-                    if isRetrying {
-                        ProgressView().tint(WandererTheme.onPrimary)
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
+                    Text(title)
+                        .wandererHeading(.section)
+                        .foregroundStyle(WandererTheme.ink)
+                    if let message {
+                        Text(message)
+                            .font(.ligga(.subheadline))
+                            .foregroundStyle(WandererTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .font(.ligga(.subheadline, weight: .semibold))
-                .foregroundStyle(WandererTheme.onPrimary)
-                .padding(.horizontal, LiggaSpace.m)
-                .frame(minHeight: 36)
-                .background(WandererTheme.primaryFill, in: Capsule())
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.liggaPressable)
-            .disabled(isRetrying)
-            .accessibilityIdentifier("retry-button")
+
+            PrimaryButton(title: "Retry", isLoading: isRetrying, action: retry)
+                .accessibilityIdentifier("retry-button")
         }
         .padding(LiggaSpace.m)
         .liggaCard()
