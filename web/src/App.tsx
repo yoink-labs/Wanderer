@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import SignIn from "./pages/SignIn";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
 import Profile from "./pages/Profile";
 import TripWorkspace from "./pages/TripWorkspace";
 
@@ -37,6 +38,7 @@ function Shell() {
           <Route path="/trips/:tripId" element={<TripWorkspace />} />
           <Route path="/trips/:tripId/:tool" element={<TripWorkspace />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

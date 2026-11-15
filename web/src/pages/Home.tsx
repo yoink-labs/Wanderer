@@ -307,6 +307,7 @@ function TripHome() {
       <footer className="home-footer">
         <span className="home-footer__word">Wanderer</span>
         <span>Open source. No paywall. Optional tips in the iOS app.</span>
+        <Link to="/privacy" className="text-link">Privacy</Link>
         <button type="button" className="text-link" onClick={() => setPlanOpen(true)}>Start a trip <ArrowRight size={14} /></button>
       </footer>
 
