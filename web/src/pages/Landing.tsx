@@ -247,6 +247,7 @@ export default function Landing() {
             Sign in to Wanderer <ArrowRight size={14} />
           </Link>
           <a href="/images/CREDITS.md">Photography credits</a>
+          <Link to="/privacy">Privacy policy</Link>
         </div>
       </footer>
       <PlanTripDialog open={planning} onClose={() => setPlanning(false)} />
