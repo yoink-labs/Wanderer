@@ -973,9 +973,9 @@ textarea {
   min-height: 36px;
   border-radius: 999px;
 }
-/* Sign-in is a welcome page; credentials stay inside the existing Clerk flow. */
+/* Wanderer authentication: the form lives on the same paper as the site. */
 .signin-page {
-  min-height: calc(100svh - 80px);
+  min-height: calc(100svh - var(--header-h));
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   background: var(--card);
@@ -985,9 +985,9 @@ textarea {
   isolation: isolate;
   display: flex;
   align-items: end;
-  min-height: 750px;
+  min-height: 680px;
   color: #fff;
-  padding: 64px;
+  padding: clamp(36px, 4.5vw, 72px);
 }
 .signin-story > img {
   position: absolute;
@@ -1002,72 +1002,44 @@ textarea {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(0deg, #041e2bed, transparent 100%);
+  background: linear-gradient(0deg, #041e2bed, #041e2b08 100%);
 }
-.signin-story h1 {
+.signin-story h2 {
   font-size: clamp(36px, 4vw, 58px);
   letter-spacing: -0.05em;
   font-weight: 600;
   line-height: 1.12;
   margin: 24px 0;
 }
-.signin-story p {
-  font-size: 13px;
-  color: #e0e7e9;
-}
+.signin-story p { font-size: 14px; color: #e0e7e9; }
 .signin-story__location {
   position: absolute;
   top: 34px;
   left: 40px;
   display: flex;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   align-items: center;
 }
 .signin-welcome {
   width: 100%;
-  max-width: 460px;
+  min-width: 0;
+  max-width: 480px;
   margin: auto;
-  padding: 64px 40px;
+  padding: 48px 40px;
   display: flex;
   flex-direction: column;
   align-items: start;
 }
-.signin-welcome > .logo {
-  margin-bottom: 60px;
-}
-.signin-welcome h2 {
-  font-size: 42px;
-  letter-spacing: -0.05em;
-  line-height: 1.15;
-  font-weight: 600;
-}
-.signin-welcome > p:not(.journey-kicker) {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.9;
-  margin: 24px 0 30px;
-}
-.signin-welcome > .button {
-  width: 100%;
-  justify-content: space-between;
-}
-.signin-trust {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 10px;
-  width: 100%;
-  margin: 15px 0 30px;
-}
+.signin-welcome > .logo { margin-bottom: 32px; }
+.signin-welcome .journey-kicker { margin-bottom: 16px; }
+.signin-form { width: 100%; min-height: 440px; }
+.signin-loading { padding-block: 80px; color: var(--muted); }
 .signin-divider {
   width: 100%;
   border-top: 1px solid var(--line);
-  position: relative;
   text-align: center;
-  margin: 15px 0 25px;
+  margin: 24px 0 16px;
 }
 .signin-divider span {
   background: var(--card);
@@ -1075,24 +1047,92 @@ textarea {
   position: relative;
   top: -12px;
   color: var(--muted);
-  font-size: 11px;
-}
-.signin-welcome > .text-link {
-  align-self: center;
   font-size: 12px;
 }
+.signin-welcome > .text-link { align-self: center; font-size: 13px; min-height: 44px; }
 .signin-welcome > small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
-  margin-top: 56px;
+  margin-top: 20px;
   align-self: center;
+  text-align: center;
 }
-.wanderer-clerk-card {
+.wanderer-clerk-root.wanderer-clerk-root,
+.wanderer-clerk-box.wanderer-clerk-box { width: 100%; max-width: 100%; }
+.wanderer-clerk-box.wanderer-clerk-box { box-shadow: none; border: 0; border-radius: 0; }
+.wanderer-clerk-card.wanderer-clerk-card {
   background: var(--card);
   color: var(--ink);
-  border-radius: 26px;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--line);
+  padding: 0;
+  margin: 0;
+  gap: 24px;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
+}
+.wanderer-clerk-header.wanderer-clerk-header,
+.wanderer-clerk-header > div { width: 100%; text-align: left; }
+.wanderer-clerk-providers.wanderer-clerk-providers { grid-template-columns: minmax(0, 1fr); }
+.wanderer-clerk-title.wanderer-clerk-title {
+  color: var(--ink);
+  font-size: clamp(26px, 2.4vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  line-height: 1.2;
+}
+.wanderer-clerk-subtitle.wanderer-clerk-subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 10px;
+}
+.signin-page .signin-form .wanderer-clerk-social.wanderer-clerk-social,
+.signin-page .signin-form .wanderer-clerk-input.wanderer-clerk-input {
+  min-height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 16px;
+}
+.signin-page .signin-form .wanderer-clerk-social.wanderer-clerk-social {
+  font-size: 14px;
+  font-weight: 600;
+}
+.signin-page .signin-form .wanderer-clerk-social.wanderer-clerk-social:hover { background: var(--paper-deep); }
+.signin-page .signin-form .wanderer-clerk-input.wanderer-clerk-input:focus-visible,
+.signin-page .signin-form .wanderer-clerk-social.wanderer-clerk-social:focus-visible,
+.signin-page .signin-form .wanderer-clerk-primary.wanderer-clerk-primary:focus-visible {
+  outline: 2px solid var(--sea);
+  outline-offset: 3px;
+}
+.signin-page .signin-form .wanderer-clerk-primary.wanderer-clerk-primary {
+  min-height: 50px;
+  background: var(--ink);
+  color: var(--card);
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.015em;
+}
+.signin-page .signin-form .wanderer-clerk-primary.wanderer-clerk-primary::after { background: none; }
+.signin-page .signin-form .wanderer-clerk-primary.wanderer-clerk-primary > span { color: inherit; }
+.signin-page .signin-form .wanderer-clerk-primary.wanderer-clerk-primary:hover { background: var(--ink-soft); }
+[data-theme="dark"] .signin-page .signin-form .wanderer-clerk-primary.wanderer-clerk-primary { background: var(--route); color: var(--navy); }
+[data-theme="dark"] .signin-page .signin-form .wanderer-clerk-primary.wanderer-clerk-primary:hover { background: #ffd27f; }
+.wanderer-clerk-footer.wanderer-clerk-footer {
+  background: var(--card);
+  background-image: none;
+  padding: 20px 0 0;
+  border: 0;
+}
+.wanderer-clerk-link.wanderer-clerk-link { color: var(--ink); font-weight: 600; }
+/* Required free-plan attribution remains visible in Clerk's own footer. */
+@media (min-width: 601px) and (max-width: 900px) {
+  .signin-page { grid-template-columns: 0.85fr 1fr; }
 }
 @media (min-width: 1600px) {
   .journey-hero__content {
@@ -1309,14 +1349,11 @@ textarea {
     padding: 36px;
     min-height: 650px;
   }
-  .signin-story h1 {
+  .signin-story h2 {
     font-size: 38px;
   }
   .signin-welcome {
     padding: 48px 28px;
-  }
-  .signin-welcome h2 {
-    font-size: 36px;
   }
 }
 @media (max-width: 600px) {
@@ -1864,17 +1901,16 @@ textarea {
     min-height: calc(100svh - 68px);
   }
   .signin-story {
-    min-height: 240px;
-    padding: 32px 24px;
+    min-height: 164px;
+    padding: 26px 24px 24px;
     align-items: end;
   }
-  .signin-story h1 {
-    font-size: 32px;
-    margin: 14px 0 0;
+  .signin-story h2 {
+    font-size: 28px;
+    margin: 10px 0 0;
   }
   .signin-story .journey-eyebrow {
-    justify-content: start;
-    font-size: 7px;
+    display: none;
   }
   .signin-story p {
     display: none;
@@ -1885,27 +1921,22 @@ textarea {
     font-size: 8px;
   }
   .signin-welcome {
-    padding: 36px 24px 40px;
-    max-width: 420px;
+    padding: 28px 24px 32px;
+    max-width: 440px;
   }
   .signin-welcome > .logo {
     display: none;
-  }
-  .signin-welcome h2 {
-    font-size: 34px;
   }
   .signin-welcome > p:not(.journey-kicker) {
     font-size: 13px;
     margin: 18px 0 24px;
   }
   .signin-welcome .journey-kicker {
-    font-size: 8px;
+    font-size: 9px;
+    margin-bottom: 12px;
   }
   .signin-welcome > small {
-    margin-top: 32px;
-  }
-  .signin-trust {
-    margin-bottom: 22px;
+    margin-top: 12px;
   }
   .signin-divider {
     margin-bottom: 16px;

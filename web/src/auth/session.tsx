@@ -6,6 +6,8 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
+import { signInHref } from "./redirect";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../lib/theme";
 import { TEST_TOKEN, USE_TEST_AUTH, WandererApi } from "../lib/api";
 
@@ -73,6 +75,7 @@ function ClerkSessionHost({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
   const clerk = useClerk();
+  const navigate = useNavigate();
 
   const api = useMemo(() => new WandererApi(getToken), [getToken]);
 
@@ -100,14 +103,15 @@ function ClerkSessionHost({ children }: { children: ReactNode }) {
         : null,
       api,
       signIn: () => {
-        void clerk.openSignIn({});
+        const returnTo = window.location.pathname + window.location.search + window.location.hash;
+        navigate(signInHref(returnTo));
       },
       signOut,
       openProfile: () => {
         void clerk.openUserProfile();
       },
     }),
-    [api, clerk, isLoaded, isSignedIn, signOut, user],
+    [api, clerk, isLoaded, isSignedIn, navigate, signOut, user],
   );
 
   return (
@@ -115,24 +119,21 @@ function ClerkSessionHost({ children }: { children: ReactNode }) {
   );
 }
 
-const CLERK_APPEARANCE = {
-  variables: {
-    colorPrimary: "#F2A922",
-    colorText: "#10283A",
-    colorTextSecondary: "#56697A",
-    colorBackground: "#FFFFFF",
-    colorInputBackground: "#F3F6F5",
-    colorInputText: "#10283A",
-    borderRadius: "14px",
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif',
-    fontSize: "15px",
-  },
-  elements: {
-    card: "wanderer-clerk-card",
-    formButtonPrimary: "wanderer-clerk-primary",
-    footerActionLink: "wanderer-clerk-link",
-  },
+// Keep the free-plan Clerk attribution visible. These stable element classes
+// also apply to verification, recovery and sign-up steps.
+const CLERK_ELEMENTS = {
+  rootBox: "wanderer-clerk-root",
+  cardBox: "wanderer-clerk-box",
+  card: "wanderer-clerk-card",
+  header: "wanderer-clerk-header",
+  headerTitle: "wanderer-clerk-title",
+  headerSubtitle: "wanderer-clerk-subtitle",
+  socialButtons: "wanderer-clerk-providers",
+  socialButtonsBlockButton: "wanderer-clerk-social",
+  formFieldInput: "wanderer-clerk-input",
+  formButtonPrimary: "wanderer-clerk-primary",
+  footer: "wanderer-clerk-footer",
+  footerActionLink: "wanderer-clerk-link",
 };
 
 export function SessionHost({ children }: { children: ReactNode }) {
@@ -145,10 +146,30 @@ export function SessionHost({ children }: { children: ReactNode }) {
   return (
     <ClerkProvider
       publishableKey={publishableKey}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/"
+      localization={{
+        signIn: {
+          start: {
+            title: "Sign in to Wanderer",
+            titleCombined: "Sign in to Wanderer",
+            subtitle: "Your next chapter starts here.",
+            subtitleCombined: "Your next chapter starts here.",
+          },
+        },
+        signUp: {
+          start: {
+            title: "Join Wanderer",
+            subtitle: "A world of plans. One place for yours.",
+          },
+        },
+      }}
       appearance={{
-        ...CLERK_APPEARANCE,
+        elements: CLERK_ELEMENTS,
+        layout: { socialButtonsVariant: "blockButton", socialButtonsPlacement: "top" },
         variables: {
-          ...CLERK_APPEARANCE.variables,
           colorPrimary: dark ? "#FFC14D" : "#10283A",
           colorText: dark ? "#E8EEF1" : "#10283A",
           colorTextSecondary: dark ? "#93A6B3" : "#56697A",
@@ -159,7 +180,9 @@ export function SessionHost({ children }: { children: ReactNode }) {
           colorNeutral: dark ? "#E8EEF1" : "#10283A",
           fontFamily:
             'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          borderRadius: "18px",
+          colorDanger: dark ? "#FF8A78" : "#C8402F",
+          borderRadius: "12px",
+          fontSize: "15px",
         },
       }}
     >

@@ -32,7 +32,8 @@ function Shell() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<Landing />} />
-          <Route path="/sign-in" element={<SignIn />} />
+          <Route path="/sign-in/*" element={<SignIn />} />
+          <Route path="/sign-up/*" element={<SignIn signUp />} />
           <Route path="/guides" element={<Explore />} />
           <Route path="/guides/:guideId" element={<GuideDetail />} />
           <Route path="/trips/:tripId" element={<TripWorkspace />} />
@@ -49,13 +50,13 @@ function Shell() {
 export default function App() {
   return (
     <ThemeProvider>
-      <SessionHost>
-        <ToastProvider>
-          <BrowserRouter>
+      <BrowserRouter>
+        <SessionHost>
+          <ToastProvider>
             <Shell />
-          </BrowserRouter>
-        </ToastProvider>
-      </SessionHost>
+          </ToastProvider>
+        </SessionHost>
+      </BrowserRouter>
     </ThemeProvider>
   );
 }
