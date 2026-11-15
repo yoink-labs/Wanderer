@@ -1,3 +1,4 @@
+import { searchPlaces } from "./placeSearch";
 import { AuthError, verifyClerkJwt, type ClerkClaims } from "./auth";
 
 import { fetchFlightStatus, flightsForReservations } from "./flights";
@@ -8,6 +9,7 @@ export interface Env {
   DB: D1Database;
   MEDIA: R2Bucket;
   CACHE?: KVNamespace;
+  PLACE_SEARCH_URL?:string;
   ENVIRONMENT?: string;
   CLERK_ISSUER?: string;
   CLERK_JWKS_URL?: string;
@@ -712,6 +714,8 @@ on("POST", "/v1/trips/:tripId/cover", async ({ env, request, user, params }) => 
   return json(row);
 });
 
+on("GET", "/v1/places/search", async ({ env, url }) => searchPlaces(env.DB,url.searchParams.get('q')??'',env.PLACE_SEARCH_URL));
+
 // --- days / places / bookings / money / checklist ---------------------------
 
 registerTripResource(routes, "days", {
@@ -737,6 +741,10 @@ registerTripResource(routes, "places", {
     "price_level",
     "rating",
     "photo_url",
+    "description",
+    "opening_hours",
+    "photo_credit",
+    "photo_source_url",
     "start_time",
     "end_time",
     "position",
@@ -900,7 +908,7 @@ const OVERRIDE_FIELDS: Record<string, { place: string[]; reservation: string[] }
   place: {
     place: [
       "day_id", "name", "address", "lat", "lng", "category", "notes", "website",
-      "phone", "price_level", "rating", "photo_url", "start_time", "end_time",
+      "phone", "description", "opening_hours", "photo_credit", "photo_source_url", "price_level", "rating", "photo_url", "start_time", "end_time",
       "position", "list_id", "visited_at",
     ],
     reservation: [],
@@ -1075,7 +1083,7 @@ on("POST", "/v1/trips/:tripId/personal/places", async ({ env, request, user, par
 function pickPersonalPlace(body: Record<string, unknown>): Record<string, unknown> {
   const allowed = [
     "day_id", "list_id", "name", "address", "lat", "lng", "category", "notes",
-    "website", "phone", "photo_url", "start_time", "end_time", "position", "visited_at",
+    "website", "phone", "description", "opening_hours", "photo_credit", "photo_source_url", "photo_url", "start_time", "end_time", "position", "visited_at",
   ];
   const values: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(body)) {
@@ -1784,7 +1792,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
       // Public routes: guides and media only.
       const publicRoute =
-        url.pathname.startsWith("/v1/guides") || url.pathname.startsWith("/media/");
+        url.pathname === "/v1/places/search" || url.pathname.startsWith("/v1/guides") || url.pathname.startsWith("/media/");
       let user: User = { id: "", email: null };
       if (!publicRoute) {
         const authenticated = await authenticate(request, env);

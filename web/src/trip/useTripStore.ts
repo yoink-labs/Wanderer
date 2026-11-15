@@ -144,7 +144,7 @@ function safeMetadata(value: string): Record<string, unknown> {
 
 function cleanPlaceOverride(patch: Partial<PlaceInput>): Record<string, unknown> {
   const allowed = [
-    "name", "address", "lat", "lng", "category", "notes", "website", "phone",
+    "name", "address", "lat", "lng", "category", "notes", "website", "phone", "description", "opening_hours",
     "start_time", "end_time", "photo_url", "rating", "price_level", "day_id", "position",
   ];
   return Object.fromEntries(Object.entries(patch).filter(([key, value]) => allowed.includes(key) && value !== undefined));
@@ -187,6 +187,7 @@ export interface TripStore {
   updateTrip: (patch: Partial<Bundle["trip"]>) => Promise<void>;
   deleteTrip: () => Promise<void>;
   updateDayNotes: (dayId: string, notes: string) => Promise<void>;
+  addList: (title:string)=>Promise<void>;
   addPlace: (input: PlaceInput, personal?: boolean) => Promise<void>;
   updatePlace: (place: Place, patch: Partial<PlaceInput>, mode?: "shared" | "personal" | "override") => Promise<void>;
   deletePlace: (place: Place, mode?: "shared" | "personal") => Promise<void>;
@@ -485,6 +486,14 @@ export function useTripStore(tripId: string): TripStore {
     },
     [afterMutation, ensureWritable, guestMutate, isGuest, session.api, tripId],
   );
+
+  const addList=useCallback(async(title:string)=>{
+    ensureWritable();
+    if(!title.trim())throw new Error('Give this list a name.');
+    if(isGuest){guestMutate(local=>{local.lists.push({id:crypto.randomUUID(),trip_id:tripId,title:title.trim(),position:local.lists.length})});return;}
+    await session.api.addList(tripId,title.trim(),bundle?.lists.length??0);
+    await afterMutation();
+  },[ensureWritable,isGuest,guestMutate,tripId,session.api,bundle?.lists.length,afterMutation]);
 
   const addPlace = useCallback(
     async (input: PlaceInput, personal = false) => {
@@ -856,6 +865,7 @@ export function useTripStore(tripId: string): TripStore {
     updateTrip,
     deleteTrip,
     updateDayNotes,
+    addList,
     addPlace,
     updatePlace,
     deletePlace,

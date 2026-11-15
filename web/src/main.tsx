@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import App from "./App";
 import "./styles.css";
 import "./redesign.css";
+import "./planner.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

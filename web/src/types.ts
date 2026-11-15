@@ -54,6 +54,10 @@ export interface Place {
   notes: string | null;
   website: string | null;
   phone: string | null;
+  description?: string | null;
+  opening_hours?: string | null;
+  photo_credit?: string | null;
+  photo_source_url?: string | null;
   price_level: number | null;
   rating: number | null;
   photo_url: string | null;
@@ -288,6 +292,10 @@ export interface PlaceInput {
   notes?: string | null;
   website?: string | null;
   phone?: string | null;
+  description?: string | null;
+  opening_hours?: string | null;
+  photo_credit?: string | null;
+  photo_source_url?: string | null;
   price_level?: number | null;
   rating?: number | null;
   photo_url?: string | null;

@@ -13,11 +13,25 @@ interface MapPaneProps {
   onSelectPlace: (placeId: string) => void;
 }
 
-function hasCoordinates(place: Place): place is Place & { lat: number; lng: number } {
-  return typeof place.lat === "number" && typeof place.lng === "number" && Number.isFinite(place.lat) && Number.isFinite(place.lng);
+function hasCoordinates(
+  place: Place,
+): place is Place & { lat: number; lng: number } {
+  return (
+    typeof place.lat === "number" &&
+    typeof place.lng === "number" &&
+    Number.isFinite(place.lat) &&
+    Number.isFinite(place.lng)
+  );
 }
 
-export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId, onSelectPlace }: MapPaneProps) {
+export function MapPane({
+  places,
+  days,
+  focusDayId,
+  onFocusDay,
+  selectedPlaceId,
+  onSelectPlace,
+}: MapPaneProps) {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -32,13 +46,18 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
   }, [focusDayId]);
 
   const daysWithPlaces = useMemo(() => {
-    return days.filter((day) => places.some((place) => place.day_id === day.id));
+    return days.filter((day) =>
+      places.some((place) => place.day_id === day.id),
+    );
   }, [days, places]);
 
   const filtered = useMemo(() => {
     if (dayFilter === null) return places.filter(hasCoordinates);
-    if (dayFilter === "unscheduled") return places.filter((place) => !place.day_id && hasCoordinates(place));
-    return places.filter((place) => place.day_id === dayFilter && hasCoordinates(place));
+    if (dayFilter === "unscheduled")
+      return places.filter((place) => !place.day_id && hasCoordinates(place));
+    return places.filter(
+      (place) => place.day_id === dayFilter && hasCoordinates(place),
+    );
   }, [dayFilter, places]);
 
   const allPinned = useMemo(() => places.filter(hasCoordinates), [places]);
@@ -61,7 +80,11 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
       map.flyTo(points[0], 14, { duration: 0.45 });
       return;
     }
-    map.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 15, animate: true });
+    map.fitBounds(L.latLngBounds(points), {
+      padding: [48, 48],
+      maxZoom: 15,
+      animate: true,
+    });
   }, [filtered]);
   fitRef.current = fit;
 
@@ -103,7 +126,10 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
     if (!map || !layer) return;
     layer.clearLayers();
 
-    const groups = new Map<string, Array<Place & { lat: number; lng: number }>>();
+    const groups = new Map<
+      string,
+      Array<Place & { lat: number; lng: number }>
+    >();
     for (const place of filtered) {
       if (!hasCoordinates(place)) continue;
       const key = place.day_id ?? "unscheduled";
@@ -112,26 +138,36 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
       groups.set(key, group);
     }
 
-    const allPins: Array<{ place: Place & { lat: number; lng: number }; number: number }> = [];
-    let running = 1;
+    const allPins: Array<{
+      place: Place & { lat: number; lng: number };
+      number: number;
+    }> = [];
     const dayOrder = new Map(days.map((day) => [day.id, day.day_index]));
     const sortedGroups = [...groups.entries()].sort(([a], [b]) => {
       if (a === "unscheduled") return 1;
       if (b === "unscheduled") return -1;
       return (dayOrder.get(a) ?? 0) - (dayOrder.get(b) ?? 0);
     });
-    for (const [, group] of sortedGroups) {
+    for (const [key, group] of sortedGroups) {
+      group.sort((a, b) => a.position - b.position);
       for (const place of group) {
-        allPins.push({ place, number: running });
-        running += 1;
+        allPins.push({
+          place,
+          number:
+            places
+              .filter((p) => p.day_id === place.day_id)
+              .sort((a, b) => a.position - b.position)
+              .findIndex((p) => p.id === place.id) + 1,
+        });
       }
-      if (group.length > 1) {
+      if (group.length > 1 && key !== "unscheduled" && dayFilter !== null) {
         L.polyline(
           group.map((place) => [place.lat, place.lng] as [number, number]),
           {
             color: "#F2A922",
             weight: 3,
             opacity: 0.9,
+            dashArray: "7 7",
             lineJoin: "round",
             lineCap: "round",
           },
@@ -147,7 +183,12 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
       });
-      const marker = L.marker([place.lat, place.lng], { icon, keyboard: true, title: place.name, alt: place.name });
+      const marker = L.marker([place.lat, place.lng], {
+        icon,
+        keyboard: true,
+        title: place.name,
+        alt: place.name,
+      });
       marker.on("click", () => onSelectPlace(place.id));
       marker.addTo(layer);
     }
@@ -160,66 +201,107 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
     if (!layer) return;
     layer.eachLayer((entry) => {
       if (!(entry instanceof L.Marker)) return;
-      const el = entry.getElement()?.querySelector<HTMLElement>(".wanderer-marker");
+      const el = entry
+        .getElement()
+        ?.querySelector<HTMLElement>(".wanderer-marker");
       if (!el) return;
       const id = el.dataset.placeId;
       el.classList.toggle("is-selected", id === selectedPlaceId);
     });
   }, [selectedPlaceId]);
 
-  const dayLabel = dayFilter === null ? "All days" : dayFilter === "unscheduled" ? "Unscheduled" : `Day ${(days.find((day) => day.id === dayFilter)?.day_index ?? 0) + 1}`;
+  const dayLabel =
+    dayFilter === null
+      ? "All days"
+      : dayFilter === "unscheduled"
+        ? "Unscheduled"
+        : `Day ${(days.find((day) => day.id === dayFilter)?.day_index ?? 0) + 1}`;
 
   return (
     <aside className="map-pane" aria-label="Trip map">
       <div className="map-pane__header">
         <div>
-          <p className="map-pane__eyebrow"><Layers3 size={13} /> The route</p>
+          <p className="map-pane__eyebrow">
+            <Layers3 size={13} /> The route
+          </p>
           <h2>{dayLabel}</h2>
         </div>
-        <button type="button" className="button button--secondary button--small" onClick={fit} disabled={!filtered.length}>
+        <button
+          type="button"
+          className="button button--secondary button--small"
+          onClick={fit}
+          disabled={!filtered.length}
+        >
           <Expand size={14} /> Fit {dayFilter === null ? "all" : "day"}
         </button>
       </div>
 
       {(daysWithPlaces.length > 1 || places.some((place) => !place.day_id)) && (
-        <div className="map-pane__filters" role="group" aria-label="Filter the map by day">
-        <button type="button" className={dayFilter === null ? "is-active" : ""} onClick={() => { setDayFilter(null); onFocusDay(null); }}>
-          All
-        </button>
-        {daysWithPlaces.map((day) => (
+        <div
+          className="map-pane__filters"
+          role="group"
+          aria-label="Filter the map by day"
+        >
           <button
             type="button"
-            key={day.id}
-            className={dayFilter === day.id ? "is-active" : ""}
-            onClick={() => { setDayFilter(day.id); onFocusDay(day.id); }}
+            className={dayFilter === null ? "is-active" : ""}
+            onClick={() => {
+              setDayFilter(null);
+              onFocusDay(null);
+            }}
           >
-            Day {day.day_index + 1}
+            All
           </button>
-        ))}
-        {places.some((place) => !place.day_id) && (
-          <button
-            type="button"
-            className={dayFilter === "unscheduled" ? "is-active" : ""}
-            onClick={() => { setDayFilter("unscheduled"); onFocusDay(null); }}
-          >
-            Ideas
-          </button>
-        )}
+          {daysWithPlaces.map((day) => (
+            <button
+              type="button"
+              key={day.id}
+              className={dayFilter === day.id ? "is-active" : ""}
+              onClick={() => {
+                setDayFilter(day.id);
+                onFocusDay(day.id);
+              }}
+            >
+              Day {day.day_index + 1}
+            </button>
+          ))}
+          {places.some((place) => !place.day_id) && (
+            <button
+              type="button"
+              className={dayFilter === "unscheduled" ? "is-active" : ""}
+              onClick={() => {
+                setDayFilter("unscheduled");
+                onFocusDay(null);
+              }}
+            >
+              Ideas
+            </button>
+          )}
         </div>
       )}
 
       <div className="map-pane__canvas">
-        <div ref={containerRef} className={`map-canvas ${theme.resolved === "dark" ? "map-canvas--dark" : ""}`} />
+        <div
+          ref={containerRef}
+          className={`map-canvas ${theme.resolved === "dark" ? "map-canvas--dark" : ""}`}
+        />
         {!allPinned.length && (
           <div className="map-pane__empty">
-            <span><MapPinOff size={22} /></span>
+            <span>
+              <MapPinOff size={22} />
+            </span>
             <strong>No pins yet</strong>
-            <p>Add a place with an address or coordinates and it will appear on the map.</p>
+            <p>
+              Add a place with an address or coordinates and it will appear on
+              the map.
+            </p>
           </div>
         )}
         {allPinned.length > 0 && !filtered.length && (
           <div className="map-pane__empty">
-            <span><MapPinOff size={22} /></span>
+            <span>
+              <MapPinOff size={22} />
+            </span>
             <strong>No pins in this view</strong>
             <p>Try another day, or add a stop with coordinates.</p>
           </div>
@@ -227,8 +309,14 @@ export function MapPane({ places, days, focusDayId, onFocusDay, selectedPlaceId,
       </div>
 
       <div className="map-pane__footer">
-        <span>{filtered.length} {filtered.length === 1 ? "pin" : "pins"} on the map</span>
-        <span className="map-pane__osm">OpenStreetMap</span>
+        <span>
+          {filtered.length} {filtered.length === 1 ? "pin" : "pins"} on the map
+        </span>
+        <span className="map-pane__osm">
+          {dayFilter && dayFilter !== "unscheduled"
+            ? "Straight-line route · OSM"
+            : "OpenStreetMap"}
+        </span>
       </div>
     </aside>
   );

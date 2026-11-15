@@ -1,10 +1,18 @@
-import { ArrowLeft, Check, LoaderCircle, MapPin, Search, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  LoaderCircle,
+  MapPin,
+  Search,
+  UserRound,
+} from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Dialog } from "../components/Dialog";
 import { PlaceCategoryIcon } from "../components/TripBits";
 import { useToast } from "../components/Toast";
 import { isoFromZoned, wallTimeInZone } from "../lib/dates";
 import type { Place, PlaceCategory, PlaceInput } from "../types";
+import { useSession } from "../auth/session";
 import type { TripStore } from "./useTripStore";
 
 interface PlaceDialogProps {
@@ -13,6 +21,7 @@ interface PlaceDialogProps {
   store: TripStore;
   place?: Place | null;
   defaultDayId?: string | null;
+  defaultListId?: string | null;
   saveAsPersonal?: boolean;
 }
 
@@ -23,6 +32,7 @@ interface Fields {
   lng: string;
   category: PlaceCategory;
   dayId: string;
+  listId: string;
   startTime: string;
   endTime: string;
   notes: string;
@@ -30,7 +40,11 @@ interface Fields {
   phone: string;
 }
 
-function initialFields(place: Place | null | undefined, dayId: string | null | undefined, timeZone: string): Fields {
+function initialFields(
+  place: Place | null | undefined,
+  dayId: string | null | undefined,
+  timeZone: string,
+): Fields {
   return {
     name: place?.name ?? "",
     address: place?.address ?? "",
@@ -38,6 +52,7 @@ function initialFields(place: Place | null | undefined, dayId: string | null | u
     lng: place?.lng != null ? String(place.lng) : "",
     category: place?.category ?? "sight",
     dayId: place?.day_id ?? dayId ?? "",
+    listId: place?.list_id ?? "",
     startTime: wallTimeInZone(place?.start_time, timeZone),
     endTime: wallTimeInZone(place?.end_time, timeZone),
     notes: place?.notes ?? "",
@@ -63,13 +78,28 @@ interface NominatimResult {
   lat: string;
   lon: string;
   type?: string;
+  extratags?: Record<string, string>;
 }
 
-export function PlaceDialog({ open, onClose, store, place = null, defaultDayId = null, saveAsPersonal = false }: PlaceDialogProps) {
+export function PlaceDialog({
+  open,
+  onClose,
+  store,
+  place = null,
+  defaultDayId = null,
+  defaultListId = null,
+  saveAsPersonal = false,
+}: PlaceDialogProps) {
   const { toast } = useToast();
+  const session = useSession();
   const timeZone = store.bundle?.trip.timezone ?? "UTC";
-  const [fields, setFields] = useState<Fields>(() => initialFields(place, defaultDayId, timeZone));
-  const [tab, setTab] = useState<"search" | "manual">(place ? "manual" : "search");
+  const [fields, setFields] = useState<Fields>(() =>
+    initialFields(place, defaultDayId, timeZone),
+  );
+  const [tab, setTab] = useState<"search" | "manual">(
+    place ? "manual" : "search",
+  );
+  const [sourceDetails, setSourceDetails] = useState<Partial<PlaceInput>>({});
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NominatimResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -94,65 +124,61 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
 
   useEffect(() => {
     if (!open) return;
-    setFields(initialFields(place, defaultDayId, timeZone));
+    setFields({
+      ...initialFields(place, defaultDayId, timeZone),
+      listId: place?.list_id ?? defaultListId ?? "",
+    });
     setTab(place ? "manual" : "search");
     setQuery("");
+    setSourceDetails({});
     setResults([]);
     setSearchError(null);
     setError(null);
     setOnlyMe(false);
-  }, [open, place, defaultDayId, timeZone]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, place, defaultDayId, defaultListId, timeZone]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!open || tab !== "search" || isEdit) return;
+  async function search() {
     const text = query.trim();
-    if (text.length < 2) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    const controller = new AbortController();
+    if (text.length < 2 || searching) return;
     searchAbort.current?.abort();
+    const controller = new AbortController();
     searchAbort.current = controller;
     setSearching(true);
     setSearchError(null);
-    const timer = window.setTimeout(async () => {
-      try {
-        const url = new URL("https://nominatim.openstreetmap.org/search");
-        url.searchParams.set("format", "jsonv2");
-        url.searchParams.set("q", text);
-        url.searchParams.set("limit", "7");
-        url.searchParams.set("addressdetails", "1");
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: { Accept: "application/json" },
-        });
-        if (!response.ok) throw new Error("Place search is unavailable right now.");
-        const data = (await response.json()) as NominatimResult[];
-        setResults(Array.isArray(data) ? data : []);
-      } catch (caught) {
-        if ((caught as Error).name === "AbortError") return;
-        setSearchError("Place search is unavailable. You can still add the stop by hand.");
-        setResults([]);
-      } finally {
-        if (!controller.signal.aborted) setSearching(false);
+    try {
+      const key = "wanderer.search." + text.toLowerCase();
+      const cached = sessionStorage.getItem(key);
+      if (cached) {
+        setResults(JSON.parse(cached));
+        return;
       }
-    }, 450);
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query, tab, open, isEdit]);
+      const data = await session.api.searchPlaces(text);
+      setResults(data);
+      sessionStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      if ((e as Error).name !== "AbortError")
+        setSearchError(
+          "Place search is unavailable. You can still add the stop by hand.",
+        );
+    } finally {
+      setSearching(false);
+    }
+  }
 
   if (!open) return null;
 
   function chooseResult(result: NominatimResult) {
+    setSourceDetails({
+      opening_hours: result.extratags?.opening_hours || null,
+    });
     setFields((current) => ({
       ...current,
       name: result.name || result.display_name.split(",")[0],
       address: result.display_name,
       lat: result.lat,
       lng: result.lon,
+      website: result.extratags?.website || current.website,
+      phone: result.extratags?.phone || current.phone,
     }));
     setTab("manual");
   }
@@ -187,6 +213,7 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
       return;
     }
     const payload: PlaceInput = {
+      ...sourceDetails,
       name,
       address: fields.address.trim() || null,
       lat: fields.lat.trim() ? Number(fields.lat) : null,
@@ -198,6 +225,7 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
       phone: fields.phone.trim() || null,
       start_time,
       end_time,
+      list_id: fields.listId || null,
     };
     if (Number.isNaN(payload.lat) || Number.isNaN(payload.lng)) {
       setError("Latitude and longitude need to be numbers.");
@@ -208,17 +236,33 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
       if (isEdit && place) {
         await store.updatePlace(
           place,
-          { ...payload, position: place.position, day_id: fields.dayId || null },
+          {
+            ...payload,
+            position: place.position,
+            day_id: fields.dayId || null,
+          },
           saveAsPersonal ? "override" : isPrivate ? "personal" : "shared",
         );
-        toast(saveAsPersonal ? "Your version is saved" : isPrivate ? "Private stop saved" : "Stop updated", "success");
+        toast(
+          saveAsPersonal
+            ? "Your version is saved"
+            : isPrivate
+              ? "Private stop saved"
+              : "Stop updated",
+          "success",
+        );
       } else {
         await store.addPlace(payload, onlyMe);
-        toast(onlyMe ? "Private stop added" : "Stop added to the day", "success");
+        toast(
+          onlyMe ? "Private stop added" : "Stop added to the day",
+          "success",
+        );
       }
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Couldn't save this stop.");
+      setError(
+        caught instanceof Error ? caught.message : "Couldn't save this stop.",
+      );
     } finally {
       setSaving(false);
     }
@@ -228,7 +272,15 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
     <Dialog
       open={open}
       onClose={onClose}
-      title={isEdit ? (saveAsPersonal ? "Your version of this stop" : place?._private ? "Edit private stop" : "Edit stop") : "Add a stop"}
+      title={
+        isEdit
+          ? saveAsPersonal
+            ? "Your version of this stop"
+            : place?._private
+              ? "Edit private stop"
+              : "Edit stop"
+          : "Add a stop"
+      }
       description={
         saveAsPersonal
           ? "Only you will see these changes. The group plan stays as it was."
@@ -241,27 +293,62 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
       wide
       footer={
         <>
-          <button type="button" className="button button--secondary" onClick={onClose} disabled={saving}>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cancel
           </button>
           {!isEdit && tab === "search" ? (
-            <button type="button" className="button button--primary" onClick={() => setTab("manual")}>
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={() => setTab("manual")}
+            >
               Enter details by hand
             </button>
           ) : (
-            <button type="submit" form={`place-form-${id}`} className="button button--primary" disabled={saving || !store.canWrite}>
-              {saving ? <LoaderCircle size={16} className="spin" /> : <Check size={16} />} {saving ? "Saving…" : modeLabel}
+            <button
+              type="submit"
+              form={`place-form-${id}`}
+              className="button button--primary"
+              disabled={saving || !store.canWrite}
+            >
+              {saving ? (
+                <LoaderCircle size={16} className="spin" />
+              ) : (
+                <Check size={16} />
+              )}{" "}
+              {saving ? "Saving…" : modeLabel}
             </button>
           )}
         </>
       }
     >
       {!isEdit && !store.isGuest && (
-        <div className="mode-tabs" role="tablist" aria-label="How to add a place">
-          <button type="button" role="tab" aria-selected={tab === "search"} className={tab === "search" ? "is-active" : ""} onClick={() => setTab("search")}>
+        <div
+          className="mode-tabs"
+          role="tablist"
+          aria-label="How to add a place"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "search"}
+            className={tab === "search" ? "is-active" : ""}
+            onClick={() => setTab("search")}
+          >
             <Search size={15} /> Search places
           </button>
-          <button type="button" role="tab" aria-selected={tab === "manual"} className={tab === "manual" ? "is-active" : ""} onClick={() => setTab("manual")}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "manual"}
+            className={tab === "manual" ? "is-active" : ""}
+            onClick={() => setTab("manual")}
+          >
             <MapPin size={15} /> Enter manually
           </button>
         </div>
@@ -270,33 +357,75 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
       {!isEdit && tab === "search" ? (
         <div className="place-search">
           <label className="field">
-            <span className="field__label"><Search size={14} /> Search OpenStreetMap</span>
+            <span className="field__label">
+              <Search size={14} /> Search OpenStreetMap
+            </span>
             <input
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void search();
+                }
+              }}
               placeholder="Try “Mercado da Ribeira” or “Kinkaku-ji”"
             />
           </label>
-          <p className="field__hint">Search runs on OpenStreetMap's Nominatim service. You can always enter a place by hand.</p>
-          {searching && <p className="inline-loading"><LoaderCircle size={15} className="spin" /> Looking for places…</p>}
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={() => void search()}
+            disabled={searching || query.trim().length < 2}
+          >
+            <Search size={16} /> Search
+          </button>
+          <p className="field__hint">
+            Search runs on OpenStreetMap's Nominatim service. You can always
+            enter a place by hand.
+          </p>
+          {searching && (
+            <p className="inline-loading">
+              <LoaderCircle size={15} className="spin" /> Looking for places…
+            </p>
+          )}
           {searchError && (
             <div className="inline-error">
               <span>{searchError}</span>
-              <button type="button" className="text-link" onClick={() => setTab("manual")}>Enter by hand</button>
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => setTab("manual")}
+              >
+                Enter by hand
+              </button>
             </div>
           )}
-          {!searching && !searchError && query.trim().length >= 2 && results.length === 0 && (
-            <p className="quiet-note">No matches yet. Try a broader name, or enter the stop by hand.</p>
-          )}
+          {!searching &&
+            !searchError &&
+            query.trim().length >= 2 &&
+            results.length === 0 && (
+              <p className="quiet-note">
+                No matches yet. Try a broader name, or enter the stop by hand.
+              </p>
+            )}
           {results.length > 0 && (
             <ul className="place-results">
               {results.map((result) => (
                 <li key={result.place_id}>
-                  <button type="button" className="place-result" onClick={() => chooseResult(result)}>
-                    <span className="place-result__icon"><MapPin size={16} /></span>
+                  <button
+                    type="button"
+                    className="place-result"
+                    onClick={() => chooseResult(result)}
+                  >
+                    <span className="place-result__icon">
+                      <MapPin size={16} />
+                    </span>
                     <span>
-                      <strong>{result.name || result.display_name.split(",")[0]}</strong>
+                      <strong>
+                        {result.name || result.display_name.split(",")[0]}
+                      </strong>
                       <small>{result.display_name}</small>
                     </span>
                     <span className="place-result__add">Use</span>
@@ -313,7 +442,12 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
             <input
               autoFocus
               value={fields.name}
-              onChange={(event) => setFields((current) => ({ ...current, name: event.target.value }))}
+              onChange={(event) =>
+                setFields((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
+              }
               placeholder="A place worth remembering"
               required
             />
@@ -322,7 +456,12 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
             <span className="field__label">Address</span>
             <input
               value={fields.address}
-              onChange={(event) => setFields((current) => ({ ...current, address: event.target.value }))}
+              onChange={(event) =>
+                setFields((current) => ({
+                  ...current,
+                  address: event.target.value,
+                }))
+              }
               placeholder="Street, neighbourhood, city"
             />
           </label>
@@ -335,7 +474,12 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
                   type="button"
                   key={category.value}
                   className={`category-choice ${fields.category === category.value ? "is-active" : ""}`}
-                  onClick={() => setFields((current) => ({ ...current, category: category.value }))}
+                  onClick={() =>
+                    setFields((current) => ({
+                      ...current,
+                      category: category.value,
+                    }))
+                  }
                   aria-pressed={fields.category === category.value}
                 >
                   <PlaceCategoryIcon category={category.value} size={16} />
@@ -348,7 +492,15 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
           <div className="field-row">
             <label className="field">
               <span className="field__label">Day</span>
-              <select value={fields.dayId} onChange={(event) => setFields((current) => ({ ...current, dayId: event.target.value }))}>
+              <select
+                value={fields.dayId}
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    dayId: event.target.value,
+                  }))
+                }
+              >
                 <option value="">Unscheduled</option>
                 {store.bundle?.days.map((day) => (
                   <option value={day.id} key={day.id}>
@@ -360,21 +512,60 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
             <div className="field-row field-row--tight">
               <label className="field">
                 <span className="field__label">From</span>
-                <input type="time" value={fields.startTime} onChange={(event) => setFields((current) => ({ ...current, startTime: event.target.value }))} />
+                <input
+                  type="time"
+                  value={fields.startTime}
+                  onChange={(event) =>
+                    setFields((current) => ({
+                      ...current,
+                      startTime: event.target.value,
+                    }))
+                  }
+                />
               </label>
               <label className="field">
                 <span className="field__label">To</span>
-                <input type="time" value={fields.endTime} onChange={(event) => setFields((current) => ({ ...current, endTime: event.target.value }))} />
+                <input
+                  type="time"
+                  value={fields.endTime}
+                  onChange={(event) =>
+                    setFields((current) => ({
+                      ...current,
+                      endTime: event.target.value,
+                    }))
+                  }
+                />
               </label>
             </div>
           </div>
 
           <label className="field">
+            <span className="field__label">Saved list</span>
+            <select
+              value={fields.listId}
+              onChange={(e) =>
+                setFields((f) => ({ ...f, listId: e.target.value }))
+              }
+            >
+              <option value="">No list</option>
+              {store.bundle?.lists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
             <span className="field__label">Notes</span>
             <textarea
               rows={3}
               value={fields.notes}
-              onChange={(event) => setFields((current) => ({ ...current, notes: event.target.value }))}
+              onChange={(event) =>
+                setFields((current) => ({
+                  ...current,
+                  notes: event.target.value,
+                }))
+              }
               placeholder="What to order, which entrance to use, why it matters…"
             />
           </label>
@@ -382,11 +573,31 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
           <div className="field-row">
             <label className="field">
               <span className="field__label">Website</span>
-              <input type="url" value={fields.website} onChange={(event) => setFields((current) => ({ ...current, website: event.target.value }))} placeholder="https://" />
+              <input
+                type="url"
+                value={fields.website}
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    website: event.target.value,
+                  }))
+                }
+                placeholder="https://"
+              />
             </label>
             <label className="field">
               <span className="field__label">Phone</span>
-              <input type="tel" value={fields.phone} onChange={(event) => setFields((current) => ({ ...current, phone: event.target.value }))} placeholder="Optional" />
+              <input
+                type="tel"
+                value={fields.phone}
+                onChange={(event) =>
+                  setFields((current) => ({
+                    ...current,
+                    phone: event.target.value,
+                  }))
+                }
+                placeholder="Optional"
+              />
             </label>
           </div>
 
@@ -395,22 +606,51 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
             <div className="field-row">
               <label className="field">
                 <span className="field__label">Latitude</span>
-                <input inputMode="decimal" value={fields.lat} onChange={(event) => setFields((current) => ({ ...current, lat: event.target.value }))} placeholder="38.7223" />
+                <input
+                  inputMode="decimal"
+                  value={fields.lat}
+                  onChange={(event) =>
+                    setFields((current) => ({
+                      ...current,
+                      lat: event.target.value,
+                    }))
+                  }
+                  placeholder="38.7223"
+                />
               </label>
               <label className="field">
                 <span className="field__label">Longitude</span>
-                <input inputMode="decimal" value={fields.lng} onChange={(event) => setFields((current) => ({ ...current, lng: event.target.value }))} placeholder="-9.1393" />
+                <input
+                  inputMode="decimal"
+                  value={fields.lng}
+                  onChange={(event) =>
+                    setFields((current) => ({
+                      ...current,
+                      lng: event.target.value,
+                    }))
+                  }
+                  placeholder="-9.1393"
+                />
               </label>
             </div>
           </details>
 
           {!isEdit && !store.isGuest && canBePersonal && (
             <label className="check-row check-row--privacy">
-              <input type="checkbox" checked={onlyMe} onChange={(event) => setOnlyMe(event.target.checked)} />
-              <span className="check-row__mark" aria-hidden="true"><UserRound size={14} /></span>
+              <input
+                type="checkbox"
+                checked={onlyMe}
+                onChange={(event) => setOnlyMe(event.target.checked)}
+              />
+              <span className="check-row__mark" aria-hidden="true">
+                <UserRound size={14} />
+              </span>
               <span>
                 <strong>Only visible to me</strong>
-                <small>Keep this stop out of the group plan. You can still see and edit it yourself.</small>
+                <small>
+                  Keep this stop out of the group plan. You can still see and
+                  edit it yourself.
+                </small>
               </span>
             </label>
           )}
@@ -418,17 +658,30 @@ export function PlaceDialog({ open, onClose, store, place = null, defaultDayId =
           {saveAsPersonal && (
             <p className="personal-callout">
               <UserRound size={16} />
-              This saves a personal version over the shared stop. Everyone else keeps seeing the original.
+              This saves a personal version over the shared stop. Everyone else
+              keeps seeing the original.
             </p>
           )}
-          {store.offline && <p className="form-error">You're offline. Reconnect to save changes.</p>}
-          {error && <p className="form-error" role="alert">{error}</p>}
+          {store.offline && (
+            <p className="form-error">
+              You're offline. Reconnect to save changes.
+            </p>
+          )}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
         </form>
       )}
 
-      {(!isEdit && tab === "search") && (
+      {!isEdit && tab === "search" && (
         <div className="dialog-inline-actions">
-          <button type="button" className="text-link" onClick={() => setTab("manual")}>
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => setTab("manual")}
+          >
             <ArrowLeft size={14} /> I'll enter it by hand
           </button>
         </div>

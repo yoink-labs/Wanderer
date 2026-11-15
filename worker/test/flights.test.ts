@@ -164,4 +164,14 @@ describe("CORS", () => {
     });
     expect(response.status).toBe(403);
   });
+  it("does not look up a flight number marked unconfirmed", async () => {
+    const trip=await createTrip('unconfirmed-owner');
+    const date=dateIn(1);
+    await call('POST',`/v1/trips/${trip.id}/reservations`,{token:token('unconfirmed-owner'),body:{type:'flight',title:'AAA → BBB',start_at:`${date}T12:00:00Z`,metadata:{flight_number:'BA2002',flight_date:date,flight_number_confirmed:false}}});
+    const response=await call('GET',`/v1/trips/${trip.id}/flights`,{token:token('unconfirmed-owner')});
+    expect(response.status).toBe(200);
+    expect((await json(response)).flights).toEqual({});
+    expect(calls).toHaveLength(0);
+  });
+
 });

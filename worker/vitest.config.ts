@@ -1,10 +1,10 @@
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, URL as NodeURL } from "node:url";
 import { defineConfig } from "vitest/config";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 
 export default defineConfig(async () => {
   const migrations = await readD1Migrations({
-    projectPath: fileURLToPath(new URL(".", import.meta.url)),
+    projectPath: fileURLToPath(new NodeURL(".", import.meta.url)),
   });
 
   return {
