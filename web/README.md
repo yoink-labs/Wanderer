@@ -66,3 +66,16 @@ Build with `npm run build`; deploy with `npx wrangler deploy` from `web/`.
 - Print stylesheet, `.ics` download and Google Maps route links.
 
 `npm run build` runs `tsc --noEmit` first, so a type error fails the build.
+
+## Sign-in UI
+
+`/sign-in/*` and `/sign-up/*` embed Clerk in Wanderer's photo/form layout.
+The provider's `appearance` and `localization` props set the theme and app
+name in code; Apple, Google, email, verification and recovery stay with Clerk.
+The required free-plan Clerk attribution remains visible. Theme changes follow
+the site's light/dark toggle and system preference.
+
+Run `npm test` (Node 22.18+ for native TypeScript loading) for the auth return
+path checks and `npm run build` for TypeScript and the production bundle. Check
+the forms at 390px and desktop widths in both themes. The production Clerk key
+rejects localhost origins; test the real flows on the deployed origin.

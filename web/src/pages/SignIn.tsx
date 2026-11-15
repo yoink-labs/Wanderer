@@ -1,11 +1,21 @@
-import { ArrowLeft, ArrowRight, Compass, ShieldCheck } from "lucide-react";
-import { Link, Navigate } from "react-router-dom";
+import {
+  SignIn as ClerkSignIn,
+  SignUp as ClerkSignUp,
+  ClerkLoaded,
+  ClerkLoading,
+} from "@clerk/clerk-react";
+import { ArrowLeft, Compass } from "lucide-react";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { authReturnPath } from "../auth/redirect";
 import { useSession } from "../auth/session";
 import { Logo } from "../components/Logo";
 
-export default function SignIn() {
+export default function SignIn({ signUp = false }: { signUp?: boolean }) {
   const session = useSession();
-  if (session.isSignedIn) return <Navigate to="/" replace />;
+  const [searchParams] = useSearchParams();
+  const returnTo = authReturnPath(searchParams.get("redirect_url"));
+  const returnQuery = `?redirect_url=${encodeURIComponent(returnTo)}`;
+  if (session.isSignedIn) return <Navigate to={returnTo} replace />;
   return (
     <div className="signin-page">
       <div className="signin-story">
@@ -15,11 +25,11 @@ export default function SignIn() {
         />
         <div>
           <span className="journey-eyebrow">EVERY JOURNEY HAS A BEGINNING</span>
-          <h1>
+          <h2>
             A world of plans.
             <br />
             One place to return.
-          </h1>
+          </h2>
           <p>Pick up where you left off, wherever you are.</p>
         </div>
         <span className="signin-story__location">
@@ -28,34 +38,38 @@ export default function SignIn() {
       </div>
       <section className="signin-welcome">
         <Logo />
-        <p className="journey-kicker">WELCOME BACK, WANDERER</p>
-        <h2>
-          Your next chapter
-          <br />
-          starts here.
-        </h2>
-        <p>
-          Sign in with your Yoink Labs account to keep your trips in sync and
-          bring your people along.
-        </p>
-        <button
-          type="button"
-          className="button button--primary button--large"
-          onClick={session.signIn}
-          disabled={!session.isLoaded}
-        >
-          Continue to sign in <ArrowRight size={18} />
-        </button>
-        <span className="signin-trust">
-          <ShieldCheck size={15} /> Secure sign-in with Clerk
-        </span>
+        <p className="journey-kicker">{signUp ? "MAKE ROOM FOR A LITTLE WANDER" : "WELCOME BACK, WANDERER"}</p>
+        <div className="signin-form">
+          <ClerkLoading>
+            <p className="signin-loading" role="status">Getting your journey ready…</p>
+          </ClerkLoading>
+          <ClerkLoaded>
+            {signUp ? (
+              <ClerkSignUp
+                routing="path"
+                path="/sign-up"
+                signInUrl={`/sign-in${returnQuery}`}
+                forceRedirectUrl={returnTo}
+                signInForceRedirectUrl={returnTo}
+              />
+            ) : (
+              <ClerkSignIn
+                routing="path"
+                path="/sign-in"
+                signUpUrl={`/sign-up${returnQuery}`}
+                forceRedirectUrl={returnTo}
+                signUpForceRedirectUrl={returnTo}
+              />
+            )}
+          </ClerkLoaded>
+        </div>
         <div className="signin-divider">
           <span>Just looking around?</span>
         </div>
         <Link to="/" className="text-link">
           <ArrowLeft size={15} /> Keep exploring as a guest
         </Link>
-        <small>Free to use. Open source. No paywall.</small>
+        <small>One Yoink Labs account. All your Wanderer trips.</small>
       </section>
     </div>
   );
