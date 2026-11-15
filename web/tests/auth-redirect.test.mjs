@@ -20,3 +20,15 @@ test("auth routes cannot send a signed-in user back into sign-in or sign-up", ()
     assert.equal(authReturnPath(path), "/");
   }
 });
+
+
+test("Clerk's absolute same-origin return links preserve the destination between flows", () => {
+  const origin = "https://wanderer.yoinklabs.dev";
+  assert.equal(
+    authReturnPath(`${origin}/trips/kyoto?invite=travel%20friends#day-2`, origin),
+    "/trips/kyoto?invite=travel%20friends#day-2",
+  );
+  for (const value of ["https://evil.example/trips/kyoto", "https://wanderer.yoinklabs.dev.evil.example/", "http://wanderer.yoinklabs.dev/", `${origin}:444/`, `${origin}/sign-up`]) {
+    assert.equal(authReturnPath(value, origin), "/");
+  }
+});

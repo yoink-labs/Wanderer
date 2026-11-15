@@ -13,7 +13,7 @@ import { Logo } from "../components/Logo";
 export default function SignIn({ signUp = false }: { signUp?: boolean }) {
   const session = useSession();
   const [searchParams] = useSearchParams();
-  const returnTo = authReturnPath(searchParams.get("redirect_url"));
+  const returnTo = authReturnPath(searchParams.get("redirect_url"), window.location.origin);
   const returnQuery = `?redirect_url=${encodeURIComponent(returnTo)}`;
   if (session.isSignedIn) return <Navigate to={returnTo} replace />;
   return (
