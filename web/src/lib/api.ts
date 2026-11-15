@@ -152,6 +152,10 @@ export class WandererApi {
   }
 
   // Places
+  addList(tripId:string,title:string,position:number):Promise<Bundle["lists"][number]> {
+    return this.request(`/v1/trips/${encodeURIComponent(tripId)}/lists`,{method:'POST',body:JSON.stringify({title,position})});
+  }
+
   addPlace(tripId: string, body: PlaceInput): Promise<Place> {
     return this.request(`/v1/trips/${encodeURIComponent(tripId)}/places`, { method: "POST", body: JSON.stringify(body) });
   }
@@ -268,6 +272,10 @@ export class WandererApi {
 
   deletePrivateReservation(tripId: string, id: string): Promise<{ deleted: boolean }> {
     return this.request(`/v1/trips/${encodeURIComponent(tripId)}/personal/reservations/${encodeURIComponent(id)}`, { method: "DELETE" });
+  }
+
+  searchPlaces(query: string): Promise<Array<{place_id:number;display_name:string;name?:string;lat:string;lon:string;extratags?:Record<string,string>}>> {
+    return this.request(`/v1/places/search?q=${encodeURIComponent(query)}`, {}, false);
   }
 
   // Flights

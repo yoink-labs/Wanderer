@@ -1,8 +1,24 @@
 # Wanderer for the web
 
-The same trip planner as the iOS app, laid out for a large screen: a day rail,
-a day-by-day itinerary, and a live map in a three-pane workspace. Below 900px
-it becomes a single column with an Itinerary/Map switch.
+A web trip-planning workspace with an Overview, a day-by-day Itinerary, and
+Budget. A slim date rail and independently scrolling document sit beside a
+persistent map. At phone widths, a Planner/Map toggle and day picker keep the
+same workflow usable at 390px. Light and dark appearance follow the Atlas
+palette used by iOS; the web layout is designed for the browser.
+
+Overview gathers the cover, travelers, reservations, notes, and named saved-place
+lists. Select any stop or pin to open its details and edit notes. Times use the
+trip timezone for stops and each airport's timezone for flight reservations.
+Dashed map lines are straight-line connections, not driving routes. Travel labels
+estimate walking at 4.5 km/h from great-circle distances and say so explicitly.
+Missing coordinates, photos, hours, or addresses stay absent.
+
+Place search is user-triggered through the Worker, with a shared 1.1-second
+upstream lease and seven-day D1 cache. Nominatim is a free, donated service with
+no autocomplete; see its [usage policy](https://operations.osmfoundation.org/policies/nominatim/).
+`PLACE_SEARCH_URL` can switch the upstream endpoint. Photos retain their source,
+author and license in optional place fields. Existing iOS clients ignore these
+additional fields and keep using the same records and endpoints.
 
 Stack: Vite, React, TypeScript, React Router, Clerk, Leaflet with
 OpenStreetMap tiles. No Tailwind, no UI kit — one CSS token sheet.

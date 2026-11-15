@@ -438,6 +438,7 @@ export function flightReference(reservation: ReservationLike): FlightReference |
   } else {
     metadata = asRecord(reservation.metadata);
   }
+  if (metadata?.flight_number_confirmed === false) return null;
   const rawNumber =
     pickString(metadata, "flight_number", "flightNumber") ??
     (typeof reservation.title === "string" && /^[A-Z]{2}\s?\d{1,4}$/i.test(reservation.title.trim())

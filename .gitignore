@@ -24,3 +24,6 @@ Config/Cloud.local.xcconfig
 # Worker local dev
 worker/.wrangler/
 worker/.dev.vars
+
+# Local UI proof (never commit captures)
+.shots/

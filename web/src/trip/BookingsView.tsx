@@ -205,9 +205,11 @@ function BookingTicket({
   const originPlace = reservation.start_location && reservation.start_location !== originMark ? reservation.start_location : null;
   const destinationPlace = reservation.end_location && reservation.end_location !== destinationMark ? reservation.end_location : null;
   const isStay = reservation.type === "lodging" || reservation.type === "car";
-  const startTime = timeRangeInZone(reservation.start_at, reservation.end_at, timezone);
+  const departureZone=String(reservation.metadata?.departure_timezone||timezone);
+  const arrivalZone=String(reservation.metadata?.arrival_timezone||timezone);
+  const startTime = timeRangeInZone(reservation.start_at, null, departureZone);
   const span = formatDuration(reservation.start_at, reservation.end_at);
-  const date = reservation.start_at ? dateKeyInZone(reservation.start_at, timezone) : null;
+  const date = reservation.start_at ? dateKeyInZone(reservation.start_at, departureZone) : null;
   const isPast = Boolean(reservation.start_at && new Date(reservation.start_at).getTime() < Date.now());
   const privateItem = Boolean(reservation._private);
   const overridden = Boolean(reservation._overridden);
@@ -268,16 +270,16 @@ function BookingTicket({
           </span>
           <div className="ticket__point ticket__point--end">
             <span className="ticket__mark">
-              {destinationMark ?? (reservation.end_at ? fmtDate(dateKeyInZone(reservation.end_at, timezone), { month: "short", day: "numeric" }) : "To")}
+              {destinationMark ?? (reservation.end_at ? fmtDate(dateKeyInZone(reservation.end_at, arrivalZone), { month: "short", day: "numeric" }) : "To")}
             </span>
             <span className="ticket__place">{destinationPlace ?? ""}</span>
-            {reservation.end_at && <span className="ticket__time">{fmtDate(dateKeyInZone(reservation.end_at, timezone), { weekday: "short", month: "short", day: "numeric" })} · {timeRangeInZone(reservation.end_at, null, timezone)}</span>}
+            {reservation.end_at && <span className="ticket__time">{fmtDate(dateKeyInZone(reservation.end_at, arrivalZone), { weekday: "short", month: "short", day: "numeric" })} · {timeRangeInZone(reservation.end_at, null, arrivalZone)}</span>}
           </div>
         </div>
 
         <div className="ticket__title-row">
           <h3>{reservation.title}</h3>
-          {reservation.provider && <span>{reservation.provider}</span>}
+          {reservation.provider && <span>{reservation.provider}{reservation.metadata?.flight_number ? ` · ${reservation.metadata.flight_number}` : ""}</span>}
         </div>
 
         {flight && (
