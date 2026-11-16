@@ -25,6 +25,9 @@ struct PlannerView: View {
     @State private var panelFraction: CGFloat = 0.55
     @State private var panelDragStart: CGFloat?
     @State private var placePendingDelete: PlaceRecord?
+    /// Deleting a day removes its stops and shifts every later date, so it
+    /// asks first instead of firing from a long-press menu.
+    @State private var dayPendingDelete: TripDayRecord?
     @State private var showNewListPrompt = false
     @State private var newListTitle = ""
     @State private var addedCount = 0
@@ -63,6 +66,7 @@ struct PlannerView: View {
         case notes
         case attachments
         case nearby
+        case aiPlan
         case personalItems
         case dayNote(TripDayRecord)
         case place(PlaceRecord)
@@ -88,6 +92,8 @@ struct PlannerView: View {
                 return "nearby"
             case .personalItems:
                 return "personal-items"
+            case .aiPlan:
+                return "ai-plan"
             case .dayNote(let day):
                 return "day-note-\(day.id.uuidString)"
             case .place(let place):
@@ -271,10 +277,34 @@ struct PlannerView: View {
         } message: { _ in
             Text("This removes the stop from the itinerary.")
         }
+        .confirmationDialog(
+            dayDeleteTitle,
+            isPresented: Binding(
+                get: { dayPendingDelete != nil },
+                set: { if !$0 { dayPendingDelete = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: dayPendingDelete
+        ) { day in
+            Button(dayDeleteTitle, role: .destructive) {
+                Task {
+                    await store.deleteDay(day)
+                    LiggaHaptics.success()
+                }
+                dayPendingDelete = nil
+            }
+            Button("Keep it", role: .cancel) { dayPendingDelete = nil }
+        } message: { day in
+            Text(dayDeleteMessage(for: day))
+        }
         .alert("Something went wrong", isPresented: Binding(
             get: { store.errorMessage != nil },
             set: { if !$0 { store.errorMessage = nil } }
         )) {
+            Button("Try again") {
+                store.errorMessage = nil
+                Task { await store.load() }
+            }
             Button("OK", role: .cancel) {}
         } message: {
             Text(store.errorMessage ?? "")
@@ -690,10 +720,7 @@ struct PlannerView: View {
                 Label("Insert day after", systemImage: "plus.rectangle.on.rectangle")
             }
             Button(role: .destructive) {
-                Task {
-                    await store.deleteDay(day)
-                    LiggaHaptics.success()
-                }
+                dayPendingDelete = day
             } label: {
                 Label("Delete day", systemImage: "trash")
             }
@@ -703,8 +730,20 @@ struct PlannerView: View {
             Task { await store.insertDay(after: day) }
         }
         .accessibilityAction(named: "Delete day") {
-            Task { await store.deleteDay(day) }
+            if store.days.count > 1 { dayPendingDelete = day }
         }
+    }
+
+    private var dayDeleteTitle: String {
+        guard let day = dayPendingDelete else { return "Delete day?" }
+        return "Delete Day \(day.dayIndex + 1)?"
+    }
+
+    private func dayDeleteMessage(for day: TripDayRecord) -> String {
+        let count = store.places(for: day.id).count
+        if count == 0 { return "Later days and dates shift back by one." }
+        let stops = count == 1 ? "stop moves" : "stops move"
+        return "Its \(count) \(stops) to Ideas, and later days shift back by one."
     }
 
     private var unscheduledChip: some View {
@@ -807,6 +846,15 @@ struct PlannerView: View {
                 }
             }
 
+            if currentDay != nil {
+                Button {
+                    activeSheet = .aiPlan
+                } label: {
+                    Label("Plan my day with AI", systemImage: "sparkles")
+                }
+                .accessibilityIdentifier("planner-ai-plan")
+            }
+
             Button {
                 if let url = TripExports.googleMapsURLs(places: selectedPlaces).first {
                     openURL(url)
@@ -834,6 +882,23 @@ struct PlannerView: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Day options")
+
+        if editMode.isEditing {
+            // Arranging used to have no visible way out: the menu that started
+            // it closes, so the Done has to live in the header.
+            Button {
+                toggleEditMode()
+            } label: {
+                Text("Done")
+                    .font(.ligga(.subheadline, weight: .bold))
+                    .foregroundStyle(WandererTheme.onPrimary)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                    .background(WandererTheme.primaryFill, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("planner-arrange-done")
+        }
 
         Button {
             activeSheet = .addPlace
@@ -963,11 +1028,45 @@ struct PlannerView: View {
                     .foregroundStyle(WandererTheme.muted)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = store.errorMessage, store.visiblePlaces.isEmpty {
+            // A trip that never loaded must not look like an empty day with an
+            // "add a stop" card: that sends the tap into a trip that isn't there.
+            loadFailedCard(error)
         } else if selectedPlaces.isEmpty && selectedReservations.isEmpty {
             emptyPlaces
         } else {
             placesList
         }
+    }
+
+    private func loadFailedCard(_ message: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(WandererTheme.coralDeep)
+            Text("Couldn't open this trip")
+                .font(.ligga(.subheadline, weight: .semibold))
+                .foregroundStyle(WandererTheme.ink)
+            Text(message)
+                .font(.ligga(.caption))
+                .foregroundStyle(WandererTheme.muted)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+            Button {
+                store.errorMessage = nil
+                Task { await store.load() }
+            } label: {
+                Text("Try again")
+                    .font(.ligga(.subheadline, weight: .bold))
+                    .foregroundStyle(WandererTheme.onPrimary)
+                    .padding(.horizontal, 20)
+                    .frame(minHeight: 44)
+                    .background(WandererTheme.primaryFill, in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, WandererTheme.screenPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Compact on purpose: at the small detent there may be only enough room
@@ -1448,6 +1547,10 @@ struct PlannerView: View {
             TripAttachmentsView(trip: trip)
         case .nearby:
             NearbyIdeasView(trip: trip, store: store, dayID: currentDayID)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        case .aiPlan:
+            AIDaySheet(trip: trip, day: currentDay, store: store)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         case .personalItems:

@@ -451,7 +451,9 @@ struct PlaceDetailSheet: View {
             Divider().overlay(WandererTheme.line)
 
             Button {
-                costAmount = placeCost > 0 ? String(format: "%.2f", placeCost) : ""
+                // Never prefill the running total: pressing Add would record a
+                // second expense for the whole amount and double the cost.
+                costAmount = ""
                 showCostPrompt = true
             } label: {
                 HStack(spacing: 12) {
@@ -620,8 +622,9 @@ struct PlaceDetailSheet: View {
                             .font(.ligga(.subheadline, weight: .semibold))
                     }
                     .foregroundStyle(WandererTheme.ink)
+                    .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+                    .frame(minHeight: 48)
                     .background(
                         WandererTheme.sandDeep.opacity(0.55),
                         in: RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -642,8 +645,9 @@ struct PlaceDetailSheet: View {
                         .font(.ligga(.subheadline, weight: .semibold))
                 }
                 .foregroundStyle(WandererTheme.coralDeep)
+                .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: 48)
                 .background(
                     WandererTheme.coralSoft.opacity(0.75),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous)

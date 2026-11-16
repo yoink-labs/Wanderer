@@ -8,6 +8,7 @@ struct ChecklistView: View {
 
     @State private var newItem = ""
     @State private var showDone = false
+    @State private var isGeneratingPacking = false
     @FocusState private var isAdding: Bool
 
     private static let suggestions = ["Passport", "Phone charger", "Travel adapter", "Medication", "Travel insurance"]
@@ -187,11 +188,60 @@ struct ChecklistView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Add \(suggestion)")
                 }
+
+                if OnDeviceAI.availability.isReady {
+                    Button {
+                        Task { await generatePackingList() }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if isGeneratingPacking {
+                                ProgressView().controlSize(.mini).tint(WandererTheme.coralDeep)
+                            } else {
+                                Image(systemName: "sparkles")
+                                    .font(.ligga(.caption, weight: .bold))
+                            }
+                            Text(isGeneratingPacking ? "Thinking…" : "Suggest a packing list")
+                                .font(.ligga(.footnote, weight: .semibold))
+                        }
+                        .foregroundStyle(WandererTheme.coralDeep)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 36)
+                        .background(WandererTheme.coralSoft, in: Capsule())
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isGeneratingPacking)
+                    .accessibilityIdentifier("checklist-ai-packing")
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .liggaCard()
+    }
+
+    /// Runs on the iPhone itself; the items land in the same checklist the
+    /// person can edit, so a wrong suggestion is one swipe away.
+    private func generatePackingList() async {
+        guard !isGeneratingPacking else { return }
+        isGeneratingPacking = true
+        defer { isGeneratingPacking = false }
+        do {
+            let items = try await OnDeviceAI.packingList(
+                destination: store.trip.destination,
+                days: store.days.count,
+                month: Date().formatted(.dateTime.month(.wide)),
+                notes: ""
+            )
+            let existing = Set(store.checklist.map { $0.title.lowercased() })
+            for item in items where !existing.contains(item.lowercased()) {
+                await store.addChecklistItem(title: item)
+            }
+            LiggaHaptics.success()
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
     }
 
     // MARK: - Done group

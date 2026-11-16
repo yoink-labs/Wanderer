@@ -539,6 +539,16 @@ final class TripDetailStore: ObservableObject {
             cloudUserId = try? await cloud.profile().id
             errorMessage = nil
 
+            // Sample trips ship as an itinerary you can read, not an empty
+            // shell: fill them in the first time one is opened.
+            if LocalTrips.isActive, places.isEmpty, SampleItinerary.isSample(trip) {
+                await SampleItinerary.seedIfNeeded(trip: trip, api: cloud)
+                if let seededPlaces = try? await cloud.places(tripID: trip.id), !seededPlaces.isEmpty {
+                    places = seededPlaces
+                    reservations = (try? await cloud.reservations(tripID: trip.id)) ?? reservations
+                }
+            }
+
             // Live flight status is a background nicety; never block opening
             // a trip on a paid lookup.
             Task { await refreshFlights() }
@@ -808,6 +818,25 @@ final class TripDetailStore: ObservableObject {
         return 2 * earthRadius * asin(min(1, sqrt(h)))
     }
 
+    /// Sets (or clears) a stop's start time, which is what the AI day plan
+    /// writes when it schedules a day.
+    @discardableResult
+    func setStartTime(_ place: PlaceRecord, to time: String?) async -> Bool {
+        guard let cloud else { return false }
+        do {
+            _ = try await cloud.updatePlace(tripID: trip.id, placeID: place.id, body: [
+                "start_time": .optional(time)
+            ])
+            if let index = places.firstIndex(where: { $0.id == place.id }) {
+                places[index].startTime = time
+            }
+            return true
+        } catch {
+            errorMessage = "Couldn't set the time for \(place.name): \(error.localizedDescription)"
+            return false
+        }
+    }
+
     func assign(_ place: PlaceRecord, to dayID: UUID?) async {
         guard let cloud else { return }
         do {
@@ -943,8 +972,11 @@ final class TripDetailStore: ObservableObject {
 
     // MARK: - Days
 
-    func updateDayNotes(_ day: TripDayRecord, notes: String) async {
-        guard let cloud else { return }
+    /// Returns whether the save landed, so the sheet can stay open on failure
+    /// instead of dismissing and losing what was typed.
+    @discardableResult
+    func updateDayNotes(_ day: TripDayRecord, notes: String) async -> Bool {
+        guard let cloud else { return false }
         do {
             let updated = try await cloud.updateDay(
                 tripID: trip.id,
@@ -954,8 +986,11 @@ final class TripDetailStore: ObservableObject {
             if let index = days.firstIndex(where: { $0.id == day.id }) {
                 days[index] = updated
             }
+            errorMessage = nil
+            return true
         } catch {
             errorMessage = "Couldn't save the day note: \(error.localizedDescription)"
+            return false
         }
     }
 

@@ -31,6 +31,7 @@ final class PlaceSearchModel: NSObject, ObservableObject {
     @Published private(set) var nearby: [MapSearchResult] = []
     @Published private(set) var isLoadingNearby = false
     @Published private(set) var isResolving = false
+    @Published private(set) var isSearching = false
     @Published private(set) var errorMessage: String?
 
     private let completer = MKLocalSearchCompleter()
@@ -58,14 +59,27 @@ final class PlaceSearchModel: NSObject, ObservableObject {
 
     var query: String = "" {
         didSet {
+            errorMessage = nil
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.count < 2 {
                 completer.cancel()
                 suggestions = []
+                isSearching = false
                 return
             }
+            isSearching = true
             completer.queryFragment = trimmed
         }
+    }
+
+    /// A last-resort exact search when the completer has nothing. Apple's
+    /// completer is fast but occasionally returns nothing for an unusual
+    /// spelling; this searches the whole map once and keeps the sheet usable.
+    func searchEverywhere(_ query: String) async -> [MapSearchResult] {
+        isSearching = true
+        defer { isSearching = false }
+        await prepare()
+        return (try? await MapSearchService.search(query, near: region?.center)) ?? []
     }
 
     /// Bias every search to the trip's city. Called once when the sheet opens.
@@ -138,11 +152,13 @@ extension PlaceSearchModel: MKLocalSearchCompleterDelegate {
         Task { @MainActor in
             self.suggestions = mapped
             self.errorMessage = nil
+            self.isSearching = false
         }
     }
 
     nonisolated func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
         Task { @MainActor in
+            self.isSearching = false
             // A cancelled request is normal while typing; don't shout about it.
             if (error as NSError).code == NSURLErrorCancelled { return }
             self.suggestions = []

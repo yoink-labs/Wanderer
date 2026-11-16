@@ -12,6 +12,8 @@ struct NearbyIdeasView: View {
     @State private var isLoading = false
     @State private var errorText: String?
     @State private var addedNames: Set<String> = []
+    @State private var addError: String?
+
 
     private var dayLabel: String {
         guard let dayID, let day = store.days.first(where: { $0.id == dayID }) else {
@@ -78,6 +80,14 @@ struct NearbyIdeasView: View {
                 .padding(WandererTheme.screenPadding)
             }
             .background(WandererTheme.sand.ignoresSafeArea())
+            .alert("Couldn't add that stop", isPresented: Binding(
+                get: { addError != nil },
+                set: { if !$0 { addError = nil } }
+            )) {
+                Button("OK", role: .cancel) { addError = nil }
+            } message: {
+                Text(addError ?? "")
+            }
             .navigationTitle("Nearby")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -178,7 +188,7 @@ struct NearbyIdeasView: View {
     }
 
     private func add(_ result: MapSearchResult) async {
-        await store.addPlace(
+        let added = await store.addPlaceIfNew(
             name: result.name,
             address: result.address,
             latitude: result.latitude,
@@ -188,6 +198,12 @@ struct NearbyIdeasView: View {
             website: result.website,
             phone: result.phone
         )
-        addedNames.insert(result.name)
+        // Only tick the row when it actually landed, otherwise the plus turns
+        // into a checkmark for a stop that is not in the trip.
+        if added {
+            addedNames.insert(result.name)
+        } else {
+            addError = store.errorMessage ?? "\(result.name) is already in this trip."
+        }
     }
 }
