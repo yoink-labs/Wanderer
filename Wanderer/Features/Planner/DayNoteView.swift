@@ -7,6 +7,7 @@ struct DayNoteView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var text: String
     @State private var errorText: String?
+    @FocusState private var isEditorFocused: Bool
 
     init(note: String, day: TripDayRecord, store: TripDetailStore) {
         self.day = day
@@ -32,15 +33,24 @@ struct DayNoteView: View {
                     .foregroundStyle(WandererTheme.ink)
                     .scrollContentBackground(.hidden)
                     .padding(12)
-                    .frame(minHeight: 240)
+                    // Grow with the sheet instead of a fixed 240pt that sits
+                    // behind the keyboard once it opens.
+                    .frame(minHeight: 200, maxHeight: .infinity)
                     .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .focused($isEditorFocused)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(WandererTheme.line, lineWidth: 1)
                     )
                     .padding(.horizontal, WandererTheme.screenPadding)
 
-                Spacer(minLength: 0)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isEditorFocused = false }
+                }
             }
             .background(WandererTheme.sand.ignoresSafeArea())
             .navigationTitle("Day note")
@@ -52,11 +62,11 @@ struct DayNoteView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         Task {
-                            await store.updateDayNotes(day, notes: text)
-                            if store.errorMessage == nil {
+                            let saved = await store.updateDayNotes(day, notes: text)
+                            if saved {
                                 dismiss()
                             } else {
-                                errorText = store.errorMessage
+                                errorText = store.errorMessage ?? "Couldn't save the day note."
                             }
                         }
                     }

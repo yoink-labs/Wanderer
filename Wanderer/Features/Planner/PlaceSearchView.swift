@@ -21,7 +21,13 @@ struct PlaceSearchView: View {
     @State private var quickResults: [MapSearchResult] = []
     @State private var quickTitle: String?
     @State private var isRunningQuickSearch = false
+    @State private var isFallbackSearching = false
     @State private var forMeOnly = false
+    /// Shown when the picked place is already in the trip, so the sheet can say
+    /// so and stay open instead of closing with nothing added.
+    @State private var alreadyInTrip: String?
+    /// Results from the exact-search fallback when completions come back empty.
+    @State private var fallbackResults: [MapSearchResult] = []
 
     /// Private stops are a collaboration feature; a solo guest trip already
     /// has nothing to hide from anyone.
@@ -56,16 +62,20 @@ struct PlaceSearchView: View {
                 }
             }
             .task {
-                await model.prepare()
-                await model.loadNearbyIfNeeded()
-                try? await Task.sleep(nanoseconds: 250_000_000)
+                // Focus first: typing must never wait on a network lookup.
                 isSearchFocused = true
+                async let prepared: Void = model.prepare()
+                async let loaded: Void = model.loadNearbyIfNeeded()
+                _ = await (prepared, loaded)
             }
             .onChange(of: query) { _, newValue in
                 model.query = newValue
+                alreadyInTrip = nil
+                errorMessage = nil
                 if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     quickResults = []
                     quickTitle = nil
+                    fallbackResults = []
                 }
             }
         }
@@ -142,17 +152,35 @@ struct PlaceSearchView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let errorMessage {
+        if !trimmedQuery.isEmpty {
+            suggestionList
+        } else if let errorMessage {
             stateCard(
                 icon: "wifi.exclamationmark",
                 title: "Search unavailable",
                 message: errorMessage,
                 retry: true
             )
-        } else if !trimmedQuery.isEmpty {
-            suggestionList
         } else {
             browseContent
+        }
+    }
+
+    @ViewBuilder
+    private var duplicateBanner: some View {
+        if let alreadyInTrip {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(WandererTheme.coralDeep)
+                Text("\(alreadyInTrip) is already in this trip")
+                    .font(.ligga(.footnote, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .frame(minHeight: 40)
+            .background(WandererTheme.coralSoft, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .accessibilityIdentifier("place-already-added")
         }
     }
 
@@ -181,12 +209,12 @@ struct PlaceSearchView: View {
 
                     quickChips
 
-                    if !model.nearby.isEmpty {
+                    if !nearbySuggestions.isEmpty {
                         Text("Popular near \(trip.destination)")
                             .font(.ligga(.footnote, weight: .semibold))
                             .foregroundStyle(WandererTheme.muted)
                             .padding(.top, 2)
-                        resultRows(model.nearby)
+                        resultRows(nearbySuggestions)
                     } else if model.isLoadingNearby {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small).tint(WandererTheme.coral)
@@ -245,17 +273,23 @@ struct PlaceSearchView: View {
     private var suggestionList: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 8) {
-                ForEach(model.suggestions) { suggestion in
-                    Button {
-                        Task { await add(suggestion) }
-                    } label: {
-                        suggestionRow(suggestion)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(addingKey != nil)
-                }
+                duplicateBanner
 
-                if model.suggestions.isEmpty && !model.isResolving {
+                if !model.suggestions.isEmpty {
+                    ForEach(model.suggestions) { suggestion in
+                        Button {
+                            Task { await add(suggestion) }
+                        } label: {
+                            suggestionRow(suggestion)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(addingKey != nil)
+                    }
+                    Text("Results from Apple Maps")
+                        .font(.ligga(.caption))
+                        .foregroundStyle(WandererTheme.muted.opacity(0.9))
+                        .padding(.top, 6)
+                } else if model.isSearching || isFallbackSearching {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small).tint(WandererTheme.coral)
                         Text("Searching Apple Maps…")
@@ -264,16 +298,44 @@ struct PlaceSearchView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 8)
+                } else if !fallbackResults.isEmpty {
+                    Text("Closest matches in \(trip.destination)")
+                        .font(.ligga(.footnote, weight: .semibold))
+                        .foregroundStyle(WandererTheme.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    resultRows(fallbackResults)
+                } else {
+                    noMatches
                 }
-
-                Text("Results from Apple Maps")
-                    .font(.ligga(.caption))
-                    .foregroundStyle(WandererTheme.muted.opacity(0.9))
-                    .padding(.top, 6)
             }
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var noMatches: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("No matches for \"\(trimmedQuery)\"")
+                .font(.ligga(.subheadline, weight: .semibold))
+                .foregroundStyle(WandererTheme.ink)
+            Text("Apple Maps had nothing near \(trip.destination). Try the street and city, or search the whole map.")
+                .font(.ligga(.caption))
+                .foregroundStyle(WandererTheme.muted)
+            Button {
+                Task { await searchEverywhere() }
+            } label: {
+                Label("Search all of Apple Maps", systemImage: "globe")
+                    .font(.ligga(.footnote, weight: .semibold))
+                    .foregroundStyle(WandererTheme.coralDeep)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                    .background(WandererTheme.card, in: Capsule())
+                    .overlay(Capsule().stroke(WandererTheme.line, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 8)
     }
 
     private func suggestionRow(_ suggestion: PlaceSearchModel.Suggestion) -> some View {
@@ -430,6 +492,37 @@ struct PlaceSearchView: View {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Places already pinned anywhere in the trip are hidden from suggestions:
+    /// offering a stop you already have is the main reason the list felt useless.
+    private var nearbySuggestions: [MapSearchResult] {
+        let existing = Set(store.visiblePlaces.map { $0.name.lowercased() })
+        return model.nearby
+            .filter { !existing.contains($0.name.lowercased()) }
+            .sorted { distanceFromDay($0) < distanceFromDay($1) }
+    }
+
+    private func isAlreadyInTrip(_ result: MapSearchResult) -> Bool {
+        store.visiblePlaces.contains {
+            $0.name.compare(result.name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }
+    }
+
+    /// Distance from the day being planned, so "nearby" means near the stops
+    /// you already picked rather than anywhere in the city.
+    private func distanceFromDay(_ result: MapSearchResult) -> CLLocationDistance {
+        guard let center = dayCenter else { return .greatestFiniteMagnitude }
+        return CLLocation(latitude: center.latitude, longitude: center.longitude)
+            .distance(from: CLLocation(latitude: result.latitude, longitude: result.longitude))
+    }
+
+    private var dayCenter: CLLocationCoordinate2D? {
+        let places = store.places(for: dayID).compactMap(\.coordinate)
+        guard !places.isEmpty else { return nil }
+        let latitude = places.map(\.latitude).reduce(0, +) / Double(places.count)
+        let longitude = places.map(\.longitude).reduce(0, +) / Double(places.count)
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
     private func key(for result: MapSearchResult) -> String {
         "\(result.name.lowercased())|\(String(format: "%.4f,%.4f", result.latitude, result.longitude))"
     }
@@ -439,7 +532,8 @@ struct PlaceSearchView: View {
         isRunningQuickSearch = true
         quickTitle = title
         defer { isRunningQuickSearch = false }
-        quickResults = await model.runQuickSearch(query)
+        let found = await model.runQuickSearch(query)
+        quickResults = found.filter { !isAlreadyInTrip($0) }
         if quickResults.isEmpty {
             quickTitle = nil
             errorMessage = "Apple Maps didn't return any \(title.lowercased()) near \(trip.destination)."
@@ -465,10 +559,20 @@ struct PlaceSearchView: View {
         await performAdd(result)
     }
 
-    /// Adds the stop (deduplicated by the store) and closes the sheet.
+    private func searchEverywhere() async {
+        guard !isFallbackSearching else { return }
+        isFallbackSearching = true
+        defer { isFallbackSearching = false }
+        let results = await model.searchEverywhere(trimmedQuery)
+        fallbackResults = results
+    }
+
+    /// Adds the stop (deduplicated by the store) and closes the sheet — or,
+    /// when it was already there, says so and keeps the sheet open.
     private func performAdd(_ result: MapSearchResult) async {
+        let added: Bool
         if forMeOnly {
-            await store.addPrivatePlaceIfNew(
+            added = await store.addPrivatePlaceIfNew(
                 name: result.name,
                 address: result.address,
                 latitude: result.latitude,
@@ -477,7 +581,7 @@ struct PlaceSearchView: View {
                 dayID: dayID
             )
         } else {
-            await store.addPlaceIfNew(
+            added = await store.addPlaceIfNew(
                 name: result.name,
                 address: result.address,
                 latitude: result.latitude,
@@ -488,7 +592,12 @@ struct PlaceSearchView: View {
                 phone: result.phone
             )
         }
-        dismiss()
+        if added {
+            dismiss()
+        } else {
+            alreadyInTrip = result.name
+            LiggaHaptics.selection()
+        }
     }
 }
 

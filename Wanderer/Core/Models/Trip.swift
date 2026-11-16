@@ -55,6 +55,8 @@ struct Trip: Identifiable, Hashable, Codable {
     /// one trip underway and the rest coming up.
     static var samples: [Trip] {
         [
+            sample("Argentina: Buenos Aires & Iguazú", "Buenos Aires, Argentina", startOffset: 9, days: 7, places: 27,
+                   members: ["AR", "MK"], palette: .lisbon, symbol: "sun.max.trianglebadge.exclamationmark.fill", timezone: "America/Argentina/Buenos_Aires"),
             sample("Kyoto in autumn", "Kyoto, Japan", startOffset: -2, days: 5, places: 14,
                    members: ["AR", "MK"], palette: .kyoto, symbol: "leaf.fill", timezone: "Asia/Tokyo"),
             sample("Barcelona long weekend", "Barcelona, Spain", startOffset: 24, days: 4, places: 11,

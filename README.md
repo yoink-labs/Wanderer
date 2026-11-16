@@ -94,12 +94,29 @@ account.
 - **Accessibility** — Dynamic Type (including AX sizes), dark mode, VoiceOver
   labels and 44pt targets on the main flows.
 
+## On-device AI (iOS 26 and Apple Intelligence)
+
+Two features run on Apple's Foundation Models framework, entirely on the
+phone — nothing is sent anywhere, and both disappear cleanly when the model
+is unavailable (older iOS, an ineligible device, or Apple Intelligence off):
+
+- **Plan my day** — Day options → "Plan my day with AI". The model orders the
+  stops already on that day plus anything unscheduled, sets start times, and
+  explains each pick. It may only use place names it was given, so it cannot
+  invent a venue; tapping Apply writes the times back.
+- **Suggest a packing list** — in the checklist. Generated items land as normal
+  checklist rows you can edit or delete.
+
+Availability is checked at runtime (`SystemLanguageModel.default.availability`)
+and the manual planner is never blocked.
+
 ## Deliberately not built
 
 - Paywalls, a Pro tier or subscriptions. Wanderer is free; the only
   monetization is the optional tip jar.
 
-- AI features (trip generation, chat assistant) — out of scope.
+- Cloud or third-party AI: no chat assistant, no trip generation from a blank
+  prompt, no email import. The on-device features above are the only AI.
 - Server push notifications — flight alerts are local notifications raised when
   the app refreshes a tracked flight.
 - Hotel/flight price feeds — the AeroDataBox free plan has no commercial-use

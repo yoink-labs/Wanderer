@@ -14,6 +14,8 @@ struct ExpensesView: View {
     @State private var showBudget = false
     @State private var settlePrefill: SettlePrefill?
     @State private var convertedTotal: Double?
+    /// Money rows confirm before deleting: there is no undo for an expense.
+    @State private var expensePendingDelete: ExpenseRecord?
 
     init(store: TripDetailStore, tripID: UUID) {
         self.store = store
@@ -76,6 +78,23 @@ struct ExpensesView: View {
             }
         }
         .tripToolList()
+        .confirmationDialog(
+            expensePendingDelete.map { "Delete \($0.title)?" } ?? "Delete expense?",
+            isPresented: Binding(
+                get: { expensePendingDelete != nil },
+                set: { if !$0 { expensePendingDelete = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: expensePendingDelete
+        ) { expense in
+            Button("Delete", role: .destructive) {
+                Task { await store.deleteExpense(expense) }
+                expensePendingDelete = nil
+            }
+            Button("Keep it", role: .cancel) { expensePendingDelete = nil }
+        } message: { _ in
+            Text("Balances and settle-up suggestions update straight away.")
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !store.expenses.isEmpty {
                 TripToolBottomBar {

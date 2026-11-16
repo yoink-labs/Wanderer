@@ -5,6 +5,9 @@ import SwiftUI
 struct PersonalItemsView: View {
     @ObservedObject var store: TripDetailStore
     @Environment(\.dismiss) private var dismiss
+    /// The screen says everything is reversible, so a swipe asks first.
+    @State private var privatePlacePendingDelete: PlaceRecord?
+    @State private var privateReservationPendingDelete: ReservationRecord?
 
     private var hiddenPlaces: [PlaceRecord] {
         let hidden = Set(store.personal.overrides.filter { $0.hidden && $0.itemType == "place" }.map { $0.itemId.lowercased() })
@@ -26,8 +29,8 @@ struct PersonalItemsView: View {
                         }
                         .onDelete { offsets in
                             let places = store.personal.privatePlaces
-                            for index in offsets {
-                                Task { await store.deletePrivatePlace(places[index]) }
+                            if let index = offsets.first, places.indices.contains(index) {
+                                privatePlacePendingDelete = places[index]
                             }
                         }
                     } header: {
@@ -42,8 +45,8 @@ struct PersonalItemsView: View {
                         }
                         .onDelete { offsets in
                             let items = store.personal.privateReservations
-                            for index in offsets {
-                                Task { await store.deletePrivateReservation(items[index]) }
+                            if let index = offsets.first, items.indices.contains(index) {
+                                privateReservationPendingDelete = items[index]
                             }
                         }
                     } header: {
@@ -103,6 +106,40 @@ struct PersonalItemsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(WandererTheme.platinum.ignoresSafeArea())
+            .confirmationDialog(
+                privatePlacePendingDelete.map { "Delete \($0.name)?" } ?? "Delete private stop?",
+                isPresented: Binding(
+                    get: { privatePlacePendingDelete != nil },
+                    set: { if !$0 { privatePlacePendingDelete = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: privatePlacePendingDelete
+            ) { place in
+                Button("Delete for good", role: .destructive) {
+                    Task { await store.deletePrivatePlace(place) }
+                    privatePlacePendingDelete = nil
+                }
+                Button("Keep it", role: .cancel) { privatePlacePendingDelete = nil }
+            } message: { _ in
+                Text("This removes it from your plan only. It cannot be undone.")
+            }
+            .confirmationDialog(
+                privateReservationPendingDelete.map { "Delete \($0.title)?" } ?? "Delete private booking?",
+                isPresented: Binding(
+                    get: { privateReservationPendingDelete != nil },
+                    set: { if !$0 { privateReservationPendingDelete = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: privateReservationPendingDelete
+            ) { item in
+                Button("Delete for good", role: .destructive) {
+                    Task { await store.deletePrivateReservation(item) }
+                    privateReservationPendingDelete = nil
+                }
+                Button("Keep it", role: .cancel) { privateReservationPendingDelete = nil }
+            } message: { _ in
+                Text("This removes your private booking. It cannot be undone.")
+            }
             .navigationTitle("Only you")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
