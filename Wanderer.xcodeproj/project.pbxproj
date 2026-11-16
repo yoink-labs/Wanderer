@@ -21,6 +21,7 @@
 		253DF3311E5D88D3EA97F9EB /* LegacyBackendCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09159DF78F452ED84A8316FB /* LegacyBackendCleanupTests.swift */; };
 		27B161625542EF094A1C334C /* BookingTicketModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F82F121DA13D96DC84852E2 /* BookingTicketModelTests.swift */; };
 		27B60175A1ABBB5A11BA0F65 /* WandererApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F08DFC9293EDE1EB208DB540 /* WandererApp.swift */; };
+		28BEC96D13900D0201B9C192 /* PlaceSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF86245042879BE50F94175 /* PlaceSearchModel.swift */; };
 		2A86BCA769BE5C0C54B726B3 /* ExpensesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485340E25E1BB38F5575799C /* ExpensesView.swift */; };
 		2FB62B6A59E19D6AEB320239 /* PlaceDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE938851E76A6594D1D2B6A9 /* PlaceDetailSheet.swift */; };
 		303F91AB18439B7B865469EE /* PlannerGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4593CAD5D6124451B87A0F0A /* PlannerGeometryTests.swift */; };
@@ -119,6 +120,7 @@
 		10A4DEB75CB30643D8E2EB7C /* PlannerStartDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerStartDayTests.swift; sourceTree = "<group>"; };
 		139E6CDC21F9B4DB1ECA89A7 /* TripsBacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsBacking.swift; sourceTree = "<group>"; };
 		17CA550B1A652A690CE62511 /* DayNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayNoteView.swift; sourceTree = "<group>"; };
+		1BF86245042879BE50F94175 /* PlaceSearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSearchModel.swift; sourceTree = "<group>"; };
 		1D9EC1CE0737C4230CAF8780 /* WandererTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WandererTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2069F5EE2932AF83C1E27C2B /* PlanTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTripSheet.swift; sourceTree = "<group>"; };
 		26C1F04A4BAA060C1D00E1F7 /* OfflineReadCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineReadCacheTests.swift; sourceTree = "<group>"; };
@@ -409,6 +411,7 @@
 				540B4AAB58475E1CC20E0B65 /* NearbyIdeasView.swift */,
 				37E90060C0555135B8D76B41 /* PersonalItemsView.swift */,
 				EE938851E76A6594D1D2B6A9 /* PlaceDetailSheet.swift */,
+				1BF86245042879BE50F94175 /* PlaceSearchModel.swift */,
 				BCC8BFA35C9D4C5BDBC16353 /* PlaceSearchView.swift */,
 				429FC03BBEA9FC63A71A2B8C /* PlannerGeometry.swift */,
 				278E3C4A6A45BDE4413BEE5A /* PlannerMapView.swift */,
@@ -557,6 +560,7 @@
 				};
 			};
 			buildConfigurationList = E176982E73D9BA7E1368461E /* Build configuration list for PBXProject "Wanderer" */;
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -569,7 +573,6 @@
 				63EEB895EDC195AC7983B103 /* XCRemoteSwiftPackageReference "clerk-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = CF8B5AE04BBDDE470F8467D6 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -633,6 +636,7 @@
 				45DE9336C856C18DE7ADEC47 /* OfflineReadCache.swift in Sources */,
 				9D9A2486F68D784D51824E2C /* PersonalItemsView.swift in Sources */,
 				2FB62B6A59E19D6AEB320239 /* PlaceDetailSheet.swift in Sources */,
+				28BEC96D13900D0201B9C192 /* PlaceSearchModel.swift in Sources */,
 				5FAEB6005A3BD8BEA33613BF /* PlaceSearchView.swift in Sources */,
 				904A0003FF84B0317604FCF8 /* PlanTripSheet.swift in Sources */,
 				009BB7861F52D95FB68A5EF6 /* PlannerGeometry.swift in Sources */,
@@ -820,7 +824,7 @@
 				CODE_SIGN_ENTITLEMENTS = Wanderer/Resources/Wanderer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 64PUT29XZ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -854,7 +858,7 @@
 				CODE_SIGN_ENTITLEMENTS = Wanderer/Resources/Wanderer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 64PUT29XZ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
