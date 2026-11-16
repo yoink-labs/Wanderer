@@ -16,6 +16,49 @@ struct MapSearchResult: Identifiable, Hashable {
     }
 }
 
+/// Resolves a trip's destination string ("Buenos Aires, Argentina") to a map
+/// coordinate once, so place search and the empty map open in the right city
+/// instead of worldwide.
+enum DestinationLocator {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var cache: [String: CLLocationCoordinate2D] = [:]
+
+    static func cached(_ destination: String) -> CLLocationCoordinate2D? {
+        lock.lock()
+        defer { lock.unlock() }
+        return cache[normalized(destination)]
+    }
+
+    private static func remember(_ key: String, _ coordinate: CLLocationCoordinate2D) {
+        lock.lock()
+        cache[key] = coordinate
+        lock.unlock()
+    }
+
+    static func coordinate(for destination: String) async -> CLLocationCoordinate2D? {
+        let key = normalized(destination)
+        guard !key.isEmpty else { return nil }
+        if let hit = cached(destination) { return hit }
+
+        // A local search on the destination name is the MapKit-native way to
+        // find a city; it also works when CLGeocoder is rate limited.
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = destination
+        request.resultTypes = [.address, .pointOfInterest]
+        let coordinate = (try? await MKLocalSearch(request: request).start())?
+            .mapItems.first?.placemark.coordinate
+
+        if let coordinate {
+            remember(key, coordinate)
+        }
+        return coordinate
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+}
+
 enum MapSearchService {
     static func search(_ query: String, near coordinate: CLLocationCoordinate2D?) async throws -> [MapSearchResult] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)

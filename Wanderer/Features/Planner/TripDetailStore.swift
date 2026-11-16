@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 /// Everything inside one trip, loaded from the Wanderer API.
@@ -547,6 +548,91 @@ final class TripDetailStore: ObservableObject {
     }
 
     // MARK: - Places
+
+    /// Adds a place unless the same one is already in this trip, so a slow
+    /// search or a double tap can't produce two identical stops.
+    /// Returns false when it was already there.
+    @discardableResult
+    func addPlaceIfNew(
+        name: String,
+        address: String?,
+        latitude: Double?,
+        longitude: Double?,
+        category: PlaceCategory,
+        dayID: UUID?,
+        website: String? = nil,
+        phone: String? = nil
+    ) async -> Bool {
+        if isDuplicate(name: name, latitude: latitude, longitude: longitude) {
+            return false
+        }
+        await addPlace(
+            name: name,
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            category: category,
+            dayID: dayID,
+            website: website,
+            phone: phone
+        )
+        return true
+    }
+
+    @discardableResult
+    func addPrivatePlaceIfNew(
+        name: String,
+        address: String?,
+        latitude: Double?,
+        longitude: Double?,
+        category: PlaceCategory,
+        dayID: UUID?
+    ) async -> Bool {
+        if isPrivateDuplicate(name: name, latitude: latitude, longitude: longitude) {
+            return false
+        }
+        await addPrivatePlace(
+            name: name,
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            category: category,
+            dayID: dayID
+        )
+        return true
+    }
+
+    /// Same name, or within ~75 m of an existing stop, counts as the same
+    /// place. Search results for one museum differ by a few metres, so the
+    /// distance check catches "Museo X" vs "Museo X, Av. del Libertador".
+    private func isDuplicate(name: String, latitude: Double?, longitude: Double?) -> Bool {
+        places.contains(where: { place in
+            matches(place.name, place.lat, place.lng, name, latitude, longitude)
+        })
+    }
+
+    private func isPrivateDuplicate(name: String, latitude: Double?, longitude: Double?) -> Bool {
+        personal.privatePlaces.contains(where: { place in
+            matches(place.name, place.lat, place.lng, name, latitude, longitude)
+        })
+    }
+
+    private func matches(
+        _ existingName: String,
+        _ existingLat: Double?,
+        _ existingLng: Double?,
+        _ name: String,
+        _ latitude: Double?,
+        _ longitude: Double?
+    ) -> Bool {
+        if existingName.compare(name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
+            return true
+        }
+        guard let existingLat, let existingLng, let latitude, let longitude else { return false }
+        let metres = CLLocation(latitude: existingLat, longitude: existingLng)
+            .distance(from: CLLocation(latitude: latitude, longitude: longitude))
+        return metres < 75
+    }
 
     func addPlace(
         name: String,
