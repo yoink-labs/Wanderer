@@ -2,6 +2,10 @@ import MapKit
 import SwiftUI
 
 /// Search Apple Maps for a place and drop it into the trip.
+///
+/// Results stream in from `MKLocalSearchCompleter` as the user types and are
+/// biased to the trip's city, so the sheet answers "where am I going?" even
+/// before the first keystroke with quick searches and real nearby places.
 struct PlaceSearchView: View {
     let trip: Trip
     @ObservedObject var store: TripDetailStore
@@ -10,12 +14,15 @@ struct PlaceSearchView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isSearchFocused: Bool
 
+    @StateObject private var model: PlaceSearchModel
     @State private var query = ""
-    @State private var results: [MapSearchResult] = []
-    @State private var isSearching = false
+    @State private var addingKey: String?
     @State private var errorMessage: String?
-    @State private var addingID: UUID?
+    @State private var quickResults: [MapSearchResult] = []
+    @State private var quickTitle: String?
+    @State private var isRunningQuickSearch = false
     @State private var forMeOnly = false
+
     /// Private stops are a collaboration feature; a solo guest trip already
     /// has nothing to hide from anyone.
     private var canGoPrivate: Bool { !LocalTrips.isActive }
@@ -24,37 +31,42 @@ struct PlaceSearchView: View {
         self.trip = trip
         self.store = store
         self.dayID = dayID
+        _model = StateObject(wrappedValue: PlaceSearchModel(destination: trip.destination))
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 searchField
                 if canGoPrivate {
                     privateToggle
                 }
                 content
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 6)
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
             .background(WandererTheme.sand.ignoresSafeArea())
             .navigationTitle("Add a place")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .font(.ligga(.subheadline, weight: .semibold))
-                    .foregroundStyle(WandererTheme.coralDeep)
+                    Button("Cancel") { dismiss() }
+                        .font(.ligga(.subheadline, weight: .semibold))
+                        .foregroundStyle(WandererTheme.coralDeep)
                 }
             }
             .task {
-                try? await Task.sleep(nanoseconds: 350_000_000)
+                await model.prepare()
+                await model.loadNearbyIfNeeded()
+                try? await Task.sleep(nanoseconds: 250_000_000)
                 isSearchFocused = true
             }
-            .task(id: query) {
-                await search()
+            .onChange(of: query) { _, newValue in
+                model.query = newValue
+                if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    quickResults = []
+                    quickTitle = nil
+                }
             }
         }
     }
@@ -67,7 +79,7 @@ struct PlaceSearchView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(WandererTheme.muted)
 
-            TextField("Search museums, cafés, addresses", text: $query)
+            TextField("Search \(trip.destination)", text: $query)
                 .font(.ligga(.subheadline))
                 .foregroundStyle(WandererTheme.ink)
                 .focused($isSearchFocused)
@@ -92,7 +104,7 @@ struct PlaceSearchView: View {
         }
         .padding(.leading, 15)
         .padding(.trailing, query.isEmpty ? 15 : 3)
-        .frame(height: 50)
+        .frame(height: 48)
         .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -105,32 +117,23 @@ struct PlaceSearchView: View {
 
     // MARK: - Private toggle
 
-    /// The one control that explains the personal layer in the place where
-    /// it matters: adding a stop. Off means the group sees it.
+    /// Compact: the label says what it does, the subtitle only when it is on.
     private var privateToggle: some View {
         Toggle(isOn: $forMeOnly) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: forMeOnly ? "person.crop.circle.fill" : "person.2")
-                    .font(.ligga(.body, weight: .semibold))
+                    .font(.ligga(.footnote, weight: .semibold))
                     .foregroundStyle(forMeOnly ? WandererTheme.coralDeep : WandererTheme.muted)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Only visible to me")
-                        .font(.ligga(.subheadline, weight: .semibold))
-                        .foregroundStyle(WandererTheme.ink)
-                    Text(
-                        forMeOnly
-                            ? "This stop stays out of everyone else's itinerary."
-                            : "Everyone on the trip will see this stop."
-                    )
-                    .font(.ligga(.caption))
-                    .foregroundStyle(WandererTheme.muted)
-                }
+                Text(forMeOnly ? "Only I will see this stop" : "Only visible to me")
+                    .font(.ligga(.footnote, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
         }
         .tint(WandererTheme.coral)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 44)
         .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityIdentifier("place-private-toggle")
     }
@@ -139,54 +142,133 @@ struct PlaceSearchView: View {
 
     @ViewBuilder
     private var content: some View {
-        if isSearching {
-            stateCard(
-                icon: "sparkle.magnifyingglass",
-                title: "Searching Apple Maps…",
-                message: "Looking near \(trip.destination).",
-                showsProgress: true
-            )
-        } else if let errorMessage {
+        if let errorMessage {
             stateCard(
                 icon: "wifi.exclamationmark",
                 title: "Search unavailable",
                 message: errorMessage,
                 retry: true
             )
-        } else if trimmedQuery.isEmpty {
-            stateCard(
-                icon: "magnifyingglass",
-                title: "Find somewhere to go",
-                message: "Search for a museum, café or exact address to add it to \(trip.title)."
-            )
-        } else if results.isEmpty {
-            stateCard(
-                icon: "mappin.slash",
-                title: "No places found",
-                message: "Try a different name, or search for the street and city instead."
-            )
+        } else if !trimmedQuery.isEmpty {
+            suggestionList
         } else {
-            resultsList
+            browseContent
         }
     }
 
-    private var resultsList: some View {
+    /// Before typing: category shortcuts and real places near the trip's city.
+    private var browseContent: some View {
         ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 9) {
-                ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
+            VStack(alignment: .leading, spacing: 14) {
+                if !quickResults.isEmpty {
+                    HStack {
+                        Text(quickTitle ?? "Nearby")
+                            .font(.ligga(.footnote, weight: .semibold))
+                            .foregroundStyle(WandererTheme.muted)
+                        Spacer()
+                        Button("Clear") {
+                            quickResults = []
+                            quickTitle = nil
+                        }
+                        .font(.ligga(.footnote, weight: .semibold))
+                        .foregroundStyle(WandererTheme.accentText)
+                    }
+                    resultRows(quickResults)
+                } else {
+                    Text("Search near \(trip.destination)")
+                        .font(.ligga(.footnote, weight: .semibold))
+                        .foregroundStyle(WandererTheme.muted)
+
+                    quickChips
+
+                    if !model.nearby.isEmpty {
+                        Text("Popular near \(trip.destination)")
+                            .font(.ligga(.footnote, weight: .semibold))
+                            .foregroundStyle(WandererTheme.muted)
+                            .padding(.top, 2)
+                        resultRows(model.nearby)
+                    } else if model.isLoadingNearby {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small).tint(WandererTheme.coral)
+                            Text("Finding places near \(trip.destination)…")
+                                .font(.ligga(.caption))
+                                .foregroundStyle(WandererTheme.muted)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                    }
+
+                    Text("Results from Apple Maps")
+                        .font(.ligga(.caption))
+                        .foregroundStyle(WandererTheme.muted.opacity(0.9))
+                        .padding(.top, 2)
+                }
+            }
+            .padding(.bottom, 24)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var quickChips: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 132), spacing: 8)],
+            alignment: .leading,
+            spacing: 8
+        ) {
+            ForEach(PlaceSearchModel.quickSearches, id: \.title) { item in
+                Button {
+                    Task { await runQuickSearch(item.title, item.query) }
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: item.symbol)
+                            .font(.ligga(.caption, weight: .semibold))
+                        Text(item.title)
+                            .font(.ligga(.footnote, weight: .semibold))
+                            .lineLimit(1)
+                        if isRunningQuickSearch && quickTitle == item.title {
+                            Spacer(minLength: 0)
+                            ProgressView().controlSize(.mini).tint(WandererTheme.coralDeep)
+                        }
+                    }
+                    .foregroundStyle(WandererTheme.ink)
+                    .padding(.horizontal, 12)
+                    .frame(height: 40)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(WandererTheme.card, in: Capsule())
+                    .overlay(Capsule().stroke(WandererTheme.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var suggestionList: some View {
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: 8) {
+                ForEach(model.suggestions) { suggestion in
                     Button {
-                        Task { await add(result) }
+                        Task { await add(suggestion) }
                     } label: {
-                        resultRow(result)
+                        suggestionRow(suggestion)
                     }
                     .buttonStyle(.plain)
-                    .disabled(addingID != nil)
-                    .accessibilityIdentifier("place-search-add-\(index)")
+                    .disabled(addingKey != nil)
+                }
+
+                if model.suggestions.isEmpty && !model.isResolving {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small).tint(WandererTheme.coral)
+                        Text("Searching Apple Maps…")
+                            .font(.ligga(.footnote))
+                            .foregroundStyle(WandererTheme.muted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 8)
                 }
 
                 Text("Results from Apple Maps")
-                    .font(.ligga(.footnote))
-                    .foregroundStyle(WandererTheme.muted)
+                    .font(.ligga(.caption))
+                    .foregroundStyle(WandererTheme.muted.opacity(0.9))
                     .padding(.top, 6)
             }
             .padding(.bottom, 24)
@@ -194,93 +276,121 @@ struct PlaceSearchView: View {
         .scrollDismissesKeyboard(.interactively)
     }
 
-    private func resultRow(_ result: MapSearchResult) -> some View {
+    private func suggestionRow(_ suggestion: PlaceSearchModel.Suggestion) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(WandererTheme.coralSoft)
-                Image(systemName: result.category.icon)
-                    .font(.system(size: 17, weight: .semibold))
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(WandererTheme.coralDeep)
             }
-            .frame(width: 44, height: 44)
+            .frame(width: 38, height: 38)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(result.name)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(suggestion.title)
                     .font(.ligga(.subheadline, weight: .semibold))
                     .foregroundStyle(WandererTheme.ink)
                     .lineLimit(1)
-
-                if let address = result.address, !address.isEmpty {
-                    Text(address)
+                if !suggestion.subtitle.isEmpty {
+                    Text(suggestion.subtitle)
                         .font(.ligga(.caption))
                         .foregroundStyle(WandererTheme.muted)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                        .lineLimit(1)
                 }
-
-                Text(result.category.title)
-                    .font(.ligga(.caption, weight: .semibold))
-                    .foregroundStyle(WandererTheme.muted)
             }
 
             Spacer(minLength: 6)
 
-            addBadge(for: result)
+            if model.isResolving {
+                ProgressView().controlSize(.small).tint(WandererTheme.coral)
+            } else {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(WandererTheme.accentText)
+            }
         }
-        .padding(11)
-        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(10)
+        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(WandererTheme.line.opacity(0.75), lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    @ViewBuilder
-    private func addBadge(for result: MapSearchResult) -> some View {
-        if addingID == result.id {
-            ProgressView()
-                .tint(WandererTheme.coral)
-                .frame(width: 64, height: 34)
-        } else {
-            HStack(spacing: 4) {
-                Image(systemName: "plus")
-                    .font(.ligga(.caption, weight: .bold))
-                Text("Add")
-                    .font(.ligga(.caption, weight: .bold))
+    private func resultRows(_ results: [MapSearchResult]) -> some View {
+        LazyVStack(spacing: 8) {
+            ForEach(results) { result in
+                Button {
+                    Task { await add(result) }
+                } label: {
+                    resultRow(result)
+                }
+                .buttonStyle(.plain)
+                .disabled(addingKey != nil)
             }
-            .foregroundStyle(WandererTheme.onPrimary)
-            .padding(.horizontal, 12)
-            .frame(height: 34)
-            .background(WandererTheme.primaryFill, in: Capsule())
         }
+    }
+
+    private func resultRow(_ result: MapSearchResult) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(WandererTheme.coralSoft)
+                Image(systemName: result.category.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(WandererTheme.coralDeep)
+            }
+            .frame(width: 38, height: 38)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(result.name)
+                    .font(.ligga(.subheadline, weight: .semibold))
+                    .foregroundStyle(WandererTheme.ink)
+                    .lineLimit(1)
+                if let address = result.address, !address.isEmpty {
+                    Text(address)
+                        .font(.ligga(.caption))
+                        .foregroundStyle(WandererTheme.muted)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 6)
+
+            if addingKey == key(for: result) {
+                ProgressView().controlSize(.small).tint(WandererTheme.coral)
+            } else {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(WandererTheme.accentText)
+            }
+        }
+        .padding(10)
+        .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(WandererTheme.line.opacity(0.75), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func stateCard(
         icon: String,
         title: String,
         message: String,
-        showsProgress: Bool = false,
         retry: Bool = false
     ) -> some View {
         VStack(spacing: 12) {
             Spacer()
-
-            if showsProgress {
-                ProgressView()
-                    .tint(WandererTheme.coral)
-                    .scaleEffect(1.1)
-            } else {
-                ZStack {
-                    Circle()
-                        .fill(WandererTheme.coralSoft)
-                    Image(systemName: icon)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(WandererTheme.coralDeep)
-                }
-                .frame(width: 58, height: 58)
+            ZStack {
+                Circle().fill(WandererTheme.coralSoft)
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(WandererTheme.coralDeep)
             }
+            .frame(width: 58, height: 58)
 
             Text(title)
                 .wandererHeading(.section)
@@ -294,7 +404,8 @@ struct PlaceSearchView: View {
 
             if retry {
                 Button {
-                    Task { await search() }
+                    errorMessage = nil
+                    model.query = trimmedQuery
                 } label: {
                     Text("Try again")
                         .font(.ligga(.subheadline, weight: .bold))
@@ -313,52 +424,51 @@ struct PlaceSearchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Search
+    // MARK: - Actions
 
     private var trimmedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var nearCoordinate: CLLocationCoordinate2D? {
-        guard let coordinate = store.places.compactMap(\.coordinate).first else { return nil }
-        return CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)
+    private func key(for result: MapSearchResult) -> String {
+        "\(result.name.lowercased())|\(String(format: "%.4f,%.4f", result.latitude, result.longitude))"
     }
 
-    private func search() async {
-        let trimmed = trimmedQuery
-        guard trimmed.count >= 2 else {
-            results = []
-            errorMessage = nil
-            isSearching = false
-            return
+    private func runQuickSearch(_ title: String, _ query: String) async {
+        guard !isRunningQuickSearch else { return }
+        isRunningQuickSearch = true
+        quickTitle = title
+        defer { isRunningQuickSearch = false }
+        quickResults = await model.runQuickSearch(query)
+        if quickResults.isEmpty {
+            quickTitle = nil
+            errorMessage = "Apple Maps didn't return any \(title.lowercased()) near \(trip.destination)."
         }
+    }
 
-        isSearching = true
-        errorMessage = nil
+    private func add(_ suggestion: PlaceSearchModel.Suggestion) async {
+        guard addingKey == nil else { return }
+        // Reserve the row so a double tap can't fire twice, then resolve.
+        addingKey = "resolving|\(suggestion.title.lowercased())"
+        isSearchFocused = false
 
-        do {
-            // Debounce so we only hit Apple Maps once typing settles.
-            try await Task.sleep(nanoseconds: 300_000_000)
-            let found = try await MapSearchService.search(trimmed, near: nearCoordinate)
-            guard !Task.isCancelled else { return }
-            results = found
-            isSearching = false
-        } catch is CancellationError {
-            return
-        } catch {
-            guard !Task.isCancelled else { return }
-            results = []
-            errorMessage = "We couldn't reach Apple Maps. Check your connection and try again."
-            isSearching = false
-        }
+        defer { addingKey = nil }
+        guard let result = await model.resolve(suggestion) else { return }
+        await performAdd(result)
     }
 
     private func add(_ result: MapSearchResult) async {
-        guard addingID == nil else { return }
-        addingID = result.id
+        guard addingKey == nil else { return }
+        addingKey = key(for: result)
+        isSearchFocused = false
+        defer { addingKey = nil }
+        await performAdd(result)
+    }
 
+    /// Adds the stop (deduplicated by the store) and closes the sheet.
+    private func performAdd(_ result: MapSearchResult) async {
         if forMeOnly {
-            await store.addPrivatePlace(
+            await store.addPrivatePlaceIfNew(
                 name: result.name,
                 address: result.address,
                 latitude: result.latitude,
@@ -367,7 +477,7 @@ struct PlaceSearchView: View {
                 dayID: dayID
             )
         } else {
-            await store.addPlace(
+            await store.addPlaceIfNew(
                 name: result.name,
                 address: result.address,
                 latitude: result.latitude,
@@ -378,8 +488,6 @@ struct PlaceSearchView: View {
                 phone: result.phone
             )
         }
-
-        addingID = nil
         dismiss()
     }
 }

@@ -16,6 +16,8 @@ struct PlannerView: View {
     /// Set when the map picks a stop, so the list scrolls its row into view.
     @State private var listScrollTarget: UUID?
     @State private var visibleRegion: MKCoordinateRegion?
+    /// Opens the map on the trip's city once, while the day has no pins.
+    @State private var didCenterOnDestination = false
     @State private var viewport = PlannerViewport()
     @State private var activeSheet: PlannerSheet?
     @State private var editMode: EditMode = .inactive
@@ -35,7 +37,10 @@ struct PlannerView: View {
     private static let chromeTypeCap = DynamicTypeSize.accessibility2
     @Namespace private var dayChipNamespace
 
-    private static let detents: [CGFloat] = [0.16, 0.52, 0.9]
+    /// The smallest detent has to fit the chrome — grabber, trip title, day
+    /// chips and the day header — or the bottom line gets clipped by the
+    /// screen edge (see `minimumPanelHeight`).
+    private static let detents: [CGFloat] = [0.34, 0.56, 0.9]
     private static let detentNames = ["Collapsed", "Half", "Expanded"]
 
     init(trip: Trip) {
@@ -490,8 +495,20 @@ struct PlannerView: View {
             .accessibilityIdentifier("planner-panel-handle")
     }
 
+    /// Never shorter than the fixed chrome (a clipped title or day header looks
+    /// broken), and never taller than the space above the map controls.
     private func panelHeight(for height: CGFloat) -> CGFloat {
-        min(max(height * panelFraction, 150), height - 70)
+        min(max(height * panelFraction, Self.minimumPanelHeight), height - 70)
+    }
+
+    /// Grabber + trip title + day chips + day header, with a little breathing
+    /// room for Dynamic Type.
+    private static var minimumPanelHeight: CGFloat {
+#if os(iOS)
+        UIFontMetrics(forTextStyle: .subheadline).scaledValue(for: 248)
+#else
+        248
+#endif
     }
 
     private func panelDragGesture(height: CGFloat) -> some Gesture {
@@ -953,39 +970,56 @@ struct PlannerView: View {
         }
     }
 
+    /// Compact on purpose: at the small detent there may be only enough room
+    /// for one line, so this is a single row, not a full-page empty state.
     private var emptyPlaces: some View {
-        VStack(spacing: 9) {
-            ZStack {
-                Circle()
-                    .fill(WandererTheme.coralSoft)
-                Image(systemName: selection == .unscheduled ? "tray" : "map")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(WandererTheme.coralDeep)
+        Button {
+            activeSheet = .addPlace
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(WandererTheme.coralSoft)
+                    Image(systemName: selection == .unscheduled ? "tray" : "plus")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(WandererTheme.coralDeep)
+                }
+                .frame(width: 38, height: 38)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selection == .unscheduled ? "Nothing left unscheduled" : "Add your first stop")
+                        .font(.ligga(.subheadline, weight: .semibold))
+                        .foregroundStyle(WandererTheme.ink)
+                        .lineLimit(1)
+                    Text(
+                        selection == .unscheduled
+                            ? "Places you add without a day land here."
+                            : "Search Apple Maps for a place in \(trip.destination)."
+                    )
+                    .font(.ligga(.caption))
+                    .foregroundStyle(WandererTheme.muted)
+                    .lineLimit(2)
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "chevron.right")
+                    .font(.ligga(.footnote, weight: .semibold))
+                    .foregroundStyle(WandererTheme.muted)
             }
-            .frame(width: 50, height: 50)
-
-            Text(selection == .unscheduled ? "Nothing left unscheduled" : "Nothing planned yet")
-                .font(.ligga(.subheadline, weight: .semibold))
-                .foregroundStyle(WandererTheme.ink)
-
-            Text(
-                selection == .unscheduled
-                    ? "Places you add without a day will land here."
-                    : "Add a place to start shaping this day."
+            .padding(12)
+            .background(WandererTheme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(WandererTheme.line.opacity(0.75), lineWidth: 1)
             )
-            .font(.ligga(.caption))
-            .foregroundStyle(WandererTheme.muted)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 24)
-
-            PrimaryButton(title: "Add a place", icon: "plus") {
-                activeSheet = .addPlace
-            }
-            .padding(.horizontal, 48)
-            .padding(.top, 6)
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.bottom, 10)
+        .buttonStyle(.plain)
+        .padding(.horizontal, WandererTheme.screenPadding)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .accessibilityIdentifier("planner-empty-add-place")
     }
 
     private var placesList: some View {
@@ -1509,11 +1543,30 @@ struct PlannerView: View {
             in: mapSize,
             insets: mapInsets
         ) else {
+            // Nothing pinned yet: open on the trip's destination instead of a
+            // world view, so the first pin lands where the trip is.
+            centerOnDestinationIfNeeded()
             return
         }
 
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.5)) {
             cameraPosition = .region(region)
+        }
+    }
+
+    private func centerOnDestinationIfNeeded() {
+        guard !didCenterOnDestination else { return }
+        didCenterOnDestination = true
+        Task {
+            guard let coordinate = await DestinationLocator.coordinate(for: trip.destination) else { return }
+            let region = MKCoordinateRegion(
+                center: coordinate,
+                latitudinalMeters: 18_000,
+                longitudinalMeters: 18_000
+            )
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.4)) {
+                cameraPosition = .region(region)
+            }
         }
     }
 
