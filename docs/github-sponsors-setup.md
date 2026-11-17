@@ -72,13 +72,13 @@ sponsorship starts. See
 From the dashboard, go to **Overview** and then **tax forms**. Stripe
 collects the form and emails when it's due.
 
-- Undrift LLC is a US taxpayer, so the form is a **W-9** in Undrift LLC's
+- Undrift LLC is a US LLC, so the form is the **W-9**, in Undrift LLC's
   name with its EIN. GitHub: "If you are a taxpayer in the United States,
   you must submit a W-9 before you can publish your GitHub Sponsors
   profile."
-- The org setup page links the IRS instructions for **W-8BEN-E**. That form
-  is for entities outside the US, so it shouldn't apply to Undrift LLC. If
-  Stripe asks for it anyway, check with Stripe before filing.
+- Don't file a **W-8BEN-E**. That form is only for entities outside the US.
+  GitHub's org setup page links its instructions, but they don't apply to
+  Undrift LLC.
 - The right W-9 boxes depend on how Undrift LLC is taxed (single-member
   disregarded entity, partnership or corporation). That's a question for
   whoever does Undrift's taxes.
