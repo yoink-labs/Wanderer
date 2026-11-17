@@ -73,9 +73,7 @@ npm run typecheck
 
 ## Licensing
 
-The repository doesn't have a LICENSE file yet. Until it does, please open an
-issue before starting larger work, and we'll make sure contributions are
-covered once a license is chosen.
+Wanderer is MIT licensed. See [LICENSE](LICENSE).
 
 ## Be kind
 
