@@ -2168,3 +2168,64 @@ body {
 .cl-socialButtonsBlockButtonText {
   color: var(--ink);
 }
+
+/* "Tip the devs": the shared Yoink Labs pink pill. Always visible. */
+.tip-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #d6245f;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.tip-pill:hover {
+  background: #b81d51;
+  color: #fff;
+}
+.tip-pill:active {
+  transform: scale(0.97);
+}
+.tip-pill:focus-visible {
+  outline: 3px solid #ff8fb1;
+  outline-offset: 2px;
+}
+.tip-pill__heart {
+  flex: 0 0 auto;
+}
+@media (max-width: 599px) {
+  /* Room for the pill: the mark stands in for the wordmark on a phone. */
+  .site-header__inner {
+    gap: 10px;
+  }
+  .site-header__brand .logo__word {
+    display: none;
+  }
+  .site-nav {
+    gap: 14px;
+  }
+  .site-header__actions {
+    gap: 4px;
+  }
+  .tip-pill {
+    min-height: 32px;
+    padding: 0 10px;
+    gap: 4px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 399px) {
+  .tip-pill {
+    padding: 0 8px;
+    font-size: 10px;
+  }
+}

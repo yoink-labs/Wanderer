@@ -8,8 +8,9 @@ import Foundation
 ///     -uiSheet expenses|bookings|checklist|share|files|journal|settings
 ///                                    open a trip sheet after the trip loads
 ///     -uiDemo YES                    seed a local demo trip for guests
-///     -uiRoute tipJar                push Support Wanderer on Profile
+///     -uiRoute tipJar                push Tip the devs on Profile
 ///                                    (pair with -uiTab profile)
+///     -uiRoute tipSheet              open the Tip the devs sheet on Home
 ///     -uiTipJar config               serve tips from Wanderer.storekit
 ///                                    without StoreKit (see TipJarConfigClient)
 ///     -uiTipOutcome thanks|pending|failed|cancel

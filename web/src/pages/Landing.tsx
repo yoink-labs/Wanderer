@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { TIP_URL } from "../components/AppHeader";
 import { PlanTripDialog } from "../components/PlanTripDialog";
 
 export default function Landing() {
@@ -233,7 +234,7 @@ export default function Landing() {
         <p>
           Open source. Free to use.
           <br />
-          An optional tip jar in the iOS app. Never a paywall.
+          Tips are optional and unlock nothing. Never a paywall.
         </p>
         <div>
           <a
@@ -248,6 +249,9 @@ export default function Landing() {
           </Link>
           <a href="/images/CREDITS.md">Photography credits</a>
           <Link to="/privacy">Privacy policy</Link>
+          <a href={TIP_URL}>
+            Tip the devs <ArrowRight size={14} />
+          </a>
         </div>
       </footer>
       <PlanTripDialog open={planning} onClose={() => setPlanning(false)} />

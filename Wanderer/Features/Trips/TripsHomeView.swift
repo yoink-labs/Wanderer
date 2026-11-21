@@ -14,6 +14,7 @@ struct TripsHomeView: View {
     @State private var didImportGuestTrips = false
     @State private var searchText = ""
     @State private var showPlanner = false
+    @State private var showTipJar = DebugLaunch.route == "tipSheet"
     @State private var errorText: String?
 
     /// True once the first trip fetch for this session has finished, so Home
@@ -110,6 +111,19 @@ struct TripsHomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
+        .sheet(isPresented: $showTipJar) {
+            NavigationStack {
+                TipJarView(store: .shared)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showTipJar = false }
+                                .accessibilityIdentifier("tip-jar-done")
+                        }
+                    }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showPlanner) {
             PlanTripSheet { draft in
                 createTrip(draft)
@@ -176,52 +190,95 @@ struct TripsHomeView: View {
 
     // MARK: - Header and search
 
+    /// One row when it fits. On a narrow phone or at large text sizes the tip
+    /// button drops onto its own line so it never crowds the other controls.
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: LiggaSpace.s) {
-            Text("Trips")
-                .wandererHeading(.screen)
-                .foregroundStyle(WandererTheme.ink)
-                .accessibilityAddTraits(.isHeader)
-
-            Spacer(minLength: LiggaSpace.xs)
-
-            Button {
-                LiggaHaptics.tap()
-                appearanceRaw = colorScheme == .dark
-                    ? WandererAppearance.light.rawValue
-                    : WandererAppearance.dark.rawValue
-            } label: {
-                Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.stars.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(WandererTheme.ink)
-                    .frame(width: 44, height: 44)
-                    .background {
-                        Circle().fill(.ultraThinMaterial)
-                    }
-                    .overlay {
-                        Circle().strokeBorder(WandererTheme.line, lineWidth: 1)
-                    }
-                    .contentShape(Circle())
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: LiggaSpace.s) {
+                headerTitle
+                Spacer(minLength: LiggaSpace.xs)
+                tipButton
+                headerActions
             }
-            .buttonStyle(.liggaPressable)
-            .accessibilityLabel(colorScheme == .dark ? "Switch to light appearance" : "Switch to dark appearance")
-            .accessibilityIdentifier("home-appearance")
-
-            Button {
-                LiggaHaptics.tap()
-                showPlanner = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(WandererTheme.onAccent)
-                    .frame(width: 44, height: 44)
-                    .background(WandererTheme.route, in: Circle())
-                    .contentShape(Circle())
+            VStack(alignment: .leading, spacing: LiggaSpace.s) {
+                HStack(alignment: .center, spacing: LiggaSpace.s) {
+                    headerTitle
+                    Spacer(minLength: LiggaSpace.xs)
+                    headerActions
+                }
+                tipButton
             }
-            .buttonStyle(.liggaPressable)
-            .accessibilityLabel("Plan a trip")
-            .accessibilityIdentifier("home-plan-trip")
         }
+    }
+
+    private var headerTitle: some View {
+        Text("Trips")
+            .wandererHeading(.screen)
+            .foregroundStyle(WandererTheme.ink)
+            .accessibilityAddTraits(.isHeader)
+            .fixedSize()
+    }
+
+    /// The optional tip jar, for guests and signed-in users alike.
+    private var tipButton: some View {
+        Button {
+            LiggaHaptics.tap()
+            showTipJar = true
+        } label: {
+            Label("Tip the devs", systemImage: "heart.fill")
+                .font(.ligga(.subheadline, weight: .bold))
+                .lineLimit(1)
+                .fixedSize()
+                .foregroundStyle(.white)
+                .padding(.horizontal, LiggaSpace.s)
+                .frame(minHeight: 44)
+                .background(Color.pink, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.liggaPressable)
+        .accessibilityLabel("Tip the devs")
+        .accessibilityHint("Opens the optional tip jar")
+        .accessibilityIdentifier("home-tip-the-devs")
+    }
+
+    @ViewBuilder
+    private var headerActions: some View {
+        Button {
+            LiggaHaptics.tap()
+            appearanceRaw = colorScheme == .dark
+                ? WandererAppearance.light.rawValue
+                : WandererAppearance.dark.rawValue
+        } label: {
+            Image(systemName: colorScheme == .dark ? "sun.max.fill" : "moon.stars.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(WandererTheme.ink)
+                .frame(width: 44, height: 44)
+                .background {
+                    Circle().fill(.ultraThinMaterial)
+                }
+                .overlay {
+                    Circle().strokeBorder(WandererTheme.line, lineWidth: 1)
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(.liggaPressable)
+        .accessibilityLabel(colorScheme == .dark ? "Switch to light appearance" : "Switch to dark appearance")
+        .accessibilityIdentifier("home-appearance")
+
+        Button {
+            LiggaHaptics.tap()
+            showPlanner = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(WandererTheme.onAccent)
+                .frame(width: 44, height: 44)
+                .background(WandererTheme.route, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.liggaPressable)
+        .accessibilityLabel("Plan a trip")
+        .accessibilityIdentifier("home-plan-trip")
     }
 
     private var searchBar: some View {
