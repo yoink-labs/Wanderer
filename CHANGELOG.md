@@ -47,8 +47,8 @@ is noted next to each release.
   ([#20](https://github.com/yoink-labs/Wanderer/pull/20)).
 - The copyright holder in `LICENSE` is now Undrift LLC. The license is
   still MIT.
-- Build number 8 ([#19](https://github.com/yoink-labs/Wanderer/pull/19)) and
-  9 ([#21](https://github.com/yoink-labs/Wanderer/pull/21)).
+- Build number 8 ([#19](https://github.com/yoink-labs/Wanderer/pull/19)),
+  9 ([#21](https://github.com/yoink-labs/Wanderer/pull/21)) and 10.
 
 ### Fixed
 
