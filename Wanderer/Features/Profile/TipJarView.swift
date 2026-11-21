@@ -1,10 +1,15 @@
+import StoreKit
 import SwiftUI
 
-/// "Support Wanderer": an optional tip. Nothing in the app depends on it.
+/// "Tip the devs": an optional tip. Nothing in the app depends on it.
+/// Opened from the heart button on Home and the row on Profile.
 struct TipJarView: View {
     @ObservedObject var store: TipJarStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// True in TestFlight, Xcode and the simulator, where Apple runs test
+    /// purchases and no real money moves.
+    @State private var isTestEnvironment = false
 
     var body: some View {
         ScrollView {
@@ -23,7 +28,7 @@ struct TipJarView: View {
             .animation(WandererMotion.animation(WandererMotion.snappy, reduceMotion: reduceMotion), value: store.loadState)
         }
         .background(WandererBackdrop())
-        .navigationTitle("Support Wanderer")
+        .navigationTitle("Tip the devs")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .sensoryFeedback(.success, trigger: store.thanksCount)
@@ -32,6 +37,11 @@ struct TipJarView: View {
         }
         .task {
             if store.loadState != .loaded { await store.load() }
+        }
+        .task {
+            if case .verified(let transaction)? = try? await AppTransaction.shared {
+                isTestEnvironment = transaction.environment != .production
+            }
         }
         .refreshable { await store.load() }
         .accessibilityIdentifier("tip-jar")
@@ -43,20 +53,20 @@ struct TipJarView: View {
         VStack(alignment: .leading, spacing: LiggaSpace.s) {
             ZStack {
                 RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
-                    .fill(WandererTheme.route)
+                    .fill(Color.pink.opacity(0.16))
                 Image(systemName: "heart.fill")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(WandererTheme.onAccent)
+                    .foregroundStyle(.pink)
             }
             .frame(width: WandererTheme.minimumTarget, height: WandererTheme.minimumTarget)
             .accessibilityHidden(true)
 
-            Text("Enjoying Wanderer?")
+            Text("Tip the devs")
                 .wandererHeading(.title)
                 .foregroundStyle(WandererTheme.ink)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Wanderer is free, and every feature stays free. If it helped you plan a trip, you can leave a tip. It's completely optional and doesn't unlock anything.")
+            Text("Wanderer is free with nothing locked. Tips are optional and unlock nothing.")
                 .font(.ligga(.subheadline))
                 .foregroundStyle(WandererTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -123,7 +133,7 @@ struct TipJarView: View {
             loadingRows
         case .unavailable:
             LiggaRetryCard(
-                title: "Tips aren't available right now",
+                title: "Tips aren't available yet",
                 message: "The App Store didn't return any tips for your region. Wanderer works the same either way.",
                 retry: { Task { await store.load() } }
             )
@@ -203,7 +213,9 @@ struct TipJarView: View {
     }
 
     private var footnote: some View {
-        Text("Tips are one-time payments handled by the App Store. They don't renew, and you can tip again any time.")
+        Text(isTestEnvironment
+             ? "Tips go live when Wanderer reaches the App Store. In TestFlight betas, Apple runs test purchases, so you won't be charged."
+             : "Tips are one-time payments handled by the App Store. They don't renew, and you can tip again any time.")
             .font(.ligga(.footnote))
             .foregroundStyle(WandererTheme.muted)
             .multilineTextAlignment(.center)

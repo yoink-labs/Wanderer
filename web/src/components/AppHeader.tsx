@@ -5,6 +5,36 @@ import { useTheme } from "../lib/theme";
 import { Avatar } from "./Avatar";
 import { Logo } from "./Logo";
 
+/** Where tipping is explained. The page says which apps take tips and how. */
+export const TIP_URL = "https://yoinklabs.dev/tip";
+
+/** The pink "Tip the devs" pill shared by every Yoink Labs web app. */
+export function TipPill() {
+  return (
+    <a
+      href={TIP_URL}
+      className="tip-pill"
+      aria-label="Tip the devs"
+      title="Optional tips. They unlock nothing."
+    >
+      <svg
+        className="tip-pill__heart"
+        viewBox="0 0 24 24"
+        width="14"
+        height="14"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          fill="currentColor"
+          d="M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"
+        />
+      </svg>
+      <span>Tip the devs</span>
+    </a>
+  );
+}
+
 export function AppHeader() {
   const session = useSession();
   const theme = useTheme();
@@ -28,6 +58,7 @@ export function AppHeader() {
 
         <div className="site-header__actions">
           <Link to="/about" className="header-about">Made for the journey</Link>
+          <TipPill />
           <button
             type="button"
             className="icon-button icon-button--quiet theme-toggle"

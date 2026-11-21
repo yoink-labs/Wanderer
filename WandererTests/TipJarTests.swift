@@ -186,6 +186,29 @@ final class TipJarStoreTests: XCTestCase {
         XCTAssertTrue((json["subscriptionGroups"] as? [Any])?.isEmpty ?? true, "Tips only: no subscriptions")
     }
 
+    /// The local file mirrors the products created in App Store Connect, so
+    /// simulator screenshots show the same names, descriptions and prices.
+    func testStoreKitConfigurationMatchesAppStoreConnect() throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "Wanderer", withExtension: "storekit"))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        let products = try XCTUnwrap(json["products"] as? [[String: Any]])
+
+        let expected: [String: (name: String, description: String, price: String)] = [
+            "dev.yoinklabs.wanderer.tip.small": ("Small tip", "A small thank-you to the devs.", "0.99"),
+            "dev.yoinklabs.wanderer.tip.medium": ("Medium tip", "Buys the devs a coffee.", "2.99"),
+            "dev.yoinklabs.wanderer.tip.large": ("Large tip", "A big thank-you to the devs.", "4.99"),
+        ]
+        XCTAssertEqual(Set(expected.keys), Set(TipTier.productIDs))
+        for product in products {
+            let id = try XCTUnwrap(product["productID"] as? String)
+            let want = try XCTUnwrap(expected[id], "Unexpected product \(id)")
+            let localization = try XCTUnwrap((product["localizations"] as? [[String: Any]])?.first)
+            XCTAssertEqual(localization["displayName"] as? String, want.name, id)
+            XCTAssertEqual(localization["description"] as? String, want.description, id)
+            XCTAssertEqual(product["displayPrice"] as? String, want.price, id)
+        }
+    }
+
     func testDebugConfigClientReadsPricesFromTheStoreKitFile() async throws {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "Wanderer", withExtension: "storekit"))
         let client = TipJarConfigClient(configURL: url)

@@ -11,6 +11,12 @@ is noted next to each release.
 
 ### Added
 
+- iOS: a pink heart "Tip the devs" button in the Home top bar, for guests and
+  signed-in users on every screen size. It opens the optional tip jar, now
+  titled "Tip the devs" (the Profile row too). Tips unlock nothing.
+- Web: a pink "Tip the devs" pill in the header on every page, linking to
+  [yoinklabs.dev/tip](https://yoinklabs.dev/tip), plus a footer link.
+
 - Privacy policy at [wanderer.yoinklabs.dev/privacy](https://wanderer.yoinklabs.dev/privacy),
   served as a full page that also loads without JavaScript
   ([#13](https://github.com/yoink-labs/Wanderer/pull/13)).

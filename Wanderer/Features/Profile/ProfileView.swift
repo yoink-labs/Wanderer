@@ -407,15 +407,15 @@ struct ProfileView: View {
             layout {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(WandererTheme.accentText)
+                    .foregroundStyle(.pink)
                     .frame(width: 26)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
-                    Text("Support Wanderer")
+                    Text("Tip the devs")
                         .font(.wanderer(.card))
                         .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(WandererTheme.ink)
-                    Text("Leave an optional tip")
+                    Text("Optional, and it unlocks nothing")
                         .font(.ligga(.footnote))
                         .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(WandererTheme.muted)
@@ -436,8 +436,9 @@ struct ProfileView: View {
         }
         .buttonStyle(.liggaPressable)
         .accessibilityElement(children: .combine)
+        .accessibilityLabel("Tip the devs")
         .accessibilityHint("Opens the optional tip jar")
-        .accessibilityIdentifier("profile-support-wanderer")
+        .accessibilityIdentifier("profile-tip-the-devs")
     }
 
     // MARK: - Settings

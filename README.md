@@ -83,7 +83,8 @@ account.
 - **Guides** — searchable public guides and one-tap copy into a trip.
 - **Profile** — avatar, stats, language, currency, units, appearance
   (System/Light/Dark), visited countries/cities, sign out, delete account.
-- **Tip jar** — "Support Wanderer" on Profile (guests too): three optional
+- **Tip jar** — the pink "Tip the devs" button on Home and the "Tip the
+  devs" row on Profile (guests too): three optional
   consumable tips through StoreKit 2. Prices are whatever the App Store
   returns for the user's storefront. A thank-you card after a tip; cancel
   returns quietly; Ask to Buy shows a pending note and thanks on approval;
@@ -189,22 +190,28 @@ npm run dev            # http://localhost:5173
 ## Tip jar
 
 `Wanderer/Core/Services/TipJar.swift` (StoreKit 2) and
-`Wanderer/Features/Profile/TipJarView.swift`. The product ids are
-placeholders:
+`Wanderer/Features/Profile/TipJarView.swift`. Two entry points open the same
+"Tip the devs" screen, for guests and signed-in users: the pink heart
+**Tip the devs** button in the Home top bar, and the **Tip the devs** row on
+Profile. Tips are optional and unlock nothing.
 
-| Product id | Type |
-| --- | --- |
-| `dev.yoinklabs.wanderer.tip.small` | Consumable |
-| `dev.yoinklabs.wanderer.tip.medium` | Consumable |
-| `dev.yoinklabs.wanderer.tip.large` | Consumable |
+The products exist in App Store Connect (consumable, en-US, all territories):
 
-**A human must create these in App Store Connect** (In-App Purchases →
-Consumable), choose their prices there, add a display name, description and
-review screenshot, and attach them to the next app version for review. Until
-they exist, the screen says tips aren't available and the rest of the app is
-unaffected. If the ids change, update `TipTier.productID` and
-`Wanderer/Resources/Wanderer.storekit` together (a unit test checks they
-match).
+| Product id | Display name | Description | Price |
+| --- | --- | --- | --- |
+| `dev.yoinklabs.wanderer.tip.small` | Small tip | A small thank-you to the devs. | $0.99 |
+| `dev.yoinklabs.wanderer.tip.medium` | Medium tip | Buys the devs a coffee. | $2.99 |
+| `dev.yoinklabs.wanderer.tip.large` | Large tip | A big thank-you to the devs. | $4.99 |
+
+The app never hard-codes a price; it shows whatever StoreKit returns for the
+user's storefront. **Still to do by a human:** add a review screenshot to each
+product and submit them with the first App Store version (in-app purchases
+can't be reviewed on their own before the app's first release). Until Apple
+returns the products, the screen says "Tips aren't available yet" and the rest
+of the app is unaffected. In TestFlight, Apple runs test purchases, so testers
+aren't charged; the tip screen says so. If an id changes, update
+`TipTier.productID` and `Wanderer/Resources/Wanderer.storekit` together (unit
+tests check the ids, names, descriptions and prices match the table above).
 
 Local testing: the Wanderer scheme points at `Wanderer/Resources/Wanderer.storekit`,
 so **Run from Xcode** gives working tips in the simulator, with purchases
@@ -213,7 +220,8 @@ exist only for local testing. Launches outside Xcode (simctl, ADE) don't apply
 a StoreKit configuration; in Debug builds pass `-uiTipJar config` (and
 optionally `-uiTipOutcome thanks|pending|failed|cancel`) to serve the tips
 from that file instead, e.g. with `-uiTab profile -uiRoute tipJar` for
-screenshots. Release builds ignore these flags.
+screenshots, or `-uiRoute tipSheet` to open the sheet from Home. Release
+builds ignore these flags.
 
 ## TestFlight
 

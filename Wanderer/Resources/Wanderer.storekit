@@ -20,7 +20,7 @@
       "internalID" : "5C1E7A01",
       "localizations" : [
         {
-          "description" : "Sends a postcard's worth of thanks.",
+          "description" : "A small thank-you to the devs.",
           "displayName" : "Small tip",
           "locale" : "en_US"
         }
@@ -35,7 +35,7 @@
       "internalID" : "5C1E7A02",
       "localizations" : [
         {
-          "description" : "Buys the team a coffee on the road.",
+          "description" : "Buys the devs a coffee.",
           "displayName" : "Medium tip",
           "locale" : "en_US"
         }
@@ -50,7 +50,7 @@
       "internalID" : "5C1E7A03",
       "localizations" : [
         {
-          "description" : "Puts a little fuel in the tank.",
+          "description" : "A big thank-you to the devs.",
           "displayName" : "Large tip",
           "locale" : "en_US"
         }
