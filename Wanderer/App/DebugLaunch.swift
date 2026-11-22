@@ -11,9 +11,10 @@ import Foundation
 ///     -uiRoute tipJar                push Tip the devs on Profile
 ///                                    (pair with -uiTab profile)
 ///     -uiRoute tipSheet              open the Tip the devs sheet on Home
-///     -uiTipJar config               serve tips from Wanderer.storekit
+///     -uiTipJar config|empty         serve tips from Wanderer.storekit
 ///                                    without StoreKit (see TipJarConfigClient)
 ///     -uiTipOutcome thanks|pending|failed|cancel
+///     -uiStorefront USA|GBR|BRA|none (with -uiTipJar) storefront country
 ///
 /// Appearance and guest mode use the standard UserDefaults argument domain:
 /// `-wanderer.appearance dark -wanderer.isGuest YES`.

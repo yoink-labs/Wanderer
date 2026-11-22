@@ -7,6 +7,7 @@ struct TipJarView: View {
     @ObservedObject var store: TipJarStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
     /// True in TestFlight, Xcode and the simulator, where Apple runs test
     /// purchases and no real money moves.
     @State private var isTestEnvironment = false
@@ -17,6 +18,9 @@ struct TipJarView: View {
                 header
                 statusCard
                 tipsSection
+                if store.showsWebTipLink {
+                    webTipLink
+                }
                 footnote
             }
             .padding(.horizontal, WandererTheme.gutter)
@@ -173,6 +177,41 @@ struct TipJarView: View {
         .liggaCard()
     }
 
+    /// US storefront only (`WebTipLink`). Opens Safari, not an in-app view.
+    private var webTipLink: some View {
+        Button {
+            LiggaHaptics.tap()
+            openURL(WebTipLink.url)
+        } label: {
+            HStack(spacing: LiggaSpace.s) {
+                VStack(alignment: .leading, spacing: LiggaSpace.xxs) {
+                    Text("Want to give more?")
+                        .font(.wanderer(.card))
+                        .foregroundStyle(WandererTheme.ink)
+                    Text("Tip any amount at yoinklabs.dev")
+                        .font(.ligga(.footnote))
+                        .foregroundStyle(WandererTheme.muted)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.up.right.square")
+                    .font(.ligga(.body, weight: .semibold))
+                    .foregroundStyle(WandererTheme.accentText)
+                    .accessibilityHidden(true)
+            }
+            .padding(LiggaSpace.m)
+            .frame(minHeight: WandererTheme.minimumTarget)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.liggaPressable)
+        .liggaCard()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Want to give more? Tip any amount at yoinklabs.dev")
+        .accessibilityHint("Opens yoinklabs.dev in Safari")
+        .accessibilityAddTraits(.isLink)
+        .accessibilityIdentifier("tip-jar-web-link")
+    }
+
     private var paymentsDisabledNote: some View {
         HStack(alignment: .top, spacing: LiggaSpace.s) {
             Image(systemName: "lock.fill")
@@ -191,7 +230,7 @@ struct TipJarView: View {
 
     private var loadingRows: some View {
         VStack(spacing: 0) {
-            ForEach(TipTier.allCases) { tier in
+            ForEach(TipTier.allCases.prefix(4)) { tier in
                 HStack(spacing: LiggaSpace.s) {
                     RoundedRectangle(cornerRadius: WandererTheme.controlRadius, style: .continuous)
                         .fill(WandererTheme.fillMuted)
