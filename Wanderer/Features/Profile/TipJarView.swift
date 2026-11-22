@@ -43,9 +43,7 @@ struct TipJarView: View {
             if store.loadState != .loaded { await store.load() }
         }
         .task {
-            if case .verified(let transaction)? = try? await AppTransaction.shared {
-                isTestEnvironment = transaction.environment != .production
-            }
+            isTestEnvironment = TipEnvironment.isTestPurchases
         }
         .refreshable { await store.load() }
         .accessibilityIdentifier("tip-jar")
@@ -272,6 +270,21 @@ struct TipJarView: View {
         case .idle, .purchasing: return
         }
         AccessibilityNotification.Announcement(message).post()
+    }
+}
+
+/// Whether Apple runs test purchases here (simulator, Xcode, TestFlight).
+/// Deliberately not `AppTransaction.shared`: with no Apple Account signed
+/// in, that shows a "Sign in to Apple Account" password prompt just for
+/// opening the tip screen.
+enum TipEnvironment {
+    static var isTestPurchases: Bool {
+        #if targetEnvironment(simulator) || DEBUG
+        return true
+        #else
+        // TestFlight and sandbox installs carry a sandbox receipt.
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
     }
 }
 
