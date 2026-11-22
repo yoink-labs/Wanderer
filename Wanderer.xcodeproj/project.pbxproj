@@ -569,7 +569,6 @@
 				};
 			};
 			buildConfigurationList = E176982E73D9BA7E1368461E /* Build configuration list for PBXProject "Wanderer" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -582,6 +581,7 @@
 				63EEB895EDC195AC7983B103 /* XCRemoteSwiftPackageReference "clerk-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
+			productRefGroup = CF8B5AE04BBDDE470F8467D6 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -836,7 +836,7 @@
 				CODE_SIGN_ENTITLEMENTS = Wanderer/Resources/Wanderer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 64PUT29XZ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -870,7 +870,7 @@
 				CODE_SIGN_ENTITLEMENTS = Wanderer/Resources/Wanderer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 64PUT29XZ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
