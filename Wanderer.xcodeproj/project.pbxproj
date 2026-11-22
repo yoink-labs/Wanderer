@@ -68,6 +68,7 @@
 		9997556D50DD551813AFBB77 /* TravelModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78015B4F18A43D4BDB2DDA2D /* TravelModels.swift */; };
 		9D9A2486F68D784D51824E2C /* PersonalItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E90060C0555135B8D76B41 /* PersonalItemsView.swift */; };
 		9FA8AA633269ED1A2C8C05FF /* ExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85224A44E9AFA3B3A16611D5 /* ExploreView.swift */; };
+		A0D62ECFDB30AF007C9667DB /* StoreKitSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4C4318C27E1B2CD559BD902 /* StoreKitSessionTests.swift */; };
 		A25790F6B03B6C0401C229DC /* DayNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17CA550B1A652A690CE62511 /* DayNoteView.swift */; };
 		A4969B7060AD45D48DDED22B /* HomeCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5923EE04A4450F18A7AF0F /* HomeCards.swift */; };
 		A4E70E6AB12D668C5821F1BE /* WandererComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55749C865ABBE66CF8D8624 /* WandererComponents.swift */; };
@@ -209,6 +210,7 @@
 		EE938851E76A6594D1D2B6A9 /* PlaceDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceDetailSheet.swift; sourceTree = "<group>"; };
 		F08DFC9293EDE1EB208DB540 /* WandererApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WandererApp.swift; sourceTree = "<group>"; };
 		F35A0CAB64FC2D39649C5BD5 /* FlightAlerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightAlerts.swift; sourceTree = "<group>"; };
+		F4C4318C27E1B2CD559BD902 /* StoreKitSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitSessionTests.swift; sourceTree = "<group>"; };
 		F69303B77F8AE8E3200113D0 /* TripsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -240,6 +242,7 @@
 				9CED402C874738F92140CF85 /* PlannerUndoTests.swift */,
 				C0F809E329815D3277BA161D /* SocialSignInTests.swift */,
 				3BA4F7A155E690ACB0E377D0 /* SplitMathTests.swift */,
+				F4C4318C27E1B2CD559BD902 /* StoreKitSessionTests.swift */,
 				52C06AAE34D1878A99251406 /* TipJarTests.swift */,
 				B9A2746550DE2F87D6C59194 /* TripExportsTests.swift */,
 			);
@@ -710,6 +713,7 @@
 				4DE7F6D17D21FE981D5FF0FA /* PlannerUndoTests.swift in Sources */,
 				32635A3B3E5C9663C4A39A49 /* SocialSignInTests.swift in Sources */,
 				8B56FE752B7C4B17E1189299 /* SplitMathTests.swift in Sources */,
+				A0D62ECFDB30AF007C9667DB /* StoreKitSessionTests.swift in Sources */,
 				2268BACAE74D6722DC08B249 /* TipJarTests.swift in Sources */,
 				EFF47E86C885FDA6E67160D9 /* TripExportsTests.swift in Sources */,
 			);
