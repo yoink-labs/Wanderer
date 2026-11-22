@@ -58,6 +58,66 @@
       "productID" : "dev.yoinklabs.wanderer.tip.large",
       "referenceName" : "Tip (large)",
       "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "5C1E7A04",
+      "localizations" : [
+        {
+          "description" : "A generous thank-you to the devs.",
+          "displayName" : "Generous tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "dev.yoinklabs.wanderer.tip.xl",
+      "referenceName" : "Tip (xl)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "19.99",
+      "familyShareable" : false,
+      "internalID" : "5C1E7A05",
+      "localizations" : [
+        {
+          "description" : "A big-hearted thank-you to the devs.",
+          "displayName" : "Big-hearted tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "dev.yoinklabs.wanderer.tip.xxl",
+      "referenceName" : "Tip (xxl)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "5C1E7A06",
+      "localizations" : [
+        {
+          "description" : "An amazing thank-you to the devs.",
+          "displayName" : "Amazing tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "dev.yoinklabs.wanderer.tip.huge",
+      "referenceName" : "Tip (huge)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "internalID" : "5C1E7A07",
+      "localizations" : [
+        {
+          "description" : "The biggest thank-you we offer.",
+          "displayName" : "Legendary tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "dev.yoinklabs.wanderer.tip.max",
+      "referenceName" : "Tip (max)",
+      "type" : "Consumable"
     }
   ],
   "settings" : {

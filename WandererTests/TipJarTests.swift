@@ -7,6 +7,7 @@ private final class FakeTipClient: TipStoreClient, @unchecked Sendable {
     var paymentsAllowed = true
     var productsResult: Result<[TipProduct], Error> = .success([])
     var purchaseResult: Result<TipPurchaseResult, Error> = .success(.cancelled)
+    var countryCode: String?
     private(set) var purchasedIDs: [String] = []
     let updates: AsyncStream<String>
     private let updatesContinuation: AsyncStream<String>.Continuation
@@ -26,6 +27,8 @@ private final class FakeTipClient: TipStoreClient, @unchecked Sendable {
         return try purchaseResult.get()
     }
 
+    func storefrontCountryCode() async -> String? { countryCode }
+
     func completedTips() -> AsyncStream<String> { updates }
 
     func deliver(_ productID: String) { updatesContinuation.yield(productID) }
@@ -44,12 +47,17 @@ private func tip(_ tier: TipTier, price: Decimal, name: String = "") -> TipProdu
 
 @MainActor
 final class TipJarStoreTests: XCTestCase {
-    func testProductIDsArePlaceholdersForAllThreeTiers() {
+    func testProductIDsMatchAppStoreConnect() {
         XCTAssertEqual(TipTier.productIDs, [
             "dev.yoinklabs.wanderer.tip.small",
             "dev.yoinklabs.wanderer.tip.medium",
             "dev.yoinklabs.wanderer.tip.large",
+            "dev.yoinklabs.wanderer.tip.xl",
+            "dev.yoinklabs.wanderer.tip.xxl",
+            "dev.yoinklabs.wanderer.tip.huge",
+            "dev.yoinklabs.wanderer.tip.max",
         ])
+        XCTAssertEqual(TipTier(productID: "dev.yoinklabs.wanderer.tip.max"), .max)
         XCTAssertEqual(TipTier(productID: "dev.yoinklabs.wanderer.tip.medium"), .medium)
         XCTAssertNil(TipTier(productID: "dev.yoinklabs.wanderer.pro"))
     }
@@ -68,6 +76,51 @@ final class TipJarStoreTests: XCTestCase {
 
         XCTAssertEqual(store.loadState, .loaded)
         XCTAssertEqual(store.products.map(\.tier), [.small, .medium, .large])
+    }
+
+    func testMissingHigherTiersStillShowTheRest() async {
+        let client = FakeTipClient()
+        // e.g. the new tiers aren't live in App Store Connect yet.
+        client.productsResult = .success([tip(.medium, price: 3), tip(.small, price: 1), tip(.max, price: 100)])
+        let store = TipJarStore(client: client)
+
+        await store.load()
+
+        XCTAssertEqual(store.loadState, .loaded)
+        XCTAssertEqual(store.products.map(\.tier), [.small, .medium, .max])
+    }
+
+    func testWebTipLinkOnlyOnTheUSStorefront() {
+        XCTAssertTrue(WebTipLink.isAllowed(storefrontCountryCode: "USA"))
+        for code in ["GBR", "BRA", "CAN", "usa", "US", "", nil] as [String?] {
+            XCTAssertFalse(WebTipLink.isAllowed(storefrontCountryCode: code), "\(String(describing: code))")
+        }
+        XCTAssertEqual(WebTipLink.url.absoluteString, "https://yoinklabs.dev/tip")
+    }
+
+    func testStoreShowsWebTipLinkByStorefront() async {
+        for (code, expected) in [("USA", true), ("GBR", false), ("BRA", false), (nil, false)] as [(String?, Bool)] {
+            let client = FakeTipClient()
+            client.countryCode = code
+            client.productsResult = .success([tip(.small, price: 1)])
+            let store = TipJarStore(client: client)
+
+            await store.load()
+
+            XCTAssertEqual(store.showsWebTipLink, expected, String(describing: code))
+        }
+    }
+
+    func testDebugConfigClientStorefront() async throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "Wanderer", withExtension: "storekit"))
+        let fromFile = await TipJarConfigClient(configURL: url).storefrontCountryCode()
+        XCTAssertEqual(fromFile, "USA")
+        let gbr = await TipJarConfigClient(configURL: url, storefrontOverride: "GBR").storefrontCountryCode()
+        XCTAssertEqual(gbr, "GBR")
+        let none = await TipJarConfigClient(configURL: url, storefrontOverride: "none").storefrontCountryCode()
+        XCTAssertNil(none)
+        let empty = try await TipJarConfigClient(configURL: url, returnsNoProducts: true).products(for: TipTier.productIDs)
+        XCTAssertTrue(empty.isEmpty)
     }
 
     func testPricesComeFromTheStore() async {
@@ -197,6 +250,10 @@ final class TipJarStoreTests: XCTestCase {
             "dev.yoinklabs.wanderer.tip.small": ("Small tip", "A small thank-you to the devs.", "0.99"),
             "dev.yoinklabs.wanderer.tip.medium": ("Medium tip", "Buys the devs a coffee.", "2.99"),
             "dev.yoinklabs.wanderer.tip.large": ("Large tip", "A big thank-you to the devs.", "4.99"),
+            "dev.yoinklabs.wanderer.tip.xl": ("Generous tip", "A generous thank-you to the devs.", "9.99"),
+            "dev.yoinklabs.wanderer.tip.xxl": ("Big-hearted tip", "A big-hearted thank-you to the devs.", "19.99"),
+            "dev.yoinklabs.wanderer.tip.huge": ("Amazing tip", "An amazing thank-you to the devs.", "49.99"),
+            "dev.yoinklabs.wanderer.tip.max": ("Legendary tip", "The biggest thank-you we offer.", "99.99"),
         ]
         XCTAssertEqual(Set(expected.keys), Set(TipTier.productIDs))
         for product in products {
@@ -215,7 +272,7 @@ final class TipJarStoreTests: XCTestCase {
 
         let products = TipJarStore.ordered(try await client.products(for: TipTier.productIDs))
 
-        XCTAssertEqual(products.map(\.tier), [.small, .medium, .large])
+        XCTAssertEqual(products.map(\.tier), TipTier.allCases)
         XCTAssertTrue(products.allSatisfy { $0.price > 0 && $0.displayPrice.hasPrefix("$") })
         XCTAssertTrue(products.allSatisfy { !$0.displayName.isEmpty })
     }
