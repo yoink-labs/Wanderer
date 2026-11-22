@@ -3,6 +3,10 @@
 #
 #   scripts/submit-appstore-tips.sh            # dry run (default): plan + readiness, changes nothing
 #   scripts/submit-appstore-tips.sh --submit   # really do it
+#   scripts/submit-appstore-tips.sh --submit --iaps-selected-in-asc
+#       # after ticking the tips on the version page in App Store Connect
+#       # (Apple rejects the API attach for first-time IAPs with
+#       # STATE_ERROR.FIRST_CONSUMABLE_MUST_BE_SUBMITTED_ON_VERSION)
 #
 # Steps (only --submit mutates anything):
 #   1. Reuse the editable App Store version (PREPARE_FOR_SUBMISSION, etc.)
@@ -28,11 +32,13 @@ set -euo pipefail
 APP_ID="${ASC_APP_ID:-6833580006}"
 TIP_PREFIX="dev.yoinklabs.wanderer.tip."
 MODE="dry-run"
+IAPS_SELECTED=0
 for arg in "$@"; do
   case "$arg" in
     --submit) MODE="submit" ;;
     --dry-run) MODE="dry-run" ;;
-    -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --iaps-selected-in-asc) IAPS_SELECTED=1 ;;
+    -h|--help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "error: unknown argument '$arg'" >&2; exit 2 ;;
   esac
 done
@@ -111,6 +117,10 @@ print(" ".join(ready))')"
 if [[ -z "$READY_IDS" ]]; then
   echo "  none READY_TO_SUBMIT (already submitted, or not ready)"
 fi
+if [[ "$IAPS_SELECTED" == 1 && -n "$READY_IDS" ]]; then
+  echo "  skipping the API attach: tips were selected on the version page in App Store Connect"
+  READY_IDS=""
+fi
 for iap in $READY_IDS; do
   echo "  \$ asc api POST /v1/inAppPurchaseSubmissions  (inAppPurchaseV2 $iap)"
   if [[ "$MODE" == "submit" ]]; then
@@ -118,7 +128,8 @@ for iap in $READY_IDS; do
     if ! OUT="$(asc api POST /v1/inAppPurchaseSubmissions --body "$BODY" --confirm 2>&1)"; then
       if grep -q "FIRST_.*MUST_BE_SUBMITTED_ON_VERSION" <<<"$OUT"; then
         echo "  Apple requires first-time IAPs to be ticked on the version page:" >&2
-        echo "  App Store Connect > Wanderer > $MARKETING > In-App Purchases and Subscriptions > select the tips, then re-run." >&2
+        echo "  App Store Connect > Wanderer > $MARKETING > In-App Purchases and Subscriptions > select the tips," >&2
+        echo "  then re-run with --submit --iaps-selected-in-asc." >&2
       else
         echo "$OUT" | tail -3 >&2
       fi
